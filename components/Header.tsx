@@ -19,8 +19,8 @@ export default function Header() {
             Se connecter
           </button>
           
-          {/* Bouton S'inscrire - fond vert (teal-600) */}
-          <button className="px-6 py-2 bg-teal-600 text-white rounded-full hover:bg-teal-700 transition">
+          {/* Bouton S'inscrire - fond vert (toni-green) */}
+          <button className="px-6 py-2 bg-toni-green text-white rounded-full hover:bg-toni-green-dark transition">
             S&apos;inscrire
           </button>
         </div>

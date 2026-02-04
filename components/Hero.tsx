@@ -33,7 +33,7 @@ export default function Hero() {
           </button>
           
           {/* Bouton Pharmacie - fond vert */}
-          <button className="px-8 py-4 bg-teal-600 text-white rounded-full hover:bg-teal-700 transition flex items-center gap-2 min-w-[260px]">
+          <button className="px-8 py-4 bg-toni-green text-white rounded-full hover:bg-toni-green-dark transition flex items-center gap-2 min-w-[260px]">
             <span>👥</span>
             Devenez partenaire
           </button>
