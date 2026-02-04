@@ -12,24 +12,22 @@ export default function Header() {
   return (
     // Position absolute pour superposer sur l'image de fond
     // z-10 pour être au-dessus du Hero
-    <header className="absolute top-0 left-0 right-0 z-10 px-6 py-4">
+    <header className="absolute top-0 left-0 right-0 z-10 px-6 py-4 bg-white/90 backdrop-blur-sm">
       {/* Container avec largeur max et centré */}
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        
+      <div className="max-w-[98vw] xl:max-w-[1600px] mx-auto flex items-center justify-between">
         {/* Logo Toni360 à gauche */}
         <div className="flex items-center">
-          <span className="text-2xl font-bold text-white">Toni360</span>
+          <span className="text-2xl font-bold text-toni-green">Toni360</span>
         </div>
 
         {/* Boutons d'authentification à droite - cachés sur mobile */}
         <div className="hidden md:flex items-center gap-4">
-          {/* Bouton Se connecter - outline blanc */}
-          <button className="px-6 py-2 border-2 border-white text-white rounded-full hover:bg-white hover:text-gray-900 transition">
+          {/* Bouton Se connecter - outline vert */}
+          <button className="px-6 py-2 border-2 border-toni-green text-toni-green rounded-full hover:bg-toni-green hover:text-white transition">
             Se connecter
           </button>
-          
           {/* Bouton S'inscrire - fond vert (toni-green) */}
-          <button className="px-6 py-2 bg-toni-green text-white rounded-full hover:bg-toni-green-dark transition">
+          <button className="px-6 py-2 bg-toni-green-dark-2 text-white rounded-full hover:bg-toni-green-dark transition">
             S&apos;inscrire
           </button>
         </div>
@@ -37,7 +35,7 @@ export default function Header() {
         {/* Bouton hamburger - visible uniquement sur mobile */}
         <button 
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="md:hidden text-white focus:outline-none"
+          className="md:hidden text-toni-green focus:outline-none"
           aria-label="Menu"
         >
           <svg 
@@ -59,9 +57,9 @@ export default function Header() {
 
       {/* Menu mobile - affiché quand isMenuOpen est true */}
       {isMenuOpen && (
-        <div className="md:hidden mt-4 px-6 py-4 bg-black/90 rounded-lg backdrop-blur-sm">
+        <div className="md:hidden mt-4 px-6 py-4 bg-white/95 rounded-lg backdrop-blur-sm shadow-lg">
           <div className="flex flex-col gap-3">
-            <button className="w-full px-6 py-3 border-2 border-white text-white rounded-full hover:bg-white hover:text-gray-900 transition">
+            <button className="w-full px-6 py-3 border-2 border-toni-green text-toni-green rounded-full hover:bg-toni-green hover:text-white transition">
               Se connecter
             </button>
             <button className="w-full px-6 py-3 bg-toni-green text-white rounded-full hover:bg-toni-green-dark transition">
