@@ -1,13 +1,18 @@
+/**
+ * Composant Hero - Section principale avec image de fond
+ * Affiche le titre et les deux boutons d'action principaux
+ */
+import { Search, Users } from "lucide-react";
 
 export default function Hero() {
   return (
     // Section pleine hauteur (min-h-screen) avec contenu centré
     <section className="relative min-h-screen flex flex-col items-center justify-center">
       
-      {/* Image de fond avec effet blur et overlay sombre */}
+      {/* Image de fond avec effet blur et overlay blanc */}
       <div className="absolute inset-0 -z-10">
-        {/* Overlay noir transparent (40%) pour assombrir l'image */}
-        <div className="absolute inset-0 bg-black/40"></div>
+        {/* Overlay blanc transparent (40%) */}
+        <div className="absolute inset-0 bg-white/40"></div>
         
         {/* Image de fond de pharmacie avec effet blur */}
         <div 
@@ -27,14 +32,14 @@ export default function Hero() {
         {/* Container des boutons - vertical sur mobile, horizontal sur desktop */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
           {/* Bouton Patient - fond blanc */}
-          <button className="px-8 py-4 bg-white text-gray-900 rounded-full hover:bg-gray-100 transition flex items-center gap-2 min-w-[260px]">
-            <span>🔍</span>
+          <button className="px-8 py-4 bg-white text-gray-900 rounded-full hover:bg-gray-100 transition flex items-center justify-center gap-2 min-w-[260px]">
+            <Search size={20} />
             Trouvez vos médicaments
           </button>
           
           {/* Bouton Pharmacie - fond vert */}
-          <button className="px-8 py-4 bg-toni-green text-white rounded-full hover:bg-toni-green-dark transition flex items-center gap-2 min-w-[260px]">
-            <span>👥</span>
+          <button className="px-8 py-4 bg-toni-green text-white rounded-full hover:bg-toni-green-dark transition flex items-center justify-center gap-2 min-w-[260px]">
+            <Users size={20} />
             Devenez partenaire
           </button>
         </div>
