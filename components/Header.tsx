@@ -1,5 +1,14 @@
+/**
+ * Composant Header - Barre de navigation fixée en haut
+ * Contient le logo et les boutons d'authentification
+ */
+"use client";
+
+import { useState } from "react";
 
 export default function Header() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   return (
     // Position absolute pour superposer sur l'image de fond
     // z-10 pour être au-dessus du Hero
@@ -12,8 +21,8 @@ export default function Header() {
           <span className="text-2xl font-bold text-white">Toni360</span>
         </div>
 
-        {/* Boutons d'authentification à droite */}
-        <div className="flex items-center gap-4">
+        {/* Boutons d'authentification à droite - cachés sur mobile */}
+        <div className="hidden md:flex items-center gap-4">
           {/* Bouton Se connecter - outline blanc */}
           <button className="px-6 py-2 border-2 border-white text-white rounded-full hover:bg-white hover:text-gray-900 transition">
             Se connecter
@@ -24,7 +33,43 @@ export default function Header() {
             S&apos;inscrire
           </button>
         </div>
+
+        {/* Bouton hamburger - visible uniquement sur mobile */}
+        <button 
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="md:hidden text-white focus:outline-none"
+          aria-label="Menu"
+        >
+          <svg 
+            className="w-6 h-6" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            {isMenuOpen ? (
+              // Icône X pour fermer
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              // Icône hamburger
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            )}
+          </svg>
+        </button>
       </div>
+
+      {/* Menu mobile - affiché quand isMenuOpen est true */}
+      {isMenuOpen && (
+        <div className="md:hidden mt-4 px-6 py-4 bg-black/90 rounded-lg backdrop-blur-sm">
+          <div className="flex flex-col gap-3">
+            <button className="w-full px-6 py-3 border-2 border-white text-white rounded-full hover:bg-white hover:text-gray-900 transition">
+              Se connecter
+            </button>
+            <button className="w-full px-6 py-3 bg-toni-green text-white rounded-full hover:bg-toni-green-dark transition">
+              S&apos;inscrire
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
