@@ -23,7 +23,7 @@ export default function Header() {
         {/* Boutons d'authentification à droite - cachés sur mobile */}
         <div className="hidden md:flex items-center gap-4">
           {/* Bouton Se connecter - outline vert */}
-          <button className="px-6 py-2 border-2 border-toni-green text-toni-green rounded-full hover:bg-toni-green hover:text-white transition">
+          <button className="px-6 py-2 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold rounded-full hover:bg-toni-green-dark-2 hover:text-white transition">
             Se connecter
           </button>
           {/* Bouton S'inscrire - fond vert (toni-green) */}
@@ -59,7 +59,7 @@ export default function Header() {
       {isMenuOpen && (
         <div className="md:hidden mt-4 px-6 py-4 bg-white/95 rounded-lg backdrop-blur-sm shadow-lg">
           <div className="flex flex-col gap-3">
-            <button className="w-full px-6 py-3 border-2 border-toni-green text-toni-green rounded-full hover:bg-toni-green hover:text-white transition">
+            <button className="w-full px-6 py-3 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold rounded-full hover:bg-toni-green-dark-2 hover:text-white transition">
               Se connecter
             </button>
             <button className="w-full px-6 py-3 bg-toni-green text-white rounded-full hover:bg-toni-green-dark transition">

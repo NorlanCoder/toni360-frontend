@@ -9,14 +9,14 @@ export default function Hero() {
     // Section pleine hauteur (min-h-screen) avec contenu centré
     <section className="relative min-h-screen flex flex-col items-center justify-center">
       
-      {/* Image de fond avec effet blur et overlay blur 40% */}
+      {/* Image de fond avec effet blur et overlay */}
       <div className="absolute inset-0 -z-10">
-        {/* Overlay blur blanc 40% */}
-        <div className="absolute inset-0 bg-white/40 backdrop-blur-sm"></div>
+        {/* Overlay pour assombrir et blur */}
+        <div className="absolute inset-0 bg-black/30 backdrop-blur-md"></div>
         {/* Image de fond de pharmacie */}
         <div 
           className="w-full h-full bg-cover bg-center"
-          style={{ backgroundImage: "url('/images/pharmacy-bg.jpg')" }}
+          style={{ backgroundImage: "url('/images/ph2.jpeg')" }}
         ></div>
       </div>
 
