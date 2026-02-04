@@ -29,9 +29,9 @@ export default function RootLayout({
                 theme: {
                   extend: {
                     colors: {
-                      'toni-green': '#0D9488',
-                      'toni-green-dark': '#0F766E',
-                      'toni-green-light': '#14B8A6',
+                      'toni-green': '#10B981',
+                      'toni-green-dark': '#059669',
+                      'toni-green-light': '#34D399',
                     },
                     fontFamily: {
                       sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],

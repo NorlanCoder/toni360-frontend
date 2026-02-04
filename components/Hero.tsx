@@ -24,21 +24,21 @@ export default function Hero() {
       {/* Contenu principal centré */}
       <div className="text-center px-6 max-w-4xl">
         {/* Titre principal responsive (taille augmente sur grands écrans) */}
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-12">
-          Accédez rapidement à vos médicaments<br />
-          ou rejoignez notre réseau de pharmacies
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-12">
+          <span className="text-2xl md:text-3xl lg:text-4xl">Accédez rapidement à vos médicaments</span><br />
+          <span className="text-xl md:text-2xl lg:text-3xl">ou rejoignez notre réseau de pharmacies</span>
         </h1>
 
         {/* Container des boutons - vertical sur mobile, horizontal sur desktop */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
           {/* Bouton Patient - fond blanc */}
-          <button className="px-8 py-4 bg-white text-gray-900 rounded-full hover:bg-gray-100 transition flex items-center justify-center gap-2 min-w-[260px]">
+          <button className="px-8 py-4 bg-white text-toni-green font-bold rounded-full hover:bg-gray-100 transition flex items-center justify-center gap-2 min-w-[260px]">
             <Search size={20} />
             Trouvez vos médicaments
           </button>
           
           {/* Bouton Pharmacie - fond vert */}
-          <button className="px-8 py-4 bg-toni-green text-white rounded-full hover:bg-toni-green-dark transition flex items-center justify-center gap-2 min-w-[260px]">
+          <button className="px-8 py-4 bg-toni-green text-white font-bold rounded-full hover:bg-toni-green-dark transition flex items-center justify-center gap-2 min-w-[260px]">
             <Users size={20} />
             Devenez partenaire
           </button>
