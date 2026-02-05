@@ -52,7 +52,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, nom: e.target.value })
                 }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
@@ -66,7 +66,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
@@ -83,7 +83,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, telephone: e.target.value })
                 }
-                className="w-full pl-20 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                className="w-full pl-20 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
@@ -97,7 +97,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full pl-11 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                className="w-full pl-11 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
               <button
                 type="button"
