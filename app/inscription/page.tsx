@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { COUNTRY_CODES } from "@/lib/countryCodes";
 
 export default function InscriptionPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
+    indicatif: COUNTRY_CODES[0].code,
     telephone: "",
     password: "",
   });
@@ -70,12 +72,20 @@ export default function InscriptionPage() {
               />
             </div>
 
-            {/* Téléphone */}
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                <span className="text-xl">🇧🇯</span>
-                <span className="text-sm text-gray-600">+229</span>
-              </div>
+            {/* Téléphone avec select indicatif */}
+            <div className="relative flex">
+              <select
+                value={formData.indicatif}
+                onChange={e => setFormData({ ...formData, indicatif: e.target.value })}
+                className="pl-2 pr-1 py-3 border border-gray-300 rounded-l-lg bg-white text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 min-w-[90px]"
+                style={{ fontSize: '1rem' }}
+              >
+                {COUNTRY_CODES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.flag} {c.code}
+                  </option>
+                ))}
+              </select>
               <input
                 type="tel"
                 placeholder="Numéro de téléphone"
@@ -83,7 +93,8 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, telephone: e.target.value })
                 }
-                className="w-full pl-20 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full pr-4 py-3 border-t border-b border-r border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                style={{ fontSize: '1rem' }}
               />
             </div>
 
