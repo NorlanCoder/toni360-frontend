@@ -54,13 +54,13 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, nom: e.target.value })
                 }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full px-4 py-3 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
             {/* Email */}
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="email"
                 placeholder="Adresse email"
@@ -68,7 +68,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full pl-11 pr-4 py-3 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
@@ -77,7 +77,7 @@ export default function InscriptionPage() {
               <select
                 value={formData.indicatif}
                 onChange={e => setFormData({ ...formData, indicatif: e.target.value })}
-                className="pl-2 pr-1 py-3 border border-gray-300 rounded-l-lg bg-white text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 min-w-[90px]"
+                className="pl-2 pr-1 py-3 border border-black rounded-l-lg bg-white text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 min-w-[90px]"
                 style={{ fontSize: '1rem' }}
               >
                 {COUNTRY_CODES.map((c) => (
@@ -93,14 +93,14 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, telephone: e.target.value })
                 }
-                className="w-full pr-4 py-3 border-t border-b border-r border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full pr-4 py-3 border-t border-b border-r border-black rounded-r-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
                 style={{ fontSize: '1rem' }}
               />
             </div>
 
             {/* Mot de passe */}
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Créer un mot de passe"
@@ -108,14 +108,14 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full pl-11 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full pl-11 pr-12 py-3 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
 
