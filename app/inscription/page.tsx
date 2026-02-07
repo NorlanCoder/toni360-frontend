@@ -23,15 +23,15 @@ export default function InscriptionPage() {
   return (
     <div className="flex min-h-screen">
       {/* Section Image - Gauche - Cachée sur mobile */}
-      <div className="hidden lg:block lg:w-1/2 relative">
+      <div className="hidden lg:block lg:w-3/5 relative">
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/images/ph.jpeg')" }}
+          style={{ backgroundImage: "url('/images/ph 4.png')" }}
         />
       </div>
 
       {/* Section Formulaire - Droite */}
-      <div className="w-full lg:w-1/2 bg-[#F5F5F0] flex flex-col items-center justify-center px-6 py-12">
+      <div className="w-full lg:w-2/5 flex flex-col items-center justify-center px-6 py-12" style={{ backgroundColor: '#eafff8' }}>
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="mb-8 text-center">
@@ -54,7 +54,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, nom: e.target.value })
                 }
-                className="w-full px-4 py-3 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
@@ -68,7 +68,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full pl-11 pr-4 py-3 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full pl-11 pr-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
@@ -77,7 +77,7 @@ export default function InscriptionPage() {
               <select
                 value={formData.indicatif}
                 onChange={e => setFormData({ ...formData, indicatif: e.target.value })}
-                className="pl-2 pr-1 py-3 border border-black rounded-l-lg bg-white text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 min-w-[90px]"
+                className="pl-2 pr-1 py-3 border border-black rounded-l-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 min-w-[90px]"
                 style={{ fontSize: '1rem' }}
               >
                 {COUNTRY_CODES.map((c) => (
@@ -93,7 +93,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, telephone: e.target.value })
                 }
-                className="w-full pr-4 py-3 border-t border-b border-r border-black rounded-r-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full pr-4 py-3 border-t border-b border-r border-black rounded-r-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
                 style={{ fontSize: '1rem' }}
               />
             </div>
@@ -108,7 +108,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full pl-11 pr-12 py-3 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full pl-11 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
               <button
                 type="button"
@@ -122,7 +122,7 @@ export default function InscriptionPage() {
             {/* Bouton S'inscrire */}
             <button
               type="submit"
-              className="w-full bg-toni-green-dark-2 text-white font-bold py-3 rounded-lg hover:bg-toni-green-dark transition"
+              className="w-full bg-toni-green-dark-2 text-white font-bold py-3 rounded-md hover:bg-toni-green-dark transition"
             >
               S&apos;inscrire
             </button>
