@@ -39,7 +39,7 @@ export default function InscriptionPage() {
           </div>
 
           {/* Titre */}
-          <h2 className="text-3xl font-bold text-gray-800 text-center mb-8">
+          <h2 className="text-5xl text-gray-800 text-center mb-12">
             Inscription
           </h2>
 
