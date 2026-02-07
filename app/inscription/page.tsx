@@ -32,7 +32,7 @@ export default function InscriptionPage() {
 
       {/* Section Formulaire - Droite */}
       <div className="w-full lg:w-2/5 flex flex-col items-center justify-center px-6 py-12" style={{ backgroundColor: '#eafff8' }}>
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-8 text-center">
             <h1 className="text-3xl font-bold text-toni-green-dark-2">Toni360</h1>
@@ -60,7 +60,7 @@ export default function InscriptionPage() {
 
             {/* Email */}
             <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <User className="absolute left-4 top-[50%] -translate-y-1/2 text-gray-400" size={18} style={{ marginTop: '1px' }} />
               <input
                 type="email"
                 placeholder="Adresse email"
@@ -68,17 +68,17 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full pl-11 pr-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full pl-12 pr-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
-            {/* Téléphone avec select indicatif */}
-            <div className="relative flex">
+            {/* Téléphone avec indicatif */}
+            <div className="relative flex gap-2">
               <select
                 value={formData.indicatif}
                 onChange={e => setFormData({ ...formData, indicatif: e.target.value })}
-                className="pl-2 pr-1 py-3 border border-black rounded-l-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 min-w-[90px]"
-                style={{ fontSize: '1rem' }}
+                className="px-2 py-3 border border-black rounded-md text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                style={{ fontSize: '0.75rem', width: '70px' }}
               >
                 {COUNTRY_CODES.map((c) => (
                   <option key={c.code} value={c.code}>
@@ -93,14 +93,13 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, telephone: e.target.value })
                 }
-                className="w-full pr-4 py-3 border-t border-b border-r border-black rounded-r-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
-                style={{ fontSize: '1rem' }}
+                className="flex-1 px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
             {/* Mot de passe */}
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Lock className="absolute left-4 top-[50%] -translate-y-1/2 text-gray-400" size={18} style={{ marginTop: '1px' }} />
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Créer un mot de passe"
@@ -108,12 +107,13 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full pl-11 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-4 top-[50%] -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                style={{ marginTop: '1px' }}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
