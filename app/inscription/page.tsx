@@ -59,8 +59,8 @@ export default function InscriptionPage() {
             </div>
 
             {/* Email */}
-            <div className="relative">
-              <User className="absolute left-4 top-[50%] -translate-y-1/2 text-gray-400" size={18} style={{ marginTop: '1px' }} />
+            <div className="relative flex items-center">
+              <User className="absolute left-4 text-gray-400" size={18} />
               <input
                 type="email"
                 placeholder="Adresse email"
@@ -98,8 +98,8 @@ export default function InscriptionPage() {
             </div>
 
             {/* Mot de passe */}
-            <div className="relative">
-              <Lock className="absolute left-4 top-[50%] -translate-y-1/2 text-gray-400" size={18} style={{ marginTop: '1px' }} />
+            <div className="relative flex items-center">
+              <Lock className="absolute left-4 text-gray-400" size={18} />
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Créer un mot de passe"
@@ -112,7 +112,7 @@ export default function InscriptionPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-[50%] -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-4 text-gray-400 hover:text-gray-600"
                 style={{ marginTop: '1px' }}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
