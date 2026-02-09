@@ -112,8 +112,8 @@ export default function ConnexionPage() {
             )}
 
             {/* Mot de passe */}
-            <div className="relative">
-              <Lock className="absolute left-4 top-[50%] -translate-y-1/2 text-gray-400" size={18} style={{ marginTop: '1px' }} />
+            <div className="relative flex items-center">
+              <Lock className="absolute left-4 text-gray-400" size={18} />
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Mot de passe"
@@ -126,8 +126,7 @@ export default function ConnexionPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-[50%] -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                style={{ marginTop: '1px' }}
+                className="absolute right-4 text-gray-400 hover:text-gray-600"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>

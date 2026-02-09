@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Home, User, Package, Bell, ShoppingCart, HelpCircle, LogOut, Search } from "lucide-react";
+import { Home, User, Package, Bell, ShoppingCart, HelpCircle, LogOut, Search, Lock } from "lucide-react";
 import Link from "next/link";
 
 export default function ProfilPage() {
@@ -12,10 +12,16 @@ export default function ProfilPage() {
     telephone: "",
     ville: "",
   });
+  const [deletePassword, setDeletePassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Form submitted:", formData);
+  };
+
+  const handleDeleteAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Delete account with password:", deletePassword);
   };
 
   return (
@@ -188,8 +194,41 @@ export default function ProfilPage() {
             )}
 
             {activeTab === "delete" && (
-              <div className="text-center py-12">
-                <p className="text-gray-600">Section de suppression de compte</p>
+              <div className="max-w-xl mx-auto">
+                <h3 className="text-3xl font-bold text-gray-900 text-center mb-12">
+                  Êtes-vous sûr de vouloir supprimer votre compte ?
+                </h3>
+
+                <form onSubmit={handleDeleteAccount} className="space-y-8">
+                  {/* Password Input */}
+                  <div className="relative max-w-md mx-auto flex items-center">
+                    <Lock className="absolute left-4 text-gray-400" size={18} />
+                    <input
+                      type="password"
+                      placeholder="Entrez votre mot de passe"
+                      value={deletePassword}
+                      onChange={(e) => setDeletePassword(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 border-2 border-gray-400 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                    />
+                  </div>
+
+                  {/* Buttons */}
+                  <div className="flex justify-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("info")}
+                      className="px-12 py-3 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold text-lg rounded-full hover:bg-toni-green-dark-2 hover:text-white transition"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-12 py-3 bg-red-600 text-white font-bold text-lg rounded-full hover:bg-red-700 transition"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                </form>
               </div>
             )}
           </div>
