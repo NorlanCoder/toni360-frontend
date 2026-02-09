@@ -109,7 +109,7 @@ export default function ProfilPage() {
         <main className="flex-1 p-8">
           <div className="max-w-4xl">
             {/* Tabs */}
-            <div className="flex gap-8 border-b border-gray-300 mb-8">
+            <div className="flex gap-20 border-b border-gray-300 mb-8">
               <button
                 onClick={() => setActiveTab("info")}
                 className={`pb-4 font-semibold text-lg transition ${
