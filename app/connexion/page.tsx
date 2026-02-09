@@ -27,7 +27,7 @@ export default function ConnexionPage() {
       <div className="hidden lg:block lg:w-3/5 relative">
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/images/ph 4.png')" }}
+          style={{ backgroundImage: "url('/images/ph6.png')" }}
         />
       </div>
 
@@ -36,7 +36,7 @@ export default function ConnexionPage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold text-toni-green-dark-2">Toni360</h1>
+            <img src="/images/logo.png" alt="Toni360" className="h-28 mx-auto" />
           </div>
 
           {/* Titre */}
