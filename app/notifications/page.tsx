@@ -1,6 +1,7 @@
 "use client";
 
-import { Bell, ShoppingCart } from "lucide-react";
+import { Home, User, Package, Bell, ShoppingCart, HelpCircle, LogOut } from "lucide-react";
+import Link from "next/link";
 
 export default function NotificationsPage() {
   return (
