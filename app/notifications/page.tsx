@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, User, Package, Bell, ShoppingCart, HelpCircle, LogOut } from "lucide-react";
+import { Home, User, Package, Bell, ShoppingCart, HelpCircle, LogOut, BellOff } from "lucide-react";
 import Link from "next/link";
 
 export default function NotificationsPage() {
@@ -34,6 +34,15 @@ export default function NotificationsPage() {
           Contactez-nous
         </Link>
       </div>
+      {/* Main Content */}
+      <main className="flex-1 flex items-center justify-center">
+        <div className="flex flex-col items-center justify-center">
+          <BellOff size={120} className="text-gray-400 mb-8" />
+          <div className="text-2xl text-gray-500 text-center">
+            Vous n'avez aucune notification
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
