@@ -31,12 +31,12 @@ function TabNavigation() {
   ];
 
   return (
-    <nav className="flex items-center gap-8 border-b border-gray-200">
+    <nav className="flex items-center gap-8 border-b border-gray-200 w-full justify-between mx-2 md:mx-6">
       {tabs.map((tab) => (
         <button
           key={tab}
           onClick={() => setActiveTab(tab)}
-          className={`pb-4 text-sm relative transition-colors whitespace-nowrap ${
+          className={`pb-4 text-lg md:text-xl relative transition-colors whitespace-nowrap ${
             activeTab === tab
               ? "text-black font-semibold"
               : "text-gray-500 hover:text-black"
