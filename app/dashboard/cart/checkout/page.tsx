@@ -53,20 +53,16 @@ export default function CartPage() {
       <aside className="w-[220px] min-h-screen border-r border-gray-100 flex flex-col py-6 px-4 fixed left-0 top-0 bottom-0 bg-white z-20">
         {/* Logo */}
         <div className="flex items-center gap-2 mb-10 px-2">
-          <Image src="/images/logo.png" alt="Toni360" width={140} height={48} />
+          <Image src="/images/logo.png" alt="Toni360" width={150} height={50} />
         </div>
 
         {/* Nav links */}
-        <nav className="flex flex-col gap-1 flex-1">
+        <nav className="flex flex-col gap-3 flex-1">
           {sidebarLinks.map((link) => (
             <Link
               key={link.label}
               href={link.href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-lg font-medium transition-colors ${
-                link.label === "Mes commandes"
-                  ? "py-2"
-                  : "py-3"
-              } ${
                 link.href === "/dashboard/cart"
                   ? "text-[#0fa37f] bg-green-50"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
@@ -95,17 +91,17 @@ export default function CartPage() {
       {/* Main content */}
       <main className="flex-1 ml-[220px] flex flex-col">
         {/* Header */}
-        <header className="flex items-center justify-end gap-4 px-8 py-4">
+        <header className="flex items-center justify-end gap-4 px-8 py-4 text-lg">
           <Link
             href="/notifications"
-            className="flex items-center gap-2 px-5 py-2.5 border-2 border-[#0fa37f] text-[#0fa37f] rounded-full text-lg font-semibold hover:bg-green-50 transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 border-2 border-[#0fa37f] text-[#0fa37f] rounded-full font-semibold hover:bg-green-50 transition-colors"
           >
             <BellHeaderIcon />
             Notifications
           </Link>
           <Link
             href="/dashboard/cart"
-            className="flex items-center gap-2 px-5 py-2.5 border-2 border-[#0fa37f] text-[#0fa37f] rounded-full text-lg font-semibold hover:bg-green-50 transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 border-2 border-[#0fa37f] text-[#0fa37f] rounded-full font-semibold hover:bg-green-50 transition-colors"
           >
             <CartHeaderIcon />
             Mon Panier
@@ -120,23 +116,22 @@ export default function CartPage() {
               background: "linear-gradient(135deg, #137551 0%, #0fa37f 50%, #11ca8c 100%)",
             }}
           >
-            <div className="flex items-center justify-between px-8 py-6 gap-8">
-              {/* Bloc infos pharmacie */}
-              <div className="text-white flex-1 min-w-[200px]">
+            <div className="flex items-center justify-between px-8 py-6">
+              <div className="text-white">
                 <h2 className="text-3xl font-bold mb-1">Pharmacie</h2>
                 <h2 className="text-3xl font-bold mb-2">Hubert Maga</h2>
-                <p className="text-sm text-white/80 max-w-[280px] leading-relaxed">
+                <p className="text-base text-white/80 max-w-[280px] leading-relaxed">
                   Sittué à 200m da la von du quartier de la zone résidentielle du pays
                 </p>
               </div>
-              {/* Email & téléphone au centre */}
-              <div className="flex flex-col items-center flex-1 min-w-[180px]">
-                <p className="text-white text-xl font-semibold">Hubertmaga@gmail.com</p>
-                <p className="text-white text-xl font-semibold mt-1">+229 65 65 65 65</p>
+              <div className="flex flex-col items-center gap-2">
+                <div className="text-white text-lg text-center">
+                  <p className="text-lg">Hubertmaga@gmail.com</p>
+                  <p className="mt-2 text-lg">+229 65 65 65 65</p>
+                </div>
               </div>
-              {/* Bouton itinéraire */}
-              <div className="flex flex-col items-end flex-1 min-w-[180px]">
-                <button className="flex items-center gap-2 bg-white text-gray-800 px-6 py-3 rounded-full text-xl font-bold hover:shadow-md transition-shadow">
+              <div className="flex flex-col items-end gap-2">
+                <button className="flex items-center gap-2 bg-white text-gray-800 px-5 py-2 rounded-full text-base font-semibold mt-2 hover:shadow-md transition-shadow">
                   <LocationIcon />
                   Itinéraire
                 </button>
@@ -147,7 +142,7 @@ export default function CartPage() {
           {/* Products Table */}
           <div className="w-full">
             {/* Table Header */}
-            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-center px-4 py-3 text-lg text-gray-400 border-b border-gray-100 font-semibold">
+            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-center px-4 py-3 text-base text-gray-400 border-b border-gray-100 font-medium">
               <span>Nom du produit</span>
               <span className="text-center">Qte</span>
               <span className="text-center">Prix</span>
@@ -163,8 +158,8 @@ export default function CartPage() {
               >
                 {/* Product Name */}
                 <div>
-                  <p className="font-semibold text-gray-800">{item.name}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{item.type}</p>
+                  <p className="text-lg font-semibold text-gray-800">{item.name}</p>
+                  <p className="text-base text-gray-400 mt-0.5">{item.type}</p>
                 </div>
 
                 {/* Quantity */}
@@ -172,16 +167,16 @@ export default function CartPage() {
                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
                     <button
                       onClick={() => updateQty(item.id, -1)}
-                      className="px-3 py-1.5 text-gray-500 hover:bg-gray-50 text-lg font-medium transition-colors"
+                      className="px-3 py-2 text-gray-500 hover:bg-gray-50 text-lg font-medium transition-colors"
                     >
                       −
                     </button>
-                    <span className="px-3 py-1.5 font-semibold text-gray-800 min-w-[28px] text-center bg-gray-50">
+                    <span className="px-3 py-2 text-lg font-semibold text-gray-800 min-w-[32px] text-center bg-gray-50">
                       {item.qty}
                     </span>
                     <button
                       onClick={() => updateQty(item.id, 1)}
-                      className="px-3 py-1.5 text-[#0fa37f] hover:bg-green-50 text-lg font-medium transition-colors"
+                      className="px-3 py-2 text-[#0fa37f] hover:bg-green-50 text-lg font-medium transition-colors"
                     >
                       +
                     </button>
@@ -189,12 +184,12 @@ export default function CartPage() {
                 </div>
 
                 {/* Price */}
-                <p className="text-gray-600 text-center">
+                <p className="text-lg text-gray-600 text-center">
                   {formatPrice(item.price)} XOF CFA
                 </p>
 
                 {/* Total */}
-                <p className="font-semibold text-gray-800 text-center">
+                <p className="text-lg font-semibold text-gray-800 text-center">
                   {formatPrice(item.qty * item.price)} XOF CFA
                 </p>
 
@@ -218,24 +213,24 @@ export default function CartPage() {
           </div>
 
           {/* Add Prescription */}
-          <div className="flex items-center gap-3 mt-6 px-4">
-            <button className="flex items-center gap-3 text-lg text-gray-700 font-medium hover:text-[#0fa37f] transition-colors">
-              <span className="w-11 h-11 flex items-center justify-center rounded-lg bg-[#e8faf3] text-[#0fa37f]">
-                <Image src="/fluent.svg" alt="Plus" width={28} height={28} />
+          <div className="flex items-center gap-4 mt-6 px-4">
+            <button className="flex items-center gap-4 text-lg text-gray-700 font-semibold hover:text-[#0fa37f] transition-colors">
+              <span className="w-12 h-12 flex items-center justify-center rounded-lg bg-[#e8faf3]">
+                <Image src="/fluent.svg" alt="Add" width={24} height={24} />
               </span>
               Ajouter une ordonnance
             </button>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-between gap-6 mt-10 w-full">
-            <button className="flex-1 mx-2 px-10 py-4 border-2 border-[#0fa37f] text-[#0fa37f] rounded-full text-xl font-semibold hover:bg-green-50 transition-colors">
+          <div className="flex items-center justify-between gap-6 mt-10 w-full px-4">
+            <button className="px-10 py-3 border-2 border-[#0fa37f] text-[#0fa37f] rounded-full text-lg font-semibold hover:bg-green-50 transition-colors min-w-[180px]">
               Terminer
             </button>
-            <button className="flex-1 mx-2 px-10 py-4 bg-gray-200 text-gray-600 rounded-full text-xl font-semibold hover:bg-gray-300 transition-colors">
+            <button className="px-10 py-3 bg-gray-200 text-gray-600 rounded-full text-lg font-semibold hover:bg-gray-300 transition-colors min-w-[180px]">
               Mettre en attente
             </button>
-            <button className="flex-1 mx-2 px-10 py-4 bg-[#0fa37f] text-white rounded-full text-xl font-semibold hover:bg-[#0e9272] transition-colors">
+            <button className="px-10 py-3 bg-[#0fa37f] text-white rounded-full text-lg font-semibold hover:bg-[#0e9272] transition-colors min-w-[200px]">
               Valider la commande
             </button>
           </div>
@@ -359,3 +354,4 @@ function TrashIcon() {
     </svg>
   );
 }
+
