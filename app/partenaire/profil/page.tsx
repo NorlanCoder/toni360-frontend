@@ -30,10 +30,10 @@ export default function PartenaireProfil() {
   return (
     <div className="flex h-screen overflow-hidden bg-white" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Sidebar */}
-      <aside className="w-[248px] min-w-[248px] bg-[#f7f8fa] flex flex-col">
+      <aside className="hidden lg:flex w-[248px] min-w-[248px] bg-[#f7f8fa] flex-col">
         {/* Logo */}
         <div className="flex items-center gap-2 px-6 pt-5 pb-4">
-          <Image src="/images/logo.png" alt="Toni360" width={120} height={40} className="h-[36px] w-auto" />
+          <Image src="/images/logo.png" alt="Toni360" width={160} height={53} className="h-[48px] w-auto" />
         </div>
 
         {/* Link icon */}
@@ -48,14 +48,14 @@ export default function PartenaireProfil() {
             return (
               <button
                 key={idx}
-                className={`flex items-center gap-3 w-full px-4 py-[11px] rounded-xl text-[13.5px] font-medium text-left transition-colors ${
+                className={`flex items-center gap-3 w-full px-4 py-[13px] rounded-xl text-[15px] font-medium text-left transition-colors ${
                   item.active
                     ? "bg-[#e0f8ef] text-[#10b981]"
                     : "text-[#4b5563] hover:bg-gray-100"
                 }`}
               >
                 <Icon
-                  className={`w-[18px] h-[18px] flex-shrink-0 ${
+                  className={`w-[20px] h-[20px] flex-shrink-0 ${
                     item.active ? "text-[#10b981]" : "text-[#6b7280]"
                   }`}
                   strokeWidth={1.8}
@@ -70,9 +70,9 @@ export default function PartenaireProfil() {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-auto bg-white">
         {/* Header */}
-        <header className="flex items-center px-6 pt-4 pb-3">
+        <header className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-0 px-4 md:px-6 pt-4 pb-3">
           {/* Search bar */}
-          <div className="flex-1 max-w-[520px]">
+          <div className="flex-1 md:mr-4">
             <input
               type="text"
               placeholder="Rechercher un médicament"
@@ -81,18 +81,18 @@ export default function PartenaireProfil() {
           </div>
 
           {/* Right actions */}
-          <div className="flex items-center gap-3 ml-auto">
+          <div className="flex items-center gap-2 md:gap-3">
             {/* Notifications */}
-            <button className="flex items-center gap-2 pl-5 pr-2 py-[6px] rounded-full border-[1.5px] border-[#10b981] text-[#10b981] hover:bg-[#ecf9f4] transition-colors">
-              <span className="text-[13px] font-semibold">Notifications</span>
+            <button className="flex items-center gap-2 pl-3 md:pl-5 pr-2 py-[6px] rounded-full border-[1.5px] border-[#10b981] text-[#10b981] hover:bg-[#ecf9f4] transition-colors">
+              <span className="text-[11px] md:text-[13px] font-semibold">Notifications</span>
               <span className="flex items-center justify-center w-[34px] h-[34px] rounded-full bg-[#10b981]">
                 <Bell className="w-[16px] h-[16px] text-white" fill="white" strokeWidth={0} />
               </span>
             </button>
 
             {/* Mon Compte */}
-            <button className="flex items-center gap-2 pl-5 pr-2 py-[6px] rounded-full border-[1.5px] border-[#10b981] text-[#10b981] hover:bg-[#ecf9f4] transition-colors">
-              <span className="text-[13px] font-semibold">Mon Compte</span>
+            <button className="flex items-center gap-2 pl-3 md:pl-5 pr-2 py-[6px] rounded-full border-[1.5px] border-[#10b981] text-[#10b981] hover:bg-[#ecf9f4] transition-colors">
+              <span className="text-[11px] md:text-[13px] font-semibold">Mon Compte</span>
               <span className="flex items-center justify-center w-[34px] h-[34px] rounded-full bg-[#10b981]">
                 <User className="w-[16px] h-[16px] text-white" fill="white" strokeWidth={1.5} />
               </span>
@@ -101,12 +101,12 @@ export default function PartenaireProfil() {
         </header>
 
         {/* Content area */}
-        <main className="flex-1 px-14 pt-6 pb-10">
+        <main className="flex-1 flex flex-col items-center px-4 md:px-8 pt-6 md:pt-10 pb-10">
           {/* Tabs */}
-          <div className="flex gap-14 mb-10">
+          <div className="flex justify-between items-center mb-8 md:mb-10 w-full max-w-[1000px] mx-auto">
             <button
               onClick={() => setActiveTab("info")}
-              className={`relative pb-3 text-[15.5px] font-semibold transition-colors ${
+              className={`relative pb-3 text-[13px] md:text-[15.5px] font-semibold transition-colors ${
                 activeTab === "info" ? "text-[#1f2937]" : "text-[#9ca3af]"
               }`}
             >
@@ -117,7 +117,7 @@ export default function PartenaireProfil() {
             </button>
             <button
               onClick={() => setActiveTab("delete")}
-              className={`relative pb-3 text-[15.5px] font-semibold transition-colors ${
+              className={`relative pb-3 text-[13px] md:text-[15.5px] font-semibold transition-colors ${
                 activeTab === "delete" ? "text-[#1f2937]" : "text-[#9ca3af]"
               }`}
             >
@@ -130,8 +130,8 @@ export default function PartenaireProfil() {
 
           {/* Form */}
           {activeTab === "info" && (
-            <div>
-              <div className="grid grid-cols-2 gap-x-12 gap-y-7 max-w-[680px]">
+            <div className="w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 md:gap-x-12 gap-y-5 md:gap-y-7 max-w-[1000px] mx-auto">
                 {/* Nom de la pharmacie */}
                 <div>
                   <label className="block text-[12.5px] text-[#9ca3af] mb-[6px]">
@@ -224,8 +224,8 @@ export default function PartenaireProfil() {
               </div>
 
               {/* Submit button */}
-              <div className="mt-12 max-w-[680px]">
-                <button className="w-full py-[14px] bg-[#10b981] hover:bg-[#0ea572] text-white font-semibold text-[14.5px] rounded-full transition-colors cursor-pointer">
+              <div className="mt-8 md:mt-12 max-w-[1000px] w-full mx-auto">
+                <button className="w-full py-[12px] md:py-[14px] bg-[#10b981] hover:bg-[#0ea572] text-white font-semibold text-[13px] md:text-[14.5px] rounded-full transition-colors cursor-pointer">
                   Enrégistrer les modifications
                 </button>
               </div>
