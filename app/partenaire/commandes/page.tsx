@@ -17,6 +17,7 @@ import {
   Clock,
   CheckCircle,
   ChevronDown,
+  Menu,
 } from "lucide-react";
 
 /* ──────────────────────────── Types ──────────────────────────── */
@@ -107,6 +108,7 @@ function DateSelect({ label, className = "" }: { label: string; className?: stri
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireDashboardPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("a-preparer");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
     { key: "a-preparer", label: "A préparer", icon: Package },
@@ -115,9 +117,21 @@ export default function PartenaireDashboardPage() {
   ];
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-white overflow-hidden">
+      {/* ───────────── MOBILE OVERLAY ───────────── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ───────────── SIDEBAR ───────────── */}
-      <aside className="flex w-[260px] flex-col border-r border-gray-200 bg-white">
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 lg:relative lg:z-auto lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
         {/* Logo */}
         <div className="flex h-20 items-center px-5">
           <Link href="/partenaire/dashboard" className="flex items-center gap-2">
@@ -168,7 +182,17 @@ export default function PartenaireDashboardPage() {
       {/* ───────────── MAIN AREA ──────────── */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* ─── HEADER ─── */}
-        <header className="flex h-20 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-8">
+        <header className="flex h-16 lg:h-20 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
+          {/* Hamburger (mobile) */}
+          <button
+            type="button"
+            aria-label="Ouvrir le menu"
+            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+
           {/* Search */}
           <div className="relative w-full max-w-lg">
             <Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
@@ -184,32 +208,28 @@ export default function PartenaireDashboardPage() {
             <button
               type="button"
               aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-6 py-3 text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
-              Notifications
+              <span className="hidden sm:inline">Notifications</span>
               <Bell className="h-5 w-5" />
             </button>
             <button
               type="button"
               aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-6 py-3 text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
-              Mon Compte
+              <span className="hidden sm:inline">Mon Compte</span>
               <User className="h-5 w-5" />
             </button>
           </div>
         </header>
 
         {/* ─── CONTENT ─── */}
-        <main className="flex-1 overflow-y-auto px-20 py-10">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
           {/* Date filters */}
-          <div className="mb-6 flex flex-wrap items-center">
-            <div className="flex items-center gap-2 pr-[32rem]">
-              <DateSelect label="Du" />
-            </div>
-            <div className="flex items-center gap-2 pl-[32rem]">
-              <DateSelect label="Au" />
-            </div>
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <DateSelect label="Du" />
+            <DateSelect label="Au" />
           </div>
 
           {/* Tabs */}
@@ -222,7 +242,7 @@ export default function PartenaireDashboardPage() {
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-3 pb-5 px-44 text-lg font-semibold transition-colors ${
+                  className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap pb-4 px-2 text-sm sm:text-base lg:text-lg font-semibold transition-colors ${
                     isActive
                       ? "border-b-4 border-emerald-600 text-emerald-700"
                       : "text-gray-500 hover:text-gray-700"
@@ -236,8 +256,8 @@ export default function PartenaireDashboardPage() {
           </div>
 
           {/* Table */}
-          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-            <table className="w-full table-auto text-base">
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            <table className="min-w-[520px] w-full table-auto text-sm lg:text-base">
               <thead>
                 <tr className="bg-gray-50">
                   <th className="px-8 py-5 text-left text-sm font-bold uppercase tracking-wider text-gray-600">
