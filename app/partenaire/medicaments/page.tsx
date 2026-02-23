@@ -13,7 +13,6 @@ import {
   Bell,
   User,
   Search,
-  FileText,
   Upload,
   Menu,
 } from "lucide-react";
@@ -211,7 +210,7 @@ export default function PartenaireMedicamentsPage() {
               aria-label="Importer"
               className="flex items-center justify-center rounded-lg border border-gray-300 p-2 sm:p-3 text-emerald-700 transition-colors hover:bg-gray-50"
             >
-              <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
+              <Image src="/images/dossier.svg" alt="Importer" width={24} height={24} />
             </button>
             <button
               type="button"
