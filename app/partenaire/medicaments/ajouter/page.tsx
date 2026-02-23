@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   LayoutDashboard,
   Users,
@@ -288,23 +289,12 @@ export default function PartenaireAjouterMedicamentPage() {
       </div>
 
       {/* ───────────── CONFIRMATION MODAL ───────────── */}
-      {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
-          <div className="mx-4 w-full max-w-sm rounded-2xl bg-white px-8 py-10 text-center shadow-xl">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center">
-              <Image
-                src="/images/checkmark.svg"
-                alt="Succès"
-                width={64}
-                height={64}
-              />
-            </div>
-            <p className="text-base text-gray-700">
-              Le médicament {nom} a été ajouté au stock avec succès.
-            </p>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        show={showModal}
+        message={`Le médicament ${nom} a été ajouté au stock avec succès.`}
+        iconPath="/images/checkmark.svg"
+        onClose={() => setShowModal(false)}
+      />
     </div>
   );
 }
