@@ -66,7 +66,7 @@ const mockOrderDetail: OrderDetail = {
 
 /* ──────────────────── Sidebar nav items ─────────────────────── */
 const navItems = [
-  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/dashboard", active: true },
+  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/commandes", active: true },
   { label: "Gestion des employés", icon: Users, href: "/partenaire/employes" },
   { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
   { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
@@ -214,6 +214,9 @@ export default function CommandeDetailPage() {
             </h1>
           </div>
 
+          {/* ────── WRAPPER largeur commune ────── */}
+          <div className="max-w-4xl">
+
           {/* ── Info card ── */}
           <div className="mb-4 rounded-xl border border-gray-200 bg-white px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* Patient info */}
@@ -298,39 +301,37 @@ export default function CommandeDetailPage() {
             <span className="text-2xl font-extrabold text-gray-900">{formatTotal(order.montantTotal)}</span>
           </div>
 
+          </div>{/* fin wrapper max-w-4xl */}
+
           {/* ── Boutons d'action ── */}
           <div className="flex flex-wrap items-center gap-4">
-            <button
-              type="button"
-              disabled
-              className="rounded-full bg-gray-200 px-6 py-3 text-base font-semibold text-gray-500 cursor-not-allowed"
-            >
-              Demander ordonnance
-            </button>
+            {statut === "prete" ? (
+              <button
+                type="button"
+                disabled
+                className="rounded-full bg-emerald-100 border-2 border-emerald-400 px-12 py-3 text-base font-semibold text-emerald-700 cursor-default"
+              >
+                En attente d&apos;être récupérée
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled
+                  className="rounded-full bg-gray-200 px-10 py-3 text-base font-semibold text-gray-500 cursor-not-allowed"
+                >
+                  Demander ordonnance
+                </button>
 
-            <button
-              type="button"
-              onClick={() => setStatut("prete")}
-              className={`rounded-full border-2 px-8 py-3 text-base font-semibold transition-colors ${
-                statut === "prete"
-                  ? "border-emerald-600 bg-emerald-600 text-white"
-                  : "border-emerald-600 bg-white text-emerald-700 hover:bg-emerald-50"
-              }`}
-            >
-              Prête
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setStatut("recuperee")}
-              className={`rounded-full px-8 py-3 text-base font-semibold transition-colors ${
-                statut === "recuperee"
-                  ? "bg-emerald-800 text-white"
-                  : "bg-emerald-700 text-white hover:bg-emerald-800"
-              }`}
-            >
-              Récupérée
-            </button>
+                <button
+                  type="button"
+                  onClick={() => setStatut("prete")}
+                  className="rounded-full border-2 border-emerald-600 bg-white px-12 py-3 text-base font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
+                >
+                  Prête
+                </button>
+              </>
+            )}
           </div>
         </main>
       </div>

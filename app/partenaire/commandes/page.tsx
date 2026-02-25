@@ -40,7 +40,7 @@ const mockOrders: Order[] = Array.from({ length: 7 }, () => ({
 
 /* ──────────────────── Sidebar nav items ─────────────────────── */
 const navItems = [
-  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/dashboard", active: true },
+  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/commandes", active: true },
   { label: "Gestion des employés", icon: Users, href: "/partenaire/employes" },
   { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
   { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
