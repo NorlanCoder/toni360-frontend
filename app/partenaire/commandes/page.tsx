@@ -40,7 +40,7 @@ const mockOrders: Order[] = Array.from({ length: 7 }, () => ({
 
 /* ──────────────────── Sidebar nav items ─────────────────────── */
 const navItems = [
-  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/dashboard", active: true },
+  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/commandes", active: true },
   { label: "Gestion des employés", icon: Users, href: "/partenaire/employes" },
   { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
   { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
@@ -278,7 +278,8 @@ export default function PartenaireDashboardPage() {
                 {mockOrders.map((order, idx) => (
                   <tr
                     key={idx}
-                    className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50/40 transition-colors"
+                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/40 transition-colors cursor-pointer"
+                    onClick={() => window.location.href = `/partenaire/commandes/${order.id}`}
                   >
                     <td className="px-8 py-6 text-base font-mono text-gray-700">
                       {order.id}
