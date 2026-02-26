@@ -319,6 +319,7 @@ export default function CommandeDetailPage() {
               <>
                 <button
                   type="button"
+                  onClick={() => router.push(`/partenaire/commandes/${order.id}/ordonnance`)}
                   className="rounded-full bg-gray-200 px-10 py-3 text-base font-semibold text-gray-600 hover:bg-gray-300 transition-colors cursor-pointer"
                 >
                   Demander ordonnance
