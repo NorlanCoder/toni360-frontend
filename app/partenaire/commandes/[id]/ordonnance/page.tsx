@@ -1,31 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
-import {
-  LayoutDashboard,
-  Users,
-  Pill,
-  History,
-  HelpCircle,
-  LogOut,
-  Bell,
-  User,
-  Search,
-  Menu,
-  ArrowLeft,
-} from "lucide-react";
-
-/* ──────────────────── Sidebar nav items ─────────────────────── */
-const navItems = [
-  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/commandes", active: true },
-  { label: "Gestion des employés", icon: Users, href: "/partenaire/employes" },
-  { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
-  { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
-  { label: "Assistance et support", icon: HelpCircle, href: "#" },
-];
+import { useEffect, useState } from "react";
+import { Bell, User, Search, Menu, ArrowLeft } from "lucide-react";
+import PartenaireSidebar from "@/components/partenaire/Sidebar";
 
 /* ════════════════════════════ PAGE ════════════════════════════ */
 export default function OrdonnancePage() {
@@ -34,6 +13,17 @@ export default function OrdonnancePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notification, setNotification] = useState("");
   const [decision, setDecision] = useState<"valide" | "refuse" | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  /* Auto-close success modal after 2.5 s then go back */
+  useEffect(() => {
+    if (!showSuccess) return;
+    const timer = setTimeout(() => {
+      setShowSuccess(false);
+      router.push(`/partenaire/commandes/${id}`);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [showSuccess, router, id]);
 
   function handleValider() {
     setDecision("valide");
@@ -48,71 +38,14 @@ export default function OrdonnancePage() {
   function handleEnvoyer() {
     if (!notification.trim()) return;
     // TODO: appel API – envoyer la notification au patient
-    alert("Notification envoyée au patient.");
+    setShowSuccess(true);
     setNotification("");
     setDecision(null);
   }
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
-      {/* ───────────── MOBILE OVERLAY ───────────── */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ───────────── SIDEBAR ───────────── */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 lg:relative lg:z-auto lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
-      >
-        {/* Logo */}
-        <div className="flex h-20 items-center px-5">
-          <Link href="/partenaire/dashboard" className="flex items-center gap-2">
-            <Image
-              src="/images/logo.png"
-              alt="Toni 360°"
-              width={180}
-              height={56}
-              priority
-            />
-          </Link>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex flex-1 flex-col gap-1 px-3 pt-4" aria-label="Navigation partenaire">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-4 py-4 text-base font-medium transition-colors ${
-                  item.active
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <Icon className="h-6 w-6 shrink-0" />
-                {item.label}
-              </Link>
-            );
-          })}
-
-          <div className="flex-1" />
-
-          <Link
-            href="#"
-            className="mb-6 flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
-          >
-            <LogOut className="h-5 w-5 shrink-0" />
-            Déconnexion
-          </Link>
-        </nav>
-      </aside>
+      <PartenaireSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* ───────────── MAIN AREA ──────────── */}
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -339,6 +272,35 @@ export default function OrdonnancePage() {
           </div>
         </main>
       </div>
+      {/* ─── Success Modal ─── */}
+      {showSuccess && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
+          onClick={() => setShowSuccess(false)}
+        >
+          <div
+            className="mx-4 w-full max-w-xs rounded-2xl bg-white px-8 py-12 text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full border-[6px] border-emerald-500">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-12 w-12 text-emerald-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p className="text-base leading-relaxed text-gray-600">
+              L&apos;ordonnance a été<br />demandée au patient.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
