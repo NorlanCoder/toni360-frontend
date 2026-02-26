@@ -241,12 +241,14 @@ export default function CommandeDetailPage() {
             <div className="flex flex-col items-end gap-1">
               <p className="text-xs text-gray-400 uppercase tracking-wide">Méthode de paiement</p>
               {order.paiement === "momo" && (
-                <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-400">
-                    <span className="text-xs font-black text-white">M</span>
-                  </div>
-                  <span className="font-bold text-yellow-500 text-base">MoMo</span>
-                  <span className="text-xs text-gray-400">from MTN</span>
+                <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 bg-white">
+                  <Image
+                    src="/images/momo.jpg"
+                    alt="MoMo from MTN"
+                    width={120}
+                    height={72}
+                    className="object-contain h-20 w-28 rounded"
+                  />
                 </div>
               )}
             </div>
