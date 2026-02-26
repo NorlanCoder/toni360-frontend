@@ -41,7 +41,7 @@ export default function ConfirmationModal({
             height={64}
           />
         </div>
-        <p className="text-base text-gray-700">{message}</p>
+        <p className="whitespace-pre-line text-base font-bold text-gray-700">{message}</p>
       </div>
     </div>
   );
