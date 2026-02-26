@@ -196,7 +196,7 @@ export default function CommandeDetailPage() {
         </header>
 
         {/* ─── CONTENT ─── */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10 bg-emerald-50">
 
           {/* Back + Title */}
           <div className="mb-6 flex items-center gap-4">
@@ -296,7 +296,7 @@ export default function CommandeDetailPage() {
           </div>
 
           {/* ── Montant total ── */}
-          <div className="flex items-center justify-between rounded-b-lg border border-t-0 border-gray-200 bg-emerald-100 px-6 py-5 mb-8">
+          <div className="flex items-center justify-between rounded-b-lg border border-t-0 border-gray-200 bg-emerald-200 px-6 py-5 mb-8">
             <span className="text-lg font-bold text-gray-800">Montant total</span>
             <span className="text-2xl font-extrabold text-gray-900">{formatTotal(order.montantTotal)}</span>
           </div>
@@ -304,12 +304,12 @@ export default function CommandeDetailPage() {
           </div>{/* fin wrapper max-w-4xl */}
 
           {/* ── Boutons d'action ── */}
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4 ml-8">
             {statut === "prete" ? (
               <button
                 type="button"
                 disabled
-                className="rounded-full bg-emerald-100 border-2 border-emerald-400 px-12 py-3 text-base font-semibold text-emerald-700 cursor-default"
+                className="rounded-full bg-emerald-50 border-2 border-emerald-400 px-12 py-3 text-base font-semibold text-emerald-700 cursor-default"
               >
                 En attente d&apos;être récupérée
               </button>
@@ -317,8 +317,7 @@ export default function CommandeDetailPage() {
               <>
                 <button
                   type="button"
-                  disabled
-                  className="rounded-full bg-gray-200 px-10 py-3 text-base font-semibold text-gray-500 cursor-not-allowed"
+                  className="rounded-full bg-gray-200 px-10 py-3 text-base font-semibold text-gray-600 hover:bg-gray-300 transition-colors cursor-pointer"
                 >
                   Demander ordonnance
                 </button>
@@ -326,7 +325,7 @@ export default function CommandeDetailPage() {
                 <button
                   type="button"
                   onClick={() => setStatut("prete")}
-                  className="rounded-full border-2 border-emerald-600 bg-white px-12 py-3 text-base font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
+                  className="rounded-full border-2 border-emerald-600 bg-emerald-600 px-12 py-3 text-base font-semibold text-white hover:bg-emerald-700 hover:border-emerald-700 transition-colors"
                 >
                   Prête
                 </button>
