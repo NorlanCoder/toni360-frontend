@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
+  UserRound,
   Pill,
   History,
   HelpCircle,
@@ -15,6 +16,7 @@ import {
 /* ──────────────────── Nav items ─────────────────────── */
 const navItems = [
   { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/commandes" },
+  { label: "Clients", icon: UserRound, href: "http://localhost:3000/" },
   { label: "Gestion des employés", icon: Users, href: "/partenaire/employes" },
   { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
   { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
