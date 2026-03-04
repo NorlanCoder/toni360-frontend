@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Bell, User, Search, Menu, ArrowLeft, Download } from "lucide-react";
 import PartenaireSidebar from "@/components/partenaire/Sidebar";
@@ -65,11 +65,14 @@ function formatTotal(n: number) {
 export default function CommandeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // In real app: fetch order by id. For now use mock.
   const order: OrderDetail = { ...mockOrderDetail, id: id ?? mockOrderDetail.id };
-  const [statut, setStatut] = useState<OrderStatus>(order.statut);
+  const fromSection = searchParams.get("from");
+  const initialStatut: OrderStatus = fromSection === "recuperees" ? "recuperee" : order.statut;
+  const [statut, setStatut] = useState<OrderStatus>(initialStatut);
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
@@ -78,7 +81,7 @@ export default function CommandeDetailPage() {
       {/* ───────────── MAIN AREA ──────────── */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* ─── HEADER ─── */}
-        <header className="flex h-16 lg:h-20 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
+        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
           <button
             type="button"
             aria-label="Ouvrir le menu"
@@ -229,7 +232,15 @@ export default function CommandeDetailPage() {
 
           {/* ── Boutons d'action ── */}
           <div className="flex flex-wrap items-center gap-4 ml-8">
-            {statut === "prete" ? (
+            {statut === "recuperee" ? (
+              <button
+                type="button"
+                disabled
+                className="rounded-full bg-emerald-600 px-12 py-3 text-base font-semibold text-white cursor-default opacity-80"
+              >
+                Commande récupérée
+              </button>
+            ) : statut === "prete" ? (
               <button
                 type="button"
                 disabled

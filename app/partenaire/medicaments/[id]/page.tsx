@@ -106,7 +106,7 @@ export default function PartenaireMedicamentDetailPage() {
       {/* ───────────── MAIN AREA ──────────── */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* ─── HEADER ─── */}
-        <header className="flex h-16 lg:h-20 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
+        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
           {/* Hamburger (mobile) */}
           <button
             type="button"
