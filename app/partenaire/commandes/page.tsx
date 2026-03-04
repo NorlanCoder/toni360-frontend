@@ -88,10 +88,10 @@ export default function PartenaireDashboardPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("a-preparer");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
-    { key: "a-preparer", label: "A préparer", icon: Package },
-    { key: "en-attente", label: "En attente", icon: Clock },
-    { key: "recuperees", label: "Récupérées", icon: CheckCircle },
+  const tabs: { key: TabKey; label: string; icon: React.ElementType; href: string }[] = [
+    { key: "a-preparer", label: "A préparer", icon: Package, href: "/partenaire/commandes" },
+    { key: "en-attente", label: "En attente", icon: Clock, href: "/partenaire/commandes/en-attente" },
+    { key: "recuperees", label: "Récupérées", icon: CheckCircle, href: "/partenaire/commandes/recuperees" },
   ];
 
   return (
@@ -157,10 +157,13 @@ export default function PartenaireDashboardPage() {
               const Icon = tab.icon;
               const isActive = activeTab === tab.key;
               return (
-                <button
+                <Link
                   key={tab.key}
-                  type="button"
-                  onClick={() => setActiveTab(tab.key)}
+                  href={tab.href}
+                  onClick={(e) => {
+                    if (tab.key === "a-preparer") e.preventDefault();
+                    setActiveTab(tab.key);
+                  }}
                   className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap pb-4 px-2 text-sm sm:text-base lg:text-lg font-semibold transition-colors ${
                     isActive
                       ? "border-b-4 border-emerald-600 text-emerald-700"
@@ -169,7 +172,7 @@ export default function PartenaireDashboardPage() {
                 >
                   <Icon className="h-7 w-7" />
                   {tab.label}
-                </button>
+                </Link>
               );
             })}
           </div>

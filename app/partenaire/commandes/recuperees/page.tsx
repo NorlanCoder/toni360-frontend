@@ -130,7 +130,7 @@ export default function PartenaireRecupereesPage() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-24 py-6 lg:py-10">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <DateSelect label="Du" />
             <DateSelect label="Au" />

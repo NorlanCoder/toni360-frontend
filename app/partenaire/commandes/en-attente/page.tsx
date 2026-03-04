@@ -144,7 +144,7 @@ export default function PartenaireEnAttentePage() {
         </header>
 
         {/* ─── CONTENT ─── */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-24 py-6 lg:py-10">
           {/* Date filters */}
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <DateSelect label="Du" />
@@ -212,7 +212,7 @@ export default function PartenaireEnAttentePage() {
                       {order.montant}
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <span className="inline-block rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">
+                      <span className="inline-block rounded-full bg-orange-100 px-3 py-1 text-sm font-semibold text-orange-600">
                         {order.statut}
                       </span>
                     </td>
