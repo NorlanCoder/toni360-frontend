@@ -183,7 +183,7 @@ export default function PartenaireRecupereesPage() {
                 {mockOrders.map((order, idx) => (
                   <tr
                     key={idx}
-                    className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50/40 transition-colors"
+                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60 hover:border-l-4 hover:border-l-emerald-500 transition-all"
                   >
                     <td className="px-8 py-6 text-base font-mono text-gray-700">
                       {order.id}

@@ -144,7 +144,7 @@ export default function PartenaireDashboardPage() {
         </header>
 
         {/* ─── CONTENT ─── */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-24 py-6 lg:py-10">
           {/* Date filters */}
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <DateSelect label="Du" />
@@ -200,7 +200,7 @@ export default function PartenaireDashboardPage() {
                 {mockOrders.map((order, idx) => (
                   <tr
                     key={idx}
-                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/40 transition-colors cursor-pointer"
+                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60 hover:border-l-4 hover:border-l-emerald-500 transition-all cursor-pointer"
                     onClick={() => window.location.href = `/partenaire/commandes/${order.id}`}
                   >
                     <td className="px-8 py-6 text-base font-mono text-gray-700">
