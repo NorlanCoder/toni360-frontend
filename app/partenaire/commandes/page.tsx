@@ -88,10 +88,10 @@ export default function PartenaireDashboardPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("a-preparer");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
-    { key: "a-preparer", label: "A préparer", icon: Package },
-    { key: "en-attente", label: "En attente", icon: Clock },
-    { key: "recuperees", label: "Récupérées", icon: CheckCircle },
+  const tabs: { key: TabKey; label: string; icon: React.ElementType; href: string }[] = [
+    { key: "a-preparer", label: "A préparer", icon: Package, href: "/partenaire/commandes" },
+    { key: "en-attente", label: "En attente", icon: Clock, href: "/partenaire/commandes/en-attente" },
+    { key: "recuperees", label: "Récupérées", icon: CheckCircle, href: "/partenaire/commandes/recuperees" },
   ];
 
   return (
@@ -144,7 +144,7 @@ export default function PartenaireDashboardPage() {
         </header>
 
         {/* ─── CONTENT ─── */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-24 py-6 lg:py-10">
           {/* Date filters */}
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <DateSelect label="Du" />
@@ -157,10 +157,13 @@ export default function PartenaireDashboardPage() {
               const Icon = tab.icon;
               const isActive = activeTab === tab.key;
               return (
-                <button
+                <Link
                   key={tab.key}
-                  type="button"
-                  onClick={() => setActiveTab(tab.key)}
+                  href={tab.href}
+                  onClick={(e) => {
+                    if (tab.key === "a-preparer") e.preventDefault();
+                    setActiveTab(tab.key);
+                  }}
                   className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap pb-4 px-2 text-sm sm:text-base lg:text-lg font-semibold transition-colors ${
                     isActive
                       ? "border-b-4 border-emerald-600 text-emerald-700"
@@ -169,7 +172,7 @@ export default function PartenaireDashboardPage() {
                 >
                   <Icon className="h-7 w-7" />
                   {tab.label}
-                </button>
+                </Link>
               );
             })}
           </div>
@@ -197,7 +200,7 @@ export default function PartenaireDashboardPage() {
                 {mockOrders.map((order, idx) => (
                   <tr
                     key={idx}
-                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/40 transition-colors cursor-pointer"
+                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60 hover:border-l-4 hover:border-l-emerald-500 transition-all cursor-pointer"
                     onClick={() => window.location.href = `/partenaire/commandes/${order.id}`}
                   >
                     <td className="px-8 py-6 text-base font-mono text-gray-700">
