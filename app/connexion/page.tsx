@@ -3,10 +3,15 @@
 import { useState } from "react";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { loginPatient } from "@/lib/api";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
 
 export default function ConnexionPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [loginMethod, setLoginMethod] = useState<"phone" | "email">("phone");
   const [formData, setFormData] = useState({
     indicatif: COUNTRY_CODES[0].code,
@@ -16,9 +21,31 @@ export default function ConnexionPage() {
     rememberMe: false,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login submitted:", formData);
+    setError("");
+    setLoading(true);
+
+    try {
+      // On envoie soit le téléphone complet, soit l'email
+      const login =
+        loginMethod === "phone"
+          ? `${formData.indicatif}${formData.telephone}`
+          : formData.email;
+
+      const data = await loginPatient({ login, password: formData.password });
+
+      // Stocker le token
+      localStorage.setItem("token", data.data.token);
+      localStorage.setItem("user", JSON.stringify(data.data.patient));
+
+      // Rediriger vers le dashboard
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Erreur de connexion");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,6 +70,13 @@ export default function ConnexionPage() {
           <h2 className="text-5xl text-gray-800 text-center mb-12">
             Connexion
           </h2>
+
+          {/* Message d'erreur */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm text-center">
+              {error}
+            </div>
+          )}
 
           {/* Tabs pour choisir la méthode de connexion */}
           <div className="flex mb-6 border-b-2 border-gray-300">
@@ -153,9 +187,10 @@ export default function ConnexionPage() {
             {/* Bouton Se connecter */}
             <button
               type="submit"
-              className="w-full bg-toni-green-dark-2 text-white font-bold py-3 rounded-md hover:bg-toni-green-dark transition"
+              disabled={loading}
+              className="w-full bg-toni-green-dark-2 text-white font-bold py-3 rounded-md hover:bg-toni-green-dark transition disabled:opacity-50"
             >
-              Se connecter
+              {loading ? "Connexion..." : "Se connecter"}
             </button>
           </form>
 

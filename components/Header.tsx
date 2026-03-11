@@ -5,6 +5,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -23,13 +24,13 @@ export default function Header() {
         {/* Boutons d'authentification à droite - cachés sur mobile */}
         <div className="hidden md:flex items-center gap-4">
           {/* Bouton Se connecter - outline vert */}
-          <button className="px-6 py-2 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold rounded-full hover:bg-toni-green-dark-2 hover:text-white transition">
+          <Link href="/connexion" className="px-6 py-2 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold rounded-full hover:bg-toni-green-dark-2 hover:text-white transition">
             Se connecter
-          </button>
+          </Link>
           {/* Bouton S'inscrire - fond vert (toni-green) */}
-          <button className="px-6 py-2 bg-toni-green-dark-2 text-white rounded-full hover:bg-toni-green-dark transition">
+          <Link href="/inscription" className="px-6 py-2 bg-toni-green-dark-2 text-white rounded-full hover:bg-toni-green-dark transition">
             S&apos;inscrire
-          </button>
+          </Link>
         </div>
 
         {/* Bouton hamburger - visible uniquement sur mobile */}
@@ -59,12 +60,12 @@ export default function Header() {
       {isMenuOpen && (
         <div className="md:hidden mt-4 px-6 py-4 bg-white/95 rounded-lg backdrop-blur-sm shadow-lg">
           <div className="flex flex-col gap-3">
-            <button className="w-full px-6 py-3 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold rounded-full hover:bg-toni-green-dark-2 hover:text-white transition">
+            <Link href="/connexion" className="w-full px-6 py-3 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold rounded-full hover:bg-toni-green-dark-2 hover:text-white transition text-center">
               Se connecter
-            </button>
-            <button className="w-full px-6 py-3 bg-toni-green text-white rounded-full hover:bg-toni-green-dark transition">
+            </Link>
+            <Link href="/inscription" className="w-full px-6 py-3 bg-toni-green text-white rounded-full hover:bg-toni-green-dark transition text-center">
               S&apos;inscrire
-            </button>
+            </Link>
           </div>
         </div>
       )}
