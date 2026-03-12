@@ -1,25 +1,55 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { useMemo, useState } from "react";
+import {
+  Bell,
+  FileText,
+  HelpCircle,
+  Home,
+  LogOut,
+  Minus,
+  Plus,
+  Search,
+  ShoppingCart,
+  Trash2,
+  User,
+  ListOrdered,
+} from "lucide-react";
 
-interface CartItem {
+type CartItem = {
   id: number;
   name: string;
   type: string;
   qty: number;
-}
+  requiresPrescription?: boolean;
+};
 
-export default function CartPage() {
+export default function ClientCartPage() {
+  const pathname = usePathname();
+  const [search, setSearch] = useState("");
   const [items, setItems] = useState<CartItem[]>([
     { id: 1, name: "Ibuprofen 400 mg", type: "Plaquette", qty: 2 },
     { id: 2, name: "Ibuprofen 400 mg", type: "Plaquette", qty: 2 },
     { id: 3, name: "Ibuprofen 400 mg", type: "Plaquette", qty: 2 },
-    { id: 4, name: "Ibuprofen 400 mg", type: "Plaquette", qty: 2 },
+    { id: 4, name: "Ibuprofen 400 mg", type: "Plaquette", qty: 2, requiresPrescription: true },
     { id: 5, name: "Ibuprofen 400 mg", type: "Plaquette", qty: 2 },
     { id: 6, name: "Ibuprofen 400 mg", type: "Plaquette", qty: 2 },
   ]);
+
+  const navItems = useMemo(
+    () => [
+      { label: "Accueil", href: "/client/accueil", icon: Home },
+      { label: "Mon compte", href: "/client/profil", icon: User },
+      { label: "Mes commandes", href: "/client/dashboard", icon: ListOrdered },
+      { label: "Notifications", href: "/client/notifications", icon: Bell },
+      { label: "Mon Panier", href: "/client/dashboard/cart", icon: ShoppingCart },
+      { label: "Centre d'aide", href: "/client/faq", icon: HelpCircle },
+      { label: "Déconnexion", href: "/client/connexion", icon: LogOut },
+    ],
+    []
+  );
 
   const updateQty = (id: number, delta: number) => {
     setItems((prev) =>
@@ -37,139 +67,148 @@ export default function CartPage() {
     setItems([]);
   };
 
-  const sidebarLinks = [
-    { label: "Accueil", href: "/", icon: HomeIcon },
-    { label: "Mon compte", href: "/profil", icon: UserIcon },
-    { label: "Mes commandes", href: "/dashboard", icon: OrdersIcon },
-    { label: "Notifications", href: "/notifications", icon: BellSideIcon },
-    { label: "Mon Panier", href: "/dashboard/cart", icon: CartSideIcon },
-    { label: "Centre d'aide", href: "/faq", icon: HelpIcon },
-    { label: "Déconnexion", href: "/connexion", icon: LogoutIcon },
-  ];
-
   return (
     <div className="flex min-h-screen bg-white">
       {/* Sidebar */}
-      <aside className="w-[220px] min-h-screen border-r border-gray-100 flex flex-col py-6 px-4 fixed left-0 top-0 bottom-0 bg-white z-20">
-        {/* Logo */}
-        <div className="flex items-center gap-2 mb-10 px-2">
-          <Image src="/images/logo.png" alt="Toni360" width={150} height={50} />
+      <aside className="w-72 flex flex-col justify-between py-8 px-6 border-r-2 border-gray-300 bg-white shrink-0">
+        <div>
+          {/* Logo */}
+          <div className="mb-12 mt-6">
+            <img src="/images/logo.png" alt="Toni360" className="h-20" />
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex flex-col gap-1">
+            {navItems.map(({ label, href, icon: Icon }) => {
+              const active = pathname === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-medium transition-colors ${
+                    active
+                      ? "bg-toni-green-light text-toni-green-dark-2 font-semibold"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <Icon size={18} />
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Nav links */}
-        <nav className="flex flex-col gap-3 flex-1">
-          {sidebarLinks.map((link) => (
-            <Link
-              key={link.label}
-              href={link.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-lg font-medium transition-colors ${
-                link.href === "/dashboard/cart"
-                  ? "text-[#0fa37f] bg-green-50"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              }`}
-            >
-              <link.icon active={link.href === "/dashboard/cart"} />
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Bottom links */}
-        <div className="mt-auto pt-6 px-2 flex flex-col gap-1">
-          <Link href="/privacy" className="text-lg text-[#0fa37f] hover:underline">
+        {/* Footer sidebar */}
+        <div className="text-xs text-toni-green-dark-2 leading-relaxed">
+          <Link href="/client/privacy" className="hover:underline block">
             Politiques de confidentialité,
           </Link>
-          <Link href="/return-policy" className="text-lg text-[#0fa37f] hover:underline">
+          <Link href="/client/return-policy" className="hover:underline block">
             Conditions générales de retour,
           </Link>
-          <Link href="/contact" className="text-lg text-[#0fa37f] hover:underline">
+          <Link href="/client/contact" className="hover:underline block">
             Contactez-nous
           </Link>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 ml-[220px] flex flex-col">
-        {/* Header */}
-        <header className="flex items-center gap-4 px-8 py-4">
-          {/* Search bar */}
-          <div className="flex-1 max-w-[560px] relative">
+      <div className="flex-1 flex flex-col">
+        {/* Top bar */}
+        <header className="flex items-center justify-between px-8 pt-16 pb-6 border-b-2 border-gray-300">
+          {/* Search */}
+          <div className="relative flex-1 max-w-xl ml-10">
             <input
               type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher un médicament..."
-              className="w-full h-[56px] px-7 bg-[#e8f5f1] border-0 rounded-full text-lg text-gray-700 placeholder-gray-400 outline-none transition-colors pr-[68px]"
+              className="w-full pl-5 pr-12 py-3.5 rounded-full border border-gray-300 text-base focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-gray-700"
             />
-            <div className="absolute right-[10px] top-1/2 -translate-y-1/2 cursor-pointer hover:opacity-90 transition-opacity">
-              <Image src="/search.svg" alt="Search" width={37} height={37} />
-            </div>
+            <button className="absolute right-0 top-0 bottom-0 px-4 bg-toni-green-dark-2 rounded-r-full flex items-center justify-center text-white hover:bg-toni-green-dark transition">
+              <Search size={20} />
+            </button>
           </div>
 
-          <div className="flex items-center gap-3 ml-auto">
+          {/* Actions */}
+          <div className="flex items-center gap-4 -translate-x-12">
             <Link
-              href="/notifications"
-              className="flex items-center gap-2 px-5 py-2.5 border-2 border-[#0fa37f] text-[#0fa37f] rounded-full text-xl font-bold hover:bg-green-50 transition-colors"
+              href="/client/notifications"
+              className="flex items-center gap-2 px-4 py-2 rounded-full border border-toni-green-dark-2 text-toni-green-dark-2 text-base font-semibold hover:bg-toni-green-light transition"
             >
-              <BellHeaderIcon />
+              <Bell size={16} />
               Notifications
             </Link>
             <Link
-              href="/dashboard/cart"
-              className="flex items-center gap-2 px-5 py-2.5 border-2 border-[#0fa37f] text-[#0fa37f] rounded-full text-xl font-bold hover:bg-green-50 transition-colors"
+              href="/client/dashboard/cart"
+              className="flex items-center gap-2 px-4 py-2 rounded-full border border-toni-green-dark-2 text-toni-green-dark-2 text-base font-semibold hover:bg-toni-green-light transition"
             >
-              <CartHeaderIcon />
+              <ShoppingCart size={16} />
               Mon Panier
             </Link>
           </div>
         </header>
 
-        {/* Content */}
-        <div className="px-12 pb-16 flex-1">
+        {/* Page body */}
+        <main className="flex-1 px-8 py-8 pl-24">
           {/* Supprimer tout */}
-          <div className="mb-6 p-4">
+          <div className="mb-6">
             <button
               onClick={removeAll}
-              className="text-[#0fa37f] text-lg font-medium hover:underline transition-colors"
+              className="text-toni-green-dark-2 text-base font-medium hover:underline"
             >
               Supprimer tout
             </button>
           </div>
 
-          {/* Products Grid */}
-          <div className="grid grid-cols-3 gap-5 mb-8 p-2">
+          {/* Products grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" style={{ maxWidth: "920px" }}>
             {items.map((item) => (
               <div
                 key={item.id}
-                className="border border-gray-200 rounded-xl p-7 flex flex-col gap-4"
+                className="relative border border-gray-200 rounded-2xl p-6 bg-white"
               >
-                <div className="pb-2">
-                  <h3 className="text-lg font-bold text-gray-800">{item.name}</h3>
-                  <p className="text-base text-gray-400">{item.type}</p>
+                {item.requiresPrescription && (
+                  <FileText
+                    size={18}
+                    className="absolute right-4 top-4 text-red-500"
+                  />
+                )}
+                <div className="mb-6">
+                  <h3 className="text-base font-bold text-gray-900">{item.name}</h3>
+                  <p className="text-sm text-gray-400">{item.type}</p>
                 </div>
-                <div className="flex items-center justify-between mt-auto pt-2">
-                  {/* Quantity controller */}
-                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden px-2 py-1">
+
+                <div className="flex items-center justify-between">
+                  {/* Qty */}
+                  <div className="inline-flex items-center rounded-full border border-gray-200 px-2 py-1">
                     <button
                       onClick={() => updateQty(item.id, -1)}
-                      className="px-3 py-1.5 text-gray-500 hover:bg-gray-50 text-lg font-medium transition-colors"
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-50"
+                      aria-label="Diminuer"
                     >
-                      −
+                      <Minus size={14} />
                     </button>
-                    <span className="px-3 py-1.5 text-lg font-semibold text-gray-800 min-w-[28px] text-center">
+                    <span className="px-3 text-sm font-semibold text-gray-800 min-w-[24px] text-center">
                       {item.qty}
                     </span>
                     <button
                       onClick={() => updateQty(item.id, 1)}
-                      className="px-3 py-1.5 text-[#0fa37f] hover:bg-green-50 text-lg font-medium transition-colors"
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-toni-green-dark-2 hover:bg-toni-green-light"
+                      aria-label="Augmenter"
                     >
-                      +
+                      <Plus size={14} />
                     </button>
                   </div>
+
                   {/* Delete */}
                   <button
                     onClick={() => removeItem(item.id)}
-                    className="text-red-400 hover:text-red-600 transition-colors"
+                    className="text-red-400 hover:text-red-600"
+                    aria-label="Supprimer"
                   >
-                    <TrashIcon />
+                    <Trash2 size={18} />
                   </button>
                 </div>
               </div>
@@ -177,122 +216,18 @@ export default function CartPage() {
           </div>
 
           {/* Prescription message */}
-          <p className="text-red-500 text-lg mb-6 italic font-semibold p-4">
+          <p className="mt-8 text-[#ff6b5c] text-base font-medium">
             Ayez votre ordonnance prête pour les produits soumis à prescription.
           </p>
 
-          {/* Localiser button */}
-          <button className="w-full py-5 bg-[#0fa37f] text-white rounded-full text-2xl font-bold hover:bg-[#0e9272] transition-colors mt-2 px-4">
-            Localiser
-          </button>
-        </div>
-      </main>
+          {/* Localiser */}
+          <div className="mt-6" style={{ maxWidth: "920px" }}>
+            <button className="w-2/5 mx-auto py-3 bg-toni-green-dark-2 text-white rounded-full text-lg font-bold hover:bg-toni-green-dark transition">
+              Localiser
+            </button>
+          </div>
+        </main>
+      </div>
     </div>
-  );
-}
-
-/* ─── SVG Icon Components ─── */
-
-function HomeIcon({ active }: { active?: boolean }) {
-  const color = active ? "#0fa37f" : "#6b7280";
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <polyline points="9 22 9 12 15 12 15 22" />
-    </svg>
-  );
-}
-
-function UserIcon({ active }: { active?: boolean }) {
-  const color = active ? "#0fa37f" : "#6b7280";
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-
-function OrdersIcon({ active }: { active?: boolean }) {
-  const color = active ? "#0fa37f" : "#6b7280";
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="16" y1="13" x2="8" y2="13" />
-      <line x1="16" y1="17" x2="8" y2="17" />
-      <polyline points="10 9 9 9 8 9" />
-    </svg>
-  );
-}
-
-function BellSideIcon({ active }: { active?: boolean }) {
-  const color = active ? "#0fa37f" : "#6b7280";
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  );
-}
-
-function CartSideIcon({ active }: { active?: boolean }) {
-  const color = active ? "#0fa37f" : "#6b7280";
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="9" cy="21" r="1" />
-      <circle cx="20" cy="21" r="1" />
-      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-    </svg>
-  );
-}
-
-function HelpIcon({ active }: { active?: boolean }) {
-  const color = active ? "#0fa37f" : "#6b7280";
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-      <line x1="12" y1="17" x2="12.01" y2="17" />
-    </svg>
-  );
-}
-
-function LogoutIcon({ active }: { active?: boolean }) {
-  const color = active ? "#0fa37f" : "#6b7280";
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <polyline points="16 17 21 12 16 7" />
-      <line x1="21" y1="12" x2="9" y2="12" />
-    </svg>
-  );
-}
-
-function BellHeaderIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  );
-}
-
-function CartHeaderIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="9" cy="21" r="1" />
-      <circle cx="20" cy="21" r="1" />
-      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    </svg>
   );
 }
