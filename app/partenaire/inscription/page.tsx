@@ -148,11 +148,11 @@ export default function DevenirPartenairePage() {
               />
             </div>
 
-            {/* Heure ouvrables */}
+            {/* Mot de pass */}
             <div>
               <input
                 type="text"
-                placeholder="Heure ouvrables"
+                placeholder="Mot de pass"
                 value={formData.heureOuvrables}
                 onChange={(e) =>
                   setFormData({ ...formData, heureOuvrables: e.target.value })
