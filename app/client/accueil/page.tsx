@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Home,
   User,
@@ -13,6 +14,9 @@ import {
   LogOut,
   Search,
 } from "lucide-react";
+import { getPatientProfile } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/errors";
+import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 
 const navItems = [
   { label: "Accueil", href: "/client/accueil", icon: Home, active: true },
@@ -24,7 +28,47 @@ const navItems = [
 ];
 
 export default function AccueilClientPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
+  const [patientName, setPatientName] = useState("Mr Vagelas");
+
+  useEffect(() => {
+    const session = getAuthSession();
+
+    if (!session || session.userType !== "patient") {
+      router.push("/client/connexion");
+      return;
+    }
+
+    let active = true;
+
+    getPatientProfile(session.token)
+      .then((response) => {
+        if (!active) {
+          return;
+        }
+
+        const fallbackName = `${response.data.patient.prenom} ${response.data.patient.nom}`.trim();
+        setPatientName(response.data.patient.nom_complet || fallbackName || "Client");
+      })
+      .catch((error: unknown) => {
+        if (!active) {
+          return;
+        }
+
+        if (error instanceof ApiError && error.status === 401) {
+          clearAuthSession();
+          router.push("/client/connexion");
+          return;
+        }
+
+        window.alert("Impossible de charger votre profil.");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   return (
     <div className="flex    min-h-screen bg-white">
@@ -118,7 +162,7 @@ export default function AccueilClientPage() {
         <main className="flex-1 px-8 py-8 pl-24">
           {/* Welcome */}
           <h1 className="text-2xl font-bold text-gray-900 mb-6">
-            Bienvenue, Mr Vagelas
+            Bienvenue, {patientName}
           </h1>
 
           {/* Hero card */}

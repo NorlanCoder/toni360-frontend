@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
+import { registerPatient } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/errors";
+import { saveAuthSession } from "@/lib/api/session";
 
 export default function InscriptionPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
@@ -15,9 +21,53 @@ export default function InscriptionPage() {
     password: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
+
+    if (submitting) {
+      return;
+    }
+
+    const fullName = formData.nom.trim();
+    if (!fullName || !formData.email.trim() || !formData.telephone.trim() || !formData.password) {
+      window.alert("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    const nameParts = fullName.split(/\s+/).filter(Boolean);
+    const prenom = nameParts[0] ?? fullName;
+    const nom = nameParts.slice(1).join(" ") || nameParts[0] || fullName;
+    const telephone = `${formData.indicatif}${formData.telephone}`.replace(/\s+/g, "");
+
+    setSubmitting(true);
+    try {
+      const response = await registerPatient({
+        nom,
+        prenom,
+        email: formData.email.trim(),
+        telephone,
+        password: formData.password,
+        password_confirmation: formData.password,
+      });
+
+      saveAuthSession({
+        userType: "patient",
+        token: response.data.token,
+        tokenType: response.data.token_type,
+        profile: response.data.patient ?? null,
+      });
+
+      window.alert(response.message ?? "Inscription réussie.");
+      router.push("/client/accueil");
+    } catch (error: unknown) {
+      if (error instanceof ApiError) {
+        window.alert(error.message);
+      } else {
+        window.alert("Une erreur est survenue pendant l'inscription.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -122,9 +172,10 @@ export default function InscriptionPage() {
             {/* Bouton S'inscrire */}
             <button
               type="submit"
+              disabled={submitting}
               className="w-full bg-toni-green-dark-2 text-white font-bold py-3 rounded-md hover:bg-toni-green-dark transition"
             >
-              S&apos;inscrire
+              {submitting ? "Inscription..." : "S\'inscrire"}
             </button>
           </form>
 

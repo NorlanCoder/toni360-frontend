@@ -1,15 +1,21 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Download } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
+import { registerPartner } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/errors";
+import { saveAuthSession } from "@/lib/api/session";
 
 export default function DevenirPartenairePage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const beninCode = COUNTRY_CODES.find((c) => c.code === "+229") || COUNTRY_CODES[0];
 
@@ -26,9 +32,66 @@ export default function DevenirPartenairePage() {
     licence: null as File | null,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
+
+    if (submitting) {
+      return;
+    }
+
+    if (
+      !formData.nomPharmacie.trim() ||
+      !formData.adresseComplete.trim() ||
+      !formData.telephone.trim() ||
+      !formData.email.trim() ||
+      !formData.heureOuvrables.trim() ||
+      !formData.confirmPassword.trim()
+    ) {
+      window.alert("Veuillez remplir les champs obligatoires.");
+      return;
+    }
+
+    if (formData.heureOuvrables !== formData.confirmPassword) {
+      window.alert("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    const telephone = `${formData.indicatif}${formData.telephone}`.replace(/\s+/g, "");
+
+    setSubmitting(true);
+    try {
+      const response = await registerPartner({
+        pharmacie_nom: formData.nomPharmacie.trim(),
+        adresse: formData.adresseComplete.trim(),
+        ville: formData.villeExercice.trim() || undefined,
+        telephone,
+        email: formData.email.trim(),
+        titulaire_nom: formData.nomPharmacie.trim(),
+        titulaire_prenom: "Titulaire",
+        password: formData.heureOuvrables,
+        password_confirmation: formData.confirmPassword,
+        licence_pharmaceutique: formData.licence ?? undefined,
+      });
+
+      saveAuthSession({
+        userType: "user",
+        token: response.data.token,
+        tokenType: response.data.token_type,
+        profile: response.data.user ?? null,
+        permissions: response.data.permissions ?? [],
+      });
+
+      window.alert(response.message ?? "Inscription réussie.");
+      router.push("/partenaire/dashboard");
+    } catch (error: unknown) {
+      if (error instanceof ApiError) {
+        window.alert(error.message);
+      } else {
+        window.alert("Une erreur est survenue pendant l'inscription.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -225,10 +288,11 @@ export default function DevenirPartenairePage() {
           <div className="mt-8">
             <button
               type="submit"
+              disabled={submitting}
               className="w-full py-4 text-white font-bold text-base rounded-lg transition hover:opacity-90"
               style={{ backgroundColor: "#137551" }}
             >
-              S&apos;inscrire
+              {submitting ? "Inscription..." : "S\'inscrire"}
             </button>
           </div>
         </form>
@@ -237,7 +301,7 @@ export default function DevenirPartenairePage() {
         <p className="text-center mt-8 text-lg text-gray-700">
           Déjà un compte ?{" "}
           <Link
-            href="/connexion"
+            href="/partenaire/connexion"
             className="font-bold hover:underline"
             style={{ color: "#137551", fontSize: "1.18rem" }}
           >

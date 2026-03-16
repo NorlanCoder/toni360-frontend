@@ -38,7 +38,7 @@ export default function Hero() {
           </button>
           
           {/* Bouton Pharmacie - fond vert */}
-          <Link href="/partenaire/commandes" className="px-8 py-4 bg-toni-green-dark text-white font-bold rounded-full hover:bg-toni-green-dark-2 transition flex items-center justify-center gap-2 min-w-[260px]">
+          <Link href="/partenaire/inscription" className="px-8 py-4 bg-toni-green-dark text-white font-bold rounded-full hover:bg-toni-green-dark-2 transition flex items-center justify-center gap-2 min-w-[260px]">
             <Users size={20} />
             Devenez partenaire
           </Link>
