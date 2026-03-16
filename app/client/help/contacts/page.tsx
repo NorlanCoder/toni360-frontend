@@ -1,47 +1,35 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const navLinks = [
-  { label: "A propos", href: "/about" },
-  { label: "Contacts", href: "/contact" },
-  { label: "FAQ", href: "/faq" },
-  { label: "Conditions générales de retour", href: "#" },
-  { label: "Politiques de confidentialité", href: "#" },
+  { label: "A propos", href: "/client/help/about" },
+  { label: "Contacts", href: "/client/help/contacts" },
+  { label: "FAQ", href: "/client/help/faq" },
+  { label: "CGU", href: "/client/help/return-policy" },
+  { label: "Confidentialité", href: "/client/help/privacy" },
 ];
 
 export default function FAQPage() {
+  const pathname = usePathname();
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-100 mx-0">
       {/* ──────────── HEADER ──────────── */}
       <header className="bg-white shadow-sm">
-        {/* Top bar : logo + titre */}
-        <div className="max-w-7xl mx-auto px-1 pt-6 pb-3 flex items-center gap-4">
-          <Image
-            src="/images/logo.png"
-            alt="Toni360"
-            width={120}
-            height={40}
-            className="object-contain"
-          />
-          <span className="text-3xl text-black font-light">
-            Centre d&apos;aide
-          </span>
-        </div>
-
         {/* Navigation horizontale */}
         <nav className="max-w-7xl mx-auto px-1 pb-0">
-          <ul className="flex flex-wrap gap-12 text-xl md:text-2xl text-gray-600">
+          <ul className="flex flex-wrap gap-12 text-[15px] text-gray-600">
             {navLinks.map((link) => {
-              const isActive = link.label === "FAQ";
+              const isActive = pathname === link.href;
               return (
                 <li key={link.label}>
                   <Link
                     href={link.href}
                     className={`inline-block pb-3 transition font-medium ${
                       isActive
-                        ? "text-green-600 font-semibold border-b-2 border-green-500 text-xl md:text-2xl"
+                        ? "text-green-600 font-semibold border-b-2 border-green-500 text-[15px]"
                         : "hover:text-gray-900"
                     }`}
                   >
@@ -57,15 +45,15 @@ export default function FAQPage() {
       {/* ──────────── CONTENU PRINCIPAL ──────────── */}
       <main className="max-w-7xl mx-auto px-1 py-12 ">
         {/* Titre de la section */}
-        <h1 className="text-3xl md:text-3xl font-bold text-gray-900 mb-10">
+        <h1 className="text-[15px] font-bold text-gray-900 mb-10">
           FAQ - Questions Fréquemment Posées
         </h1>
 
         {/* ── LIGNE 1 ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-64 mb-12 py-8 ">
           {/* Colonne gauche : texte */}
-          <div className="text-xl">
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">
+          <div className="text-[15px]">
+            <h2 className="text-[15px] font-bold text-gray-900 mb-3">
               1. Qu&apos;est-ce que cette plateforme ?
             </h2>
             <p className="text-gray-600 leading-relaxed">
@@ -78,21 +66,21 @@ export default function FAQPage() {
           </div>
 
           {/* Colonne droite : placeholder vidéo */}
-          <div className="bg-gray-200 rounded-lg h-64 flex items-center justify-center text-xl">
-            <span className="text-gray-500 text-2xl">Screen vidéo</span>
+          <div className="bg-gray-200 rounded-lg h-64 flex items-center justify-center text-[15px]">
+            <span className="text-gray-500 text-[15px]">Screen vidéo</span>
           </div>
         </div>
         
         {/* ── LIGNE 2 ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-64 py-8">
           {/* Colonne gauche : placeholder vidéo */}
-          <div className="bg-gray-200 rounded-lg h-64 flex items-center justify-center text-xl">
-            <span className="text-gray-500 text-2xl">Screen vidéo</span>
+          <div className="bg-gray-200 rounded-lg h-64 flex items-center justify-center text-[15px]">
+            <span className="text-gray-500 text-[15px]">Screen vidéo</span>
           </div>
 
           {/* Colonne droite : texte */}
-          <div className="text-xl">
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">
+          <div className="text-[15px]">
+            <h2 className="text-[15px] font-bold text-gray-900 mb-3">
               2. Comment puis-je rechercher des médicaments ?
             </h2>
             <p className="text-gray-600 leading-relaxed">

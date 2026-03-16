@@ -65,7 +65,7 @@ export default function PartenaireSidebar({ isOpen, onClose }: PartenaireSidebar
       >
         {/* Logo */}
         <div className="flex h-20 items-center px-5">
-          <Link href="/partenaire/commandes" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2" aria-label="Accueil">
             <Image
               src="/images/logo.png"
               alt="Toni 360°"

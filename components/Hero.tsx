@@ -32,10 +32,13 @@ export default function Hero() {
         {/* Container des boutons - vertical sur mobile, horizontal sur desktop */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
           {/* Bouton Patient - fond blanc */}
-          <button className="px-8 py-4 bg-white text-toni-green font-bold rounded-full hover:bg-gray-100 transition flex items-center justify-center gap-2 min-w-[260px]">
+          <Link
+            href="/client/connexion"
+            className="px-8 py-4 bg-white text-toni-green font-bold rounded-full hover:bg-gray-100 transition flex items-center justify-center gap-2 min-w-[260px]"
+          >
             <Search size={20} />
             Trouvez vos médicaments
-          </button>
+          </Link>
           
           {/* Bouton Pharmacie - fond vert */}
           <Link href="/partenaire/commandes" className="px-8 py-4 bg-toni-green-dark text-white font-bold rounded-full hover:bg-toni-green-dark-2 transition flex items-center justify-center gap-2 min-w-[260px]">
