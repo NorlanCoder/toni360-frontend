@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   FileText,
   Minus,
   Plus,
+  MapPin,
   Trash2,
 } from "lucide-react";
 
@@ -41,6 +43,14 @@ export default function ClientCartPage() {
   const removeAll = () => {
     setItems([]);
   };
+
+  const [showNearbyPharmacies, setShowNearbyPharmacies] = useState(false);
+
+  const nearbyPharmacies = [
+    { name: "Pharmacie du Centre", address: "Cotonou, Zongo", distance: "0,6 km" },
+    { name: "Pharmacie Sainte Marie", address: "Cotonou, Ganhi", distance: "0,8 km" },
+    { name: "Pharmacie de l'Étoile", address: "Cotonou, Fidjrossè", distance: "0,9 km" },
+  ];
 
   return (
     <>
@@ -114,9 +124,49 @@ export default function ClientCartPage() {
 
       {/* Localiser */}
       <div className="mt-6" style={{ maxWidth: "920px" }}>
-        <button className="w-2/5 mx-auto py-3 bg-toni-green-dark-2 text-white rounded-full text-lg font-bold hover:bg-toni-green-dark transition">
+        <button
+          onClick={() => setShowNearbyPharmacies(true)}
+          className="w-2/5 mx-auto py-3 bg-toni-green-dark-2 text-white rounded-full text-lg font-bold hover:bg-toni-green-dark transition"
+        >
           Localiser
         </button>
+
+        {showNearbyPharmacies && (
+          <div className="mt-6 bg-white border border-gray-200 rounded-2xl p-6">
+            <h3 className="text-base font-bold text-gray-900 mb-4">
+              Pharmacies à moins de 1 km
+            </h3>
+            <div className="space-y-4">
+              {nearbyPharmacies.map((pharmacy) => (
+                <div
+                  key={pharmacy.name}
+                  className="group flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3 transition-colors hover:bg-[#008F4F]"
+                >
+                  <div>
+                    <p className="font-semibold text-gray-900">{pharmacy.name}</p>
+                    <p className="flex items-center gap-2 text-sm text-gray-500 group-hover:text-white">
+                      <MapPin size={14} className="text-gray-500 group-hover:text-white" />
+                      {pharmacy.address}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-toni-green-dark-2 group-hover:text-white">
+                      {pharmacy.distance}
+                    </span>
+                    <Link
+                      href={`/client/dashboard/cart/checkout?pharmacy=${encodeURIComponent(
+                        pharmacy.name
+                      )}`}
+                      className="px-4 py-2 rounded-full bg-white text-[#008F4F] text-sm font-semibold border border-white hover:bg-gray-50 transition"
+                    >
+                      Commander
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

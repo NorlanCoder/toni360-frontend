@@ -17,7 +17,7 @@ import {
 const navItems = [
   { label: "Accueil", href: "/client/accueil", icon: Home },
   { label: "Mon compte", href: "/client/profil", icon: User },
-  { label: "Mes commandes", href: "/client/dashboard", icon: ListOrdered },
+  { label: "Mes commandes", href: "/client/orders", icon: ListOrdered },
   { label: "Notifications", href: "/client/notifications", icon: Bell },
   { label: "Mon Panier", href: "/client/dashboard/cart", icon: ShoppingCart },
   { label: "Centre d'aide", href: "/client/help/faq", icon: HelpCircle },

@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Camera, Upload } from "lucide-react";
 
 interface CartItem {
   id: number;
@@ -12,6 +14,9 @@ interface CartItem {
 }
 
 export default function CartPage() {
+  const searchParams = useSearchParams();
+  const pharmacyName = searchParams.get("pharmacy") || "Pharmacie";
+
   const [items, setItems] = useState<CartItem[]>([
     { id: 1, name: "Paracetamol 500 mg", type: "Plaquette", qty: 2, price: 1000 },
     { id: 2, name: "Tramadol 500 mg", type: "Plaquette", qty: 2, price: 1000 },
@@ -37,29 +42,29 @@ export default function CartPage() {
   const total = items.reduce((sum, item) => sum + item.qty * item.price, 0);
 
   return (
-    <div className="px-8 pb-10 flex-1">
+    <div className="px-6 pb-8 flex-1">
           {/* Pharmacy Card */}
-          <div className="rounded-2xl overflow-hidden mb-8"
+          <div className="rounded-xl overflow-hidden mb-5 max-w-4xl"
             style={{
               background: "linear-gradient(135deg, #137551 0%, #0fa37f 50%, #11ca8c 100%)",
             }}
           >
-            <div className="flex items-center justify-between px-8 py-6">
+            <div className="flex items-center justify-between px-5 py-3">
               <div className="text-white">
-                <h2 className="text-3xl font-bold mb-1">Pharmacie</h2>
-                <h2 className="text-3xl font-bold mb-2">Hubert Maga</h2>
-                <p className="text-base text-white/80 max-w-[280px] leading-relaxed">
+                <h2 className="text-lg font-bold mb-1">Pharmacie</h2>
+                <h2 className="text-xl font-bold mb-1">{pharmacyName}</h2>
+                <p className="text-xs text-white/80 max-w-[200px] leading-relaxed">
                   Sittué à 200m da la von du quartier de la zone résidentielle du pays
                 </p>
               </div>
               <div className="flex flex-col items-center gap-2">
-                <div className="text-white text-lg text-center">
-                  <p className="text-lg">Hubertmaga@gmail.com</p>
-                  <p className="mt-2 text-lg">+229 65 65 65 65</p>
+                <div className="text-white text-sm text-center">
+                  <p className="text-sm">Hubertmaga@gmail.com</p>
+                  <p className="mt-1 text-sm">+229 65 65 65 65</p>
                 </div>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <button className="flex items-center gap-2 bg-white text-gray-800 px-5 py-2 rounded-full text-base font-semibold mt-2 hover:shadow-md transition-shadow">
+                <button className="flex items-center gap-2 bg-white text-gray-800 px-3 py-1.5 rounded-full text-xs font-semibold mt-1 hover:shadow-md transition-shadow">
                   <LocationIcon />
                   Itinéraire
                 </button>
@@ -68,9 +73,9 @@ export default function CartPage() {
           </div>
 
           {/* Products Table */}
-          <div className="w-full">
+          <div className="w-full max-w-4xl">
             {/* Table Header */}
-            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-center px-4 py-3 text-base text-gray-400 border-b border-gray-100 font-medium">
+            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-center px-3 py-2 text-xs text-gray-400 border-b border-gray-100 font-medium">
               <span>Nom du produit</span>
               <span className="text-center">Qte</span>
               <span className="text-center">Prix</span>
@@ -82,12 +87,12 @@ export default function CartPage() {
             {items.map((item) => (
               <div
                 key={item.id}
-                className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-center px-4 py-5 border-b border-gray-50 text-lg"
+                className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-center px-3 py-3 border-b border-gray-50 text-sm"
               >
                 {/* Product Name */}
                 <div>
-                  <p className="text-lg font-semibold text-gray-800">{item.name}</p>
-                  <p className="text-base text-gray-400 mt-0.5">{item.type}</p>
+                  <p className="text-sm font-semibold text-gray-800">{item.name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{item.type}</p>
                 </div>
 
                 {/* Quantity */}
@@ -95,16 +100,16 @@ export default function CartPage() {
                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
                     <button
                       onClick={() => updateQty(item.id, -1)}
-                      className="px-3 py-2 text-gray-500 hover:bg-gray-50 text-lg font-medium transition-colors"
+                      className="px-2 py-1.5 text-gray-500 hover:bg-gray-50 text-sm font-medium transition-colors"
                     >
                       −
                     </button>
-                    <span className="px-3 py-2 text-lg font-semibold text-gray-800 min-w-[32px] text-center bg-gray-50">
+                    <span className="px-2 py-1.5 text-sm font-semibold text-gray-800 min-w-[28px] text-center bg-gray-50">
                       {item.qty}
                     </span>
                     <button
                       onClick={() => updateQty(item.id, 1)}
-                      className="px-3 py-2 text-[#0fa37f] hover:bg-green-50 text-lg font-medium transition-colors"
+                      className="px-2 py-1.5 text-[#0fa37f] hover:bg-green-50 text-sm font-medium transition-colors"
                     >
                       +
                     </button>
@@ -112,19 +117,19 @@ export default function CartPage() {
                 </div>
 
                 {/* Price */}
-                <p className="text-lg text-gray-600 text-center">
+                <p className="text-sm text-gray-600 text-center">
                   {formatPrice(item.price)} XOF CFA
                 </p>
 
                 {/* Total */}
-                <p className="text-lg font-semibold text-gray-800 text-center">
+                <p className="text-sm font-semibold text-gray-800 text-center">
                   {formatPrice(item.qty * item.price)} XOF CFA
                 </p>
 
                 {/* Delete */}
                 <button
                   onClick={() => removeItem(item.id)}
-                  className="w-10 flex items-center justify-center text-red-400 hover:text-red-600 transition-colors"
+                  className="w-8 flex items-center justify-center text-red-400 hover:text-red-600 transition-colors"
                 >
                   <TrashIcon />
                 </button>
@@ -133,7 +138,7 @@ export default function CartPage() {
           </div>
 
           {/* Total Bar */}
-          <div className="flex items-center justify-between bg-[#e8faf3] rounded-xl px-8 py-5 mt-6">
+          <div className="flex items-center justify-between bg-[#e8faf3] rounded-xl px-8 py-5 mt-6 max-w-4xl">
             <h3 className="text-xl font-bold text-gray-800">Montant total</h3>
             <p className="text-xl font-bold text-gray-800">
               {formatPrice(total)} XOF CFA
@@ -141,19 +146,29 @@ export default function CartPage() {
           </div>
 
           {/* Add Prescription */}
-          <div className="flex items-center gap-4 mt-6 px-4">
-            <button className="flex items-center gap-4 text-lg text-gray-700 font-semibold hover:text-[#0fa37f] transition-colors">
-              <span className="w-12 h-12 flex items-center justify-center rounded-lg bg-[#e8faf3]">
-                <Image src="/fluent.svg" alt="Add" width={24} height={24} />
-              </span>
-              Ajouter une ordonnance
-            </button>
+          <div className="flex flex-col gap-3 mt-6 px-4">
+            <p className="text-sm font-semibold text-gray-700">Ajouter une ordonnance</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#e8faf3] text-[#0fa37f] hover:bg-[#d9f5ea] transition-colors"
+                aria-label="Prendre une photo"
+              >
+                <Camera size={20} />
+              </button>
+              <label
+                className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#e8faf3] text-[#0fa37f] hover:bg-[#d9f5ea] transition-colors cursor-pointer"
+                aria-label="Importer un fichier"
+              >
+                <Upload size={20} />
+                <input type="file" accept="image/*,.pdf" className="hidden" />
+              </label>
+            </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-between gap-6 mt-10 w-full px-4">
-            <button className="px-10 py-3 border-2 border-[#0fa37f] text-[#0fa37f] rounded-full text-lg font-semibold hover:bg-green-50 transition-colors min-w-[180px]">
-              Terminer
+          <div className="flex items-center justify-start gap-3 mt-10 w-full px-4">
+            <button className="px-10 py-3 border-2 border-red-500 text-red-600 rounded-full text-lg font-semibold hover:bg-red-50 transition-colors min-w-[180px]">
+              Annuler
             </button>
             <button className="px-10 py-3 bg-gray-200 text-gray-600 rounded-full text-lg font-semibold hover:bg-gray-300 transition-colors min-w-[180px]">
               Mettre en attente
