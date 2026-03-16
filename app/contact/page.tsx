@@ -10,20 +10,20 @@ function TabNavigation() {
 
   const tabs = [
     { name: "A propos", href: "/about" },
-    { name: "Contacts", href: "/contact" },
+    { name: "Contacts", href: "/client/help/contacts" },
     { name: "FAQ", href: "/faq" },
-    { name: "Conditions générales d'utilisation", href: "/cgu" },
-    { name: "Politiques de confidentialité", href: "/confidentialite" },
+    { name: "Conditions d'utilisation", href: "/cgu" },
+    { name: "Confidentialité", href: "/confidentialite" },
   ];
 
   return (
-    <nav className="flex items-center justify-between gap-1 py-2">
+    <nav className="flex flex-wrap items-center justify-start gap-1 py-2">
       {tabs.map((tab) => (
         <Link
           key={tab.name}
           href={tab.href}
           onClick={() => setActiveTab(tab.name)}
-          className={`pb-4 text-xl relative transition-colors whitespace-nowrap ${
+          className={`pb-4 text-[15px] relative transition-colors whitespace-nowrap ${
             activeTab === tab.name
               ? "text-black font-semibold"
               : "text-gray-500 hover:text-black"
@@ -41,7 +41,7 @@ function TabNavigation() {
 
 export default function ContactPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white text-[15px]">
       {/* Header */}
       <header className="bg-white shadow-sm">
         {/* Logo and Title Section */}
@@ -54,7 +54,7 @@ export default function ContactPage() {
               height={40}
               className="object-contain"
             />
-            <span className="text-3xl text-black font-light">
+            <span className="text-[15px] text-black font-light">
               Centre d&apos;aide
             </span>
           </div>
@@ -72,7 +72,7 @@ export default function ContactPage() {
       <main className="w-full px-8 lg:px-16 xl:px-24 py-12">
         <div className="max-w-xl">
           {/* Introduction */}
-          <p className="text-gray-700 text-xl leading-relaxed mb-8">
+          <p className="text-gray-700 text-[15px] leading-relaxed mb-8">
             Nous sommes ici pour vous aider ! Pour toute question ou besoin
             d&apos;assistance, n&apos;hésitez pas à nous contacter. Notre équipe
             est à votre disposition pour garantir une expérience optimale sur
@@ -81,7 +81,7 @@ export default function ContactPage() {
 
           {/* Coordonnées */}
           <div className="mb-10">
-            <ul className="space-y-2 text-gray-700">
+            <ul className="space-y-2 text-gray-700 text-[15px]">
               <li className="flex items-center gap-2">
                 <span className="text-gray-500">•</span>
                 <span className="font-medium">Email</span>
@@ -104,8 +104,8 @@ export default function ContactPage() {
 
           {/* Suivez-nous */}
           <div className="mb-10">
-            <h2 className="text-lg font-bold text-black mb-3">Suivez-nous</h2>
-            <p className="text-gray-700 text-xl leading-relaxed mb-4">
+            <h2 className="text-[15px] font-bold text-black mb-3">Suivez-nous</h2>
+            <p className="text-gray-700 text-[15px] leading-relaxed mb-4">
               Restez à jour avec nos dernières nouvelles et mises à jour en nous
               suivant sur les réseaux sociaux
             </p>
@@ -143,7 +143,7 @@ export default function ContactPage() {
           </div>
 
           {/* FAQ Redirect */}
-          <p className="text-gray-700 text-xl leading-relaxed">
+          <p className="text-gray-700 text-[15px] leading-relaxed">
             Pour des réponses rapides à vos questions fréquentes sur
             l&apos;utilisation de notre plateforme, la recherche de médicaments,
             et d&apos;autres sujets, consultez notre FAQ.

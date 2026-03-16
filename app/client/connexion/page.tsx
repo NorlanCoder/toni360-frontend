@@ -80,7 +80,9 @@ export default function ConnexionPage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-8 text-center">
-            <img src="/images/logo.png" alt="Toni360" className="h-28 mx-auto" />
+            <Link href="/" aria-label="Accueil">
+              <img src="/images/logo.png" alt="Toni360" className="h-28 mx-auto" />
+            </Link>
           </div>
 
           {/* Titre */}

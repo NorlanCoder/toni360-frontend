@@ -85,7 +85,9 @@ export default function InscriptionPage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-8 text-center">
-            <img src="/images/logo.png" alt="Toni360" className="h-28 mx-auto" />
+            <Link href="/" aria-label="Accueil">
+              <img src="/images/logo.png" alt="Toni360" className="h-28 mx-auto" />
+            </Link>
           </div>
 
           {/* Titre */}
@@ -167,6 +169,20 @@ export default function InscriptionPage() {
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
+            </div>
+
+            {/* Mot de passe confirmé */}
+            <div className="relative flex items-center">
+              <Lock className="absolute left-4 text-gray-400" size={18} />
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Confirmer le mot de passe"
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+                className="w-full pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+              />
             </div>
 
             {/* Bouton S'inscrire */}
