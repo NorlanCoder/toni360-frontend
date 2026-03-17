@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
-import { loginPatient } from "@/lib/api/auth";
+import { getPatientProfile, loginPatient } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
 
@@ -45,11 +45,13 @@ export default function ConnexionPage() {
         password: formData.password,
       });
 
+      const profileResponse = await getPatientProfile(response.data.token);
+
       saveAuthSession({
         userType: "patient",
         token: response.data.token,
         tokenType: response.data.token_type,
-        profile: response.data.patient ?? null,
+        profile: profileResponse.data.patient ?? response.data.patient ?? null,
       });
 
       window.alert(response.message ?? "Connexion réussie.");
@@ -80,7 +82,9 @@ export default function ConnexionPage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-8 text-center">
-            <img src="/images/logo.png" alt="Toni360" className="h-28 mx-auto" />
+            <Link href="/" aria-label="Accueil">
+              <img src="/images/logo.png" alt="Toni360" className="h-28 mx-auto" />
+            </Link>
           </div>
 
           {/* Titre */}
@@ -207,7 +211,7 @@ export default function ConnexionPage() {
           {/* Lien vers inscription */}
           <p className="text-center text-sm text-gray-700 mt-6">
             Pas encore de compte ?{" "}
-            <Link href="/inscription" className="text-toni-green-dark-2 font-semibold hover:underline">
+            <Link href="/client/inscription" className="text-toni-green-dark-2 font-semibold hover:underline">
               Inscrivez-vous.
             </Link>
           </p>

@@ -3,6 +3,7 @@
  * Affiche le titre et les deux boutons d'action principaux
  */
 import { Search, Users } from "lucide-react";
+import Link from "next/link";
 
 export default function Hero() {
   return (
@@ -31,16 +32,19 @@ export default function Hero() {
         {/* Container des boutons - vertical sur mobile, horizontal sur desktop */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
           {/* Bouton Patient - fond blanc */}
-          <button className="px-8 py-4 bg-white text-toni-green font-bold rounded-full hover:bg-gray-100 transition flex items-center justify-center gap-2 min-w-[260px]">
+          <Link
+            href="/client/connexion"
+            className="px-8 py-4 bg-white text-toni-green font-bold rounded-full hover:bg-gray-100 transition flex items-center justify-center gap-2 min-w-[260px]"
+          >
             <Search size={20} />
             Trouvez vos médicaments
-          </button>
+          </Link>
           
           {/* Bouton Pharmacie - fond vert */}
-          <button className="px-8 py-4 bg-toni-green-dark text-white font-bold rounded-full hover:bg-toni-green-dark-2 transition flex items-center justify-center gap-2 min-w-[260px]">
+          <Link href="/partenaire/inscription" className="px-8 py-4 bg-toni-green-dark text-white font-bold rounded-full hover:bg-toni-green-dark-2 transition flex items-center justify-center gap-2 min-w-[260px]">
             <Users size={20} />
             Devenez partenaire
-          </button>
+          </Link>
         </div>
         {/* Liens légaux */}
         <div className="flex flex-wrap items-center justify-center gap-4 text-white text-sm">

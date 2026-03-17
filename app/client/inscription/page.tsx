@@ -19,6 +19,7 @@ export default function InscriptionPage() {
     indicatif: COUNTRY_CODES[0].code,
     telephone: "",
     password: "",
+    confirmPassword: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,10 +35,25 @@ export default function InscriptionPage() {
       return;
     }
 
+    if (formData.password !== formData.confirmPassword) {
+      window.alert("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      window.alert("Le mot de passe doit contenir au moins 8 caracteres.");
+      return;
+    }
+
     const nameParts = fullName.split(/\s+/).filter(Boolean);
     const prenom = nameParts[0] ?? fullName;
     const nom = nameParts.slice(1).join(" ") || nameParts[0] || fullName;
     const telephone = `${formData.indicatif}${formData.telephone}`.replace(/\s+/g, "");
+
+    if (telephone.length > 20) {
+      window.alert("Le numero de telephone est trop long.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -85,7 +101,9 @@ export default function InscriptionPage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-8 text-center">
-            <img src="/images/logo.png" alt="Toni360" className="h-28 mx-auto" />
+            <Link href="/" aria-label="Accueil">
+              <img src="/images/logo.png" alt="Toni360" className="h-28 mx-auto" />
+            </Link>
           </div>
 
           {/* Titre */}
@@ -169,6 +187,20 @@ export default function InscriptionPage() {
               </button>
             </div>
 
+            {/* Mot de passe confirmé */}
+            <div className="relative flex items-center">
+              <Lock className="absolute left-4 text-gray-400" size={18} />
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Confirmer le mot de passe"
+                value={formData.confirmPassword}
+                onChange={(e) =>
+                  setFormData({ ...formData, confirmPassword: e.target.value })
+                }
+                className="w-full pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+              />
+            </div>
+
             {/* Bouton S'inscrire */}
             <button
               type="submit"
@@ -182,7 +214,7 @@ export default function InscriptionPage() {
           {/* Lien connexion */}
           <p className="text-center mt-6 text-gray-600">
             Déjà inscrit ?{" "}
-            <Link href="/connexion" className="text-toni-green-dark-2 font-semibold hover:underline">
+            <Link href="/client/connexion" className="text-toni-green-dark-2 font-semibold hover:underline">
               Connectez-vous.
             </Link>
           </p>
