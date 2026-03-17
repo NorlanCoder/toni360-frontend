@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
+  Package,
+  Boxes,
   Users,
   Pill,
   History,
@@ -16,10 +18,13 @@ import {
   ChevronDown,
   Menu,
 } from "lucide-react";
+import { getAuthSession } from "@/lib/api/session";
+import { ApiError } from "@/lib/api/errors";
+import { extractCollection, getPartnerNotifications } from "@/lib/api/partner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 interface HistoriqueEntry {
-  id: number;
+  id: string;
   titre: string;
   description: string;
   date: string;
@@ -27,68 +32,13 @@ interface HistoriqueEntry {
 }
 
 /* ──────────────────────── Mock data ──────────────────────────── */
-const mockHistorique: HistoriqueEntry[] = [
-  {
-    id: 1,
-    titre: "L'adressse de la pharmacie a été mis à jour",
-    description:
-      "e vestibulum vestibulum. Cras venenatis euismod malesuada. Nullbh.................",
-    date: "14-11-2024",
-    heure: "15h0",
-  },
-  {
-    id: 2,
-    titre: "L'adressse de la pharmacie a été mis à jour",
-    description:
-      "e vestibulum vestibulum. Cras venenatis euismod malesuada. Nullbh.................",
-    date: "14-11-2024",
-    heure: "15h0",
-  },
-  {
-    id: 3,
-    titre: "L'adressse de la pharmacie a été mis à jour",
-    description:
-      "e vestibulum vestibulum. Cras venenatis euismod malesuada. Nullbh.................",
-    date: "14-11-2024",
-    heure: "15h0",
-  },
-  {
-    id: 4,
-    titre: "L'adressse de la pharmacie a été mis à jour",
-    description:
-      "e vestibulum vestibulum. Cras venenatis euismod malesuada. Nullbh.................",
-    date: "14-11-2024",
-    heure: "15h0",
-  },
-  {
-    id: 5,
-    titre: "L'adressse de la pharmacie a été mis à jour",
-    description:
-      "e vestibulum vestibulum. Cras venenatis euismod malesuada. Nullbh.................",
-    date: "14-11-2024",
-    heure: "15h0",
-  },
-  {
-    id: 6,
-    titre: "L'adressse de la pharmacie a été mis à jour",
-    description:
-      "e vestibulum vestibulum. Cras venenatis euismod malesuada. Nullbh.................",
-    date: "14-11-2024",
-    heure: "15h0",
-  },
-  {
-    id: 7,
-    titre: "L'adressse de la pharmacie a été mis à jour",
-    description:
-      "e vestibulum vestibulum. Cras venenatis euismod malesuada. Nullbh.................",
-    date: "14-11-2024",
-    heure: "15h0",
-  },
-];
+const mockHistorique: HistoriqueEntry[] = [];
 
 /* ──────────────────── Sidebar nav items ─────────────────────── */
 const navItems = [
-  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/commandes" },
+  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/dashboard" },
+  { label: "Gestion de commande", icon: Package, href: "/partenaire/commandes" },
+  { label: "Gestion de Stocks", icon: Boxes, href: "/partenaire/stocks" },
   { label: "Gestion des employés", icon: Users, href: "/partenaire/employes" },
   { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
   { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique", active: true },
@@ -98,6 +48,46 @@ const navItems = [
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireHistoriquePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [entries, setEntries] = useState<HistoriqueEntry[]>(mockHistorique);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadHistorique = async () => {
+      const session = getAuthSession();
+      if (!session || session.userType !== "user" || !session.token) {
+        setError("Session partenaire invalide.");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await getPartnerNotifications(session.token, 100);
+        const notifications = extractCollection(response.data.notifications);
+        setEntries(
+          notifications.map((notification) => {
+            const created = notification.created_at ? new Date(notification.created_at) : null;
+            return {
+              id: notification.id,
+              titre: notification.titre,
+              description: notification.message,
+              date: created ? created.toLocaleDateString("fr-FR") : "-",
+              heure: created
+                ? created.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+                : "-",
+            };
+          }),
+        );
+        setError(null);
+      } catch (err: unknown) {
+        setError(err instanceof ApiError ? err.message : "Impossible de charger l'historique.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadHistorique();
+  }, []);
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
@@ -117,7 +107,7 @@ export default function PartenaireHistoriquePage() {
       >
         {/* Logo */}
         <div className="flex h-20 items-center px-5">
-          <Link href="/partenaire/commandes" className="flex items-center gap-2">
+          <Link href="/partenaire/dashboard" className="flex items-center gap-2">
             <Image
               src="/images/logo.png"
               alt="Toni 360°"
@@ -188,14 +178,14 @@ export default function PartenaireHistoriquePage() {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <Link
+              href="/partenaire/notifications"
               aria-label="Voir les notifications"
               className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
               <span className="hidden sm:inline">Notifications</span>
               <Bell className="h-5 w-5" />
-            </button>
+            </Link>
             <button
               type="button"
               aria-label="Accéder à mon compte"
@@ -222,7 +212,11 @@ export default function PartenaireHistoriquePage() {
 
           {/* Liste historique */}
           <div className="flex flex-col gap-4">
-            {mockHistorique.map((entry) => (
+            {isLoading ? (
+              <div className="rounded-xl border border-gray-200 px-4 py-4 text-sm text-gray-500">Chargement de l'historique...</div>
+            ) : error ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">{error}</div>
+            ) : entries.map((entry) => (
               <div
                 key={entry.id}
                 className="flex items-center gap-4 sm:gap-6 rounded-2xl px-4 sm:px-6 py-4 sm:py-5"

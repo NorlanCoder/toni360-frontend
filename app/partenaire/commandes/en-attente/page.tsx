@@ -1,10 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bell, User, Search, Package, Clock, CheckCircle, ChevronDown, Menu } from "lucide-react";
 import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import { getAuthSession } from "@/lib/api/session";
+import { extractCollection, getPartnerCommandes } from "@/lib/api/partner";
+import { ApiError } from "@/lib/api/errors";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type TabKey = "a-preparer" | "en-attente" | "recuperees";
@@ -15,14 +18,6 @@ interface Order {
   montant: string;
   statut: string;
 }
-
-/* ──────────────────────── Mock data ──────────────────────────── */
-const mockOrders: Order[] = Array.from({ length: 7 }, () => ({
-  id: "527785445666",
-  patient: "Djibril Mohamed",
-  montant: "10 000 XOF",
-  statut: "En attente",
-}));
 
 
 /* ──────────────────────── Helpers ────────────────────────────── */
@@ -85,14 +80,60 @@ function DateSelect({ label, className = "" }: { label: string; className?: stri
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireEnAttentePage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>("en-attente");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const tabs: { key: TabKey; label: string; icon: React.ElementType; href: string }[] = [
     { key: "a-preparer", label: "A préparer", icon: Package, href: "/partenaire/commandes" },
     { key: "en-attente", label: "En attente", icon: Clock, href: "/partenaire/commandes/en-attente" },
     { key: "recuperees", label: "Récupérées", icon: CheckCircle, href: "/partenaire/commandes/recuperees" },
   ];
+
+  const moneyFormat = useMemo(
+    () =>
+      new Intl.NumberFormat("fr-FR", {
+        style: "currency",
+        currency: "XOF",
+        maximumFractionDigits: 0,
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      const session = getAuthSession();
+      if (!session || session.userType !== "user" || !session.token) {
+        setError("Session partenaire invalide.");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await getPartnerCommandes(session.token, { statut: "PRETE", per_page: 100 });
+        const commandes = extractCollection(response.data);
+
+        setOrders(
+          commandes.map((commande) => ({
+            id: commande.id,
+            patient: commande.patient?.nom_complet ?? "Patient inconnu",
+            montant: moneyFormat.format(commande.montant_total || 0),
+            statut: commande.statut_label || "En attente",
+          })),
+        );
+        setError(null);
+      } catch (err: unknown) {
+        setError(err instanceof ApiError ? err.message : "Impossible de charger les commandes.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadOrders();
+  }, [moneyFormat]);
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
@@ -124,14 +165,14 @@ export default function PartenaireEnAttentePage() {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <Link
+              href="/partenaire/notifications"
               aria-label="Voir les notifications"
               className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
               <span className="hidden sm:inline">Notifications</span>
               <Bell className="h-5 w-5" />
-            </button>
+            </Link>
             <button
               type="button"
               aria-label="Accéder à mon compte"
@@ -179,6 +220,11 @@ export default function PartenaireEnAttentePage() {
 
           {/* Table */}
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            {isLoading ? (
+              <div className="px-8 py-8 text-sm text-gray-500">Chargement des commandes...</div>
+            ) : error ? (
+              <div className="px-8 py-8 text-sm text-red-600">{error}</div>
+            ) : (
             <table className="min-w-[520px] w-full table-auto text-sm lg:text-base">
               <thead>
                 <tr className="bg-gray-50">
@@ -197,11 +243,11 @@ export default function PartenaireEnAttentePage() {
                 </tr>
               </thead>
               <tbody>
-                {mockOrders.map((order, idx) => (
+                {orders.map((order) => (
                   <tr
-                    key={idx}
+                    key={order.id}
                     className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60 hover:border-l-4 hover:border-l-emerald-500 transition-all cursor-pointer"
-                    onClick={() => window.location.href = `/partenaire/commandes/${order.id}`}
+                    onClick={() => router.push(`/partenaire/commandes/${order.id}`)}
                   >
                     <td className="px-8 py-6 text-base font-mono text-gray-700">
                       {order.id}
@@ -221,6 +267,7 @@ export default function PartenaireEnAttentePage() {
                 ))}
               </tbody>
             </table>
+            )}
           </div>
         </main>
       </div>

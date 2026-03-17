@@ -7,6 +7,7 @@ const PARTNER_ROUTE_REQUIREMENTS: Array<{ prefix: string; permission: string }> 
   { prefix: "/partenaire/employes", permission: "gestion_users:read" },
   { prefix: "/partenaire/medicaments/ajouter", permission: "gestion_produits:create" },
   { prefix: "/partenaire/medicaments", permission: "gestion_produits:read" },
+  { prefix: "/partenaire/stocks", permission: "gestion_stocks:read" },
   { prefix: "/partenaire/commandes", permission: "gestion_commandes:read" },
   { prefix: "/partenaire/profil", permission: "parametrage_pharmacie:read" },
 ];
@@ -52,7 +53,8 @@ export function canAccessPartnerRoute(session: AuthSession | null, pathname: str
     return true;
   }
 
-  return getPermissions(session).includes(match.permission);
+  const [moduleName, action] = match.permission.split(":") as [string, PermissionAction];
+  return hasPermission(session, moduleName, action);
 }
 
 export function filterPartnerNavigationByPermissions<T extends { href: string }>(
@@ -66,6 +68,10 @@ export function filterPartnerNavigationByPermissions<T extends { href: string }>
 
     if (item.href.startsWith("/partenaire/medicaments")) {
       return hasPermission(session, "gestion_produits", "read");
+    }
+
+    if (item.href.startsWith("/partenaire/stocks")) {
+      return hasPermission(session, "gestion_stocks", "read");
     }
 
     if (item.href.startsWith("/partenaire/commandes")) {

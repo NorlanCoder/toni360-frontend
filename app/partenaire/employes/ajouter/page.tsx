@@ -5,8 +5,13 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ConfirmationModal from "@/components/ConfirmationModal";
+import { getAuthSession } from "@/lib/api/session";
+import { ApiError } from "@/lib/api/errors";
+import { createPartnerUser, getPartnerRoles, PartnerRole } from "@/lib/api/partner";
 import {
   LayoutDashboard,
+  Package,
+  Boxes,
   Users,
   Pill,
   History,
@@ -22,12 +27,34 @@ import {
 
 /* ──────────────────── Sidebar nav items ─────────────────────── */
 const navItems = [
-  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/commandes" },
+  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/dashboard" },
+  { label: "Gestion de commande", icon: Package, href: "/partenaire/commandes" },
+  { label: "Gestion de Stocks", icon: Boxes, href: "/partenaire/stocks" },
   { label: "Gestion des employés", icon: Users, href: "/partenaire/employes", active: true },
   { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
   { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
   { label: "Assistance et support", icon: HelpCircle, href: "#" },
 ];
+
+const ASSIGNABLE_ROLE_CODES = [
+  "GESTIONNAIRE_OPERATIONNEL",
+  "RESPONSABLE_STOCKS",
+  "RESPONSABLE_COMMANDES",
+] as const;
+
+const roleLabelsByCode: Record<(typeof ASSIGNABLE_ROLE_CODES)[number], string> = {
+  GESTIONNAIRE_OPERATIONNEL: "Gestionnaire Opérationnel",
+  RESPONSABLE_STOCKS: "Responsable des Stocks",
+  RESPONSABLE_COMMANDES: "Responsable des Commandes",
+};
+
+function getRoleDisplayLabel(roleItem: PartnerRole): string {
+  if (roleItem.code in roleLabelsByCode) {
+    return roleLabelsByCode[roleItem.code as keyof typeof roleLabelsByCode];
+  }
+
+  return roleItem.libelle;
+}
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireAjouterEmployePage() {
@@ -35,6 +62,9 @@ export default function PartenaireAjouterEmployePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [roles, setRoles] = useState<PartnerRole[]>([]);
 
   /* ── Form state ── */
   const [nom, setNom] = useState("");
@@ -42,6 +72,33 @@ export default function PartenaireAjouterEmployePage() {
   const [telephone, setTelephone] = useState("");
   const [role, setRole] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
+
+  useEffect(() => {
+    const loadRoles = async () => {
+      const session = getAuthSession();
+      if (!session || session.userType !== "user" || !session.token) {
+        setError("Session partenaire invalide.");
+        return;
+      }
+
+      try {
+        const response = await getPartnerRoles(session.token);
+        const roleMap = new Map(response.data.roles.map((item) => [item.code, item]));
+        const availableRoles = ASSIGNABLE_ROLE_CODES
+          .map((code) => roleMap.get(code))
+          .filter((item): item is PartnerRole => Boolean(item));
+
+        setRoles(availableRoles);
+        if (availableRoles.length > 0) {
+          setRole(availableRoles[0].id);
+        }
+      } catch (err: unknown) {
+        setError(err instanceof ApiError ? err.message : "Impossible de charger les rôles.");
+      }
+    };
+
+    void loadRoles();
+  }, []);
 
   /* ── Auto-close modal after 3 s ── */
   useEffect(() => {
@@ -53,9 +110,43 @@ export default function PartenaireAjouterEmployePage() {
     return () => clearTimeout(timer);
   }, [showModal, router]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setShowModal(true);
+
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token) {
+      setError("Session partenaire invalide.");
+      return;
+    }
+
+    const [nomPart, ...prenomParts] = nom.trim().split(" ");
+    const prenomPart = prenomParts.join(" ") || nomPart;
+    const numero = telephone.replace(/\D/g, "");
+
+    if (!nomPart || !prenomPart || !email || !numero || !role || motDePasse.length < 8) {
+      setError("Veuillez remplir correctement tous les champs.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await createPartnerUser(session.token, {
+        nom: nomPart,
+        prenom: prenomPart,
+        email,
+        telephone: numero.startsWith("229") ? `+${numero}` : `+229${numero}`,
+        password: motDePasse,
+        password_confirmation: motDePasse,
+        role_id: role,
+      });
+
+      setShowModal(true);
+      setError(null);
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : "Erreur lors de la création de l'employé.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -76,7 +167,7 @@ export default function PartenaireAjouterEmployePage() {
       >
         {/* Logo */}
         <div className="flex h-20 items-center px-5">
-          <Link href="/partenaire/commandes" className="flex items-center gap-2">
+          <Link href="/partenaire/dashboard" className="flex items-center gap-2">
             <Image
               src="/images/logo.png"
               alt="Toni 360°"
@@ -147,14 +238,14 @@ export default function PartenaireAjouterEmployePage() {
 
           {/* Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              type="button"
+            <Link
+              href="/partenaire/notifications"
               aria-label="Voir les notifications"
               className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
               <span className="hidden sm:inline">Notifications</span>
               <Bell className="h-5 w-5" />
-            </button>
+            </Link>
             <button
               type="button"
               aria-label="Accéder à mon compte"
@@ -168,6 +259,11 @@ export default function PartenaireAjouterEmployePage() {
 
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-2 sm:px-6 lg:px-32 py-4 sm:py-8 lg:py-16">
+          {error && (
+            <div className="mx-auto mb-4 w-full max-w-[920px] rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
           <form
             onSubmit={handleSubmit}
             className="mx-auto w-full max-w-[920px] rounded-xl bg-white p-4 sm:p-8"
@@ -223,13 +319,15 @@ export default function PartenaireAjouterEmployePage() {
                 <label className="mb-1 block text-base font-medium text-gray-600">
                   Rôle
                 </label>
-                <input
-                  type="text"
-                  placeholder="Pharmacien"
+                <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
                   className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
+                >
+                  {roles.map((item) => (
+                    <option key={item.id} value={item.id}>{getRoleDisplayLabel(item)}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -267,9 +365,10 @@ export default function PartenaireAjouterEmployePage() {
             <div className="mt-6 sm:mt-10 flex justify-end">
               <button
                 type="submit"
+                disabled={isSubmitting}
                 className="w-full sm:w-auto rounded-full bg-emerald-700 px-4 sm:px-10 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white transition-colors hover:bg-emerald-800"
               >
-                Ajouter cet employé
+                {isSubmitting ? "Ajout en cours..." : "Ajouter cet employé"}
               </button>
             </div>
           </form>

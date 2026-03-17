@@ -7,6 +7,9 @@ import { useRouter } from "next/navigation";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import { Bell, User, Search, Menu } from "lucide-react";
 import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import { getAuthSession } from "@/lib/api/session";
+import { ApiError } from "@/lib/api/errors";
+import { createPartnerProduit } from "@/lib/api/partner";
 
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
@@ -14,12 +17,14 @@ export default function PartenaireAjouterMedicamentPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   /* ── Form state ── */
   const [nom, setNom] = useState("Paracétamol 500mg");
   const [nomGenerique, setNomGenerique] = useState("Paracétamol");
   const [forme, setForme] = useState("Comprimés");
-  const [prix, setPrix] = useState("700 XOF CFA");
+  const [prix, setPrix] = useState("700");
   const [stockInitial, setStockInitial] = useState("100");
   const [seuil, setSeuil] = useState("100");
   const [ordonnance, setOrdonnance] = useState(true);
@@ -34,9 +39,44 @@ export default function PartenaireAjouterMedicamentPage() {
     return () => clearTimeout(timer);
   }, [showModal, router]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setShowModal(true);
+
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token) {
+      setError("Session partenaire invalide.");
+      return;
+    }
+
+    const prixVente = Number(prix.replace(/\s|[^\d.]/g, ""));
+    const quantite = Number(stockInitial);
+    const seuilAlerte = Number(seuil);
+
+    if (!nom || !forme || Number.isNaN(prixVente) || Number.isNaN(quantite) || Number.isNaN(seuilAlerte)) {
+      setError("Veuillez remplir correctement le formulaire.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await createPartnerProduit(session.token, {
+        nom,
+        dci: nomGenerique,
+        forme,
+        dosage: "500mg",
+        prix_achat: prixVente,
+        prix_vente: prixVente,
+        necessite_ordonnance: ordonnance,
+        quantite_initiale: quantite,
+        seuil_alerte: seuilAlerte,
+      });
+      setShowModal(true);
+      setError(null);
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : "Erreur lors de l'ajout du médicament.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -69,14 +109,14 @@ export default function PartenaireAjouterMedicamentPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <Link
+              href="/partenaire/notifications"
               aria-label="Voir les notifications"
               className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
               <span className="hidden sm:inline">Notifications</span>
               <Bell className="h-5 w-5" />
-            </button>
+            </Link>
             <button
               type="button"
               aria-label="Accéder à mon compte"
@@ -90,6 +130,11 @@ export default function PartenaireAjouterMedicamentPage() {
 
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-12 lg:px-32 py-10 lg:py-16">
+          {error && (
+            <div className="mx-auto mb-4 w-full max-w-[920px] rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
           <form
             onSubmit={handleSubmit}
             className="mx-auto w-full max-w-[920px] rounded-xl bg-white p-6 sm:p-8"
@@ -203,9 +248,10 @@ export default function PartenaireAjouterMedicamentPage() {
             {/* Submit */}
             <button
               type="submit"
+              disabled={isSubmitting}
               className="mt-10 w-full rounded-full bg-emerald-600 py-4 text-lg font-bold text-white transition-colors hover:bg-emerald-700"
             >
-              Ajouter au stock
+              {isSubmitting ? "Ajout en cours..." : "Ajouter au stock"}
             </button>
           </form>
         </main>

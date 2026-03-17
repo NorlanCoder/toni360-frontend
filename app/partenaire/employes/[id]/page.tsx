@@ -1,9 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { Bell, User, Search, Menu } from "lucide-react";
 import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import { getAuthSession } from "@/lib/api/session";
+import { ApiError } from "@/lib/api/errors";
+import { getPartnerUser, togglePartnerUserActive, updatePartnerUser } from "@/lib/api/partner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 interface Permission {
@@ -11,42 +16,212 @@ interface Permission {
   enabled: boolean;
 }
 
+type EmployeeRoleCode = "PHARMACIEN_TITULAIRE" | "GESTIONNAIRE_OPERATIONNEL" | "RESPONSABLE_STOCKS" | "RESPONSABLE_COMMANDES";
+
+interface EmployeeState {
+  id: string;
+  nom: string;
+  role: string;
+  roleCode: EmployeeRoleCode | null;
+  statut: "Actif" | "Désactivé";
+  email: string;
+  telephone: string;
+  dateAjout: string;
+}
+
 /* ──────────────────────── Mock data ──────────────────────────── */
-const mockEmployee = {
-  id: 1,
-  nom: "Luc ASSOGBA",
-  role: "Gestionnaire opérationnel",
-  statut: "Actif" as const,
-  email: "lucassogba@gmail.com",
-  telephone: "+229 01 25 00 00 00",
-  dateAjout: "12-05-2024",
+const mockEmployee: EmployeeState = {
+  id: "",
+  nom: "",
+  role: "Gestionnaire Opérationnel",
+  roleCode: null,
+  statut: "Actif",
+  email: "",
+  telephone: "",
+  dateAjout: "-",
 };
 
-const defaultPermissions: Permission[] = [
-  { label: "Gestion des commandes", enabled: true },
-  { label: "Gestion des médicaments", enabled: true },
-  { label: "Gestion des employés", enabled: true },
-  { label: "Gestion des données de la pharmacie", enabled: true },
-  { label: "Gestion des interactions avec les patients", enabled: true },
-  { label: "Gestion des performances", enabled: true },
-];
+const PERMISSIONS_BY_ROLE: Record<EmployeeRoleCode, Permission[]> = {
+  PHARMACIEN_TITULAIRE: [
+    { label: "Gestion des employés", enabled: true },
+    { label: "Gestion des commandes", enabled: true },
+    { label: "Gestion des médicaments", enabled: true },
+    { label: "Gestion des stocks", enabled: true },
+    { label: "Gestion des données de la pharmacie", enabled: true },
+    { label: "Gestion des interactions avec les patients", enabled: true },
+    { label: "Gestion des performances", enabled: true },
+    { label: "Gestion des paiements", enabled: true },
+  ],
+  GESTIONNAIRE_OPERATIONNEL: [
+    { label: "Gestion des commandes", enabled: true },
+    { label: "Gestion des médicaments", enabled: true },
+    { label: "Gestion des stocks", enabled: true },
+    { label: "Gestion des données de la pharmacie", enabled: true },
+    { label: "Gestion des interactions avec les patients", enabled: true },
+    { label: "Gestion des performances", enabled: true },
+    { label: "Gestion des paiements", enabled: true },
+  ],
+  RESPONSABLE_STOCKS: [
+    { label: "Gestion des médicaments", enabled: true },
+    { label: "Gestion des stocks", enabled: true },
+  ],
+  RESPONSABLE_COMMANDES: [
+    { label: "Gestion des commandes", enabled: true },
+    { label: "Gestion des paiements", enabled: true },
+  ],
+};
+
+function mapRoleCode(code: string | undefined): EmployeeRoleCode | null {
+  if (code === "PHARMACIEN_TITULAIRE") return "PHARMACIEN_TITULAIRE";
+  if (code === "GESTIONNAIRE_OPERATIONNEL") return "GESTIONNAIRE_OPERATIONNEL";
+  if (code === "RESPONSABLE_STOCKS") return "RESPONSABLE_STOCKS";
+  if (code === "RESPONSABLE_COMMANDES") return "RESPONSABLE_COMMANDES";
+  return null;
+}
+
+function mapRoleLabel(code: EmployeeRoleCode | null, libelle: string | undefined): string {
+  if (code === "PHARMACIEN_TITULAIRE") return "Pharmacien Titulaire";
+  if (code === "GESTIONNAIRE_OPERATIONNEL") return "Gestionnaire Opérationnel";
+  if (code === "RESPONSABLE_STOCKS") return "Responsable des Stocks";
+  if (code === "RESPONSABLE_COMMANDES") return "Responsable des Commandes";
+  return libelle ?? "Employé";
+}
+
+function getPermissionsForRole(code: EmployeeRoleCode | null): Permission[] {
+  if (!code) {
+    return [];
+  }
+
+  return PERMISSIONS_BY_ROLE[code];
+}
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireEmployeDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [permissions, setPermissions] = useState<Permission[]>(defaultPermissions);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [employee, setEmployee] = useState(mockEmployee);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editableName, setEditableName] = useState("");
+  const [editablePhone, setEditablePhone] = useState("");
 
   /* ── Modal state ── */
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [deactivatePassword, setDeactivatePassword] = useState("");
+  const isTitulaire = employee.roleCode === "PHARMACIEN_TITULAIRE";
 
-  /* ── Toggle a permission ── */
-  const togglePermission = (index: number) => {
-    setPermissions((prev) =>
-      prev.map((p, i) => (i === index ? { ...p, enabled: !p.enabled } : p)),
-    );
+  useEffect(() => {
+    const loadEmployee = async () => {
+      const session = getAuthSession();
+      if (!session || session.userType !== "user" || !session.token || !id) {
+        setError("Session partenaire invalide.");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await getPartnerUser(session.token, id);
+        const user = response.data.user;
+        const roleCode = mapRoleCode(user.role?.code);
+
+        if (roleCode === "PHARMACIEN_TITULAIRE") {
+          router.replace("/partenaire/employes");
+          return;
+        }
+
+        const mapped: EmployeeState = {
+          id: user.id,
+          nom: user.nom_complet,
+          role: mapRoleLabel(roleCode, user.role?.libelle),
+          roleCode,
+          statut: user.is_active ? "Actif" : "Désactivé",
+          email: user.email,
+          telephone: user.telephone,
+          dateAjout: user.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "-",
+        };
+        setEmployee(mapped);
+        setPermissions(getPermissionsForRole(roleCode));
+        setEditableName(mapped.nom);
+        setEditablePhone(mapped.telephone);
+      } catch (err: unknown) {
+        setError(err instanceof ApiError ? err.message : "Impossible de charger l'employé.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadEmployee();
+  }, [id]);
+
+  const handleSave = async () => {
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token || !id) {
+      setError("Session partenaire invalide.");
+      return;
+    }
+
+    const [nomPart, ...prenomParts] = editableName.trim().split(" ");
+    const prenomPart = prenomParts.join(" ") || nomPart;
+
+    setIsSubmitting(true);
+    try {
+      const response = await updatePartnerUser(session.token, id, {
+        nom: nomPart,
+        prenom: prenomPart,
+        telephone: editablePhone,
+      });
+      const user = response.data.user;
+      setEmployee((prev) => ({
+        ...prev,
+        nom: user.nom_complet,
+        telephone: user.telephone,
+      }));
+      setIsEditing(false);
+      setError(null);
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : "Erreur lors de la mise à jour.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const handleToggleActive = async () => {
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token || !id) {
+      setError("Session partenaire invalide.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await togglePartnerUserActive(session.token, id);
+      setEmployee((prev) => ({
+        ...prev,
+        statut: prev.statut === "Actif" ? "Désactivé" : "Actif",
+      }));
+      setShowDeactivateModal(false);
+      setDeactivatePassword("");
+      setError(null);
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : "Action impossible sur cet employé.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    await handleToggleActive();
+    router.push("/partenaire/employes");
+  };
+
+  if (isLoading) {
+    return <div className="p-6 text-sm text-gray-600">Chargement de l'employé...</div>;
+  }
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
@@ -78,14 +253,14 @@ export default function PartenaireEmployeDetailPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              type="button"
+            <Link
+              href="/partenaire/notifications"
               aria-label="Voir les notifications"
               className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
               <span className="hidden sm:inline">Notifications</span>
               <Bell className="h-5 w-5" />
-            </button>
+            </Link>
             <button
               type="button"
               aria-label="Accéder à mon compte"
@@ -99,6 +274,11 @@ export default function PartenaireEmployeDetailPage() {
 
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-32 py-6 lg:py-12">
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
           <div className="mx-auto w-full max-w-[860px] space-y-8">
             {/* ════════ EMPLOYEE CARD ════════ */}
             <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8">
@@ -107,13 +287,13 @@ export default function PartenaireEmployeDetailPage() {
                 <div>
                   <div className="flex items-center gap-3">
                     <h1 className="text-2xl font-bold text-gray-900">
-                      {mockEmployee.nom}
+                      {isEditing ? editableName : employee.nom}
                     </h1>
                     <span className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-0.5 text-xs font-medium text-gray-600">
-                      {mockEmployee.statut}
+                      {employee.statut}
                     </span>
                   </div>
-                  <p className="mt-1 text-base text-gray-500">{mockEmployee.role}</p>
+                  <p className="mt-1 text-base text-gray-500">{employee.role}</p>
                 </div>
 
                 {/* Trash icon */}
@@ -134,26 +314,49 @@ export default function PartenaireEmployeDetailPage() {
 
               {/* Info row */}
               <div className="mt-5 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-gray-600">
-                <span>{mockEmployee.email}</span>
-                <span>{mockEmployee.telephone}</span>
-                <span>{mockEmployee.dateAjout}</span>
+                <span>{employee.email}</span>
+                <span>{isEditing ? editablePhone : employee.telephone}</span>
+                <span>{employee.dateAjout}</span>
               </div>
+
+              {isEditing && (
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <input
+                    type="text"
+                    value={editableName}
+                    onChange={(e) => setEditableName(e.target.value)}
+                    className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800"
+                  />
+                  <input
+                    type="text"
+                    value={editablePhone}
+                    onChange={(e) => setEditablePhone(e.target.value)}
+                    className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800"
+                  />
+                </div>
+              )}
 
               {/* Action buttons */}
               <div className="mt-6 flex items-center gap-4">
-                <button
-                  type="button"
-                  className="rounded-full border-2 border-emerald-600 px-8 py-2 text-sm font-semibold text-emerald-600 transition-colors hover:bg-emerald-50"
-                >
-                  Modifier
-                </button>
-                <button
-                  type="button"
-                  className="rounded-full bg-gray-200 px-8 py-2 text-sm font-semibold text-gray-500 transition-colors hover:bg-gray-300"
-                  onClick={() => setShowDeactivateModal(true)}
-                >
-                  Désactiver
-                </button>
+                {!isTitulaire && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => (isEditing ? void handleSave() : setIsEditing(true))}
+                      disabled={isSubmitting}
+                      className="rounded-full border-2 border-emerald-600 px-8 py-2 text-sm font-semibold text-emerald-600 transition-colors hover:bg-emerald-50"
+                    >
+                      {isEditing ? "Enregistrer" : "Modifier"}
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-full bg-gray-200 px-8 py-2 text-sm font-semibold text-gray-500 transition-colors hover:bg-gray-300"
+                      onClick={() => setShowDeactivateModal(true)}
+                    >
+                      Désactiver
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -162,6 +365,12 @@ export default function PartenaireEmployeDetailPage() {
               <h2 className="mb-4 text-lg font-bold text-gray-900">
                 Gérer les permissions
               </h2>
+
+              {isTitulaire && (
+                <p className="mb-3 text-sm text-gray-600">
+                  Le Pharmacien Titulaire dispose de toutes les permissions par défaut.
+                </p>
+              )}
 
               <div className="rounded-2xl bg-emerald-50/70 px-6 py-2">
                 {permissions.map((perm, idx) => (
@@ -177,10 +386,10 @@ export default function PartenaireEmployeDetailPage() {
                         role="switch"
                         aria-checked={perm.enabled}
                         aria-label={perm.label}
-                        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${
+                        disabled
+                        className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${
                           perm.enabled ? "bg-emerald-500" : "bg-gray-300"
                         }`}
-                        onClick={() => togglePermission(idx)}
                       >
                         <span
                           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ${
@@ -220,8 +429,7 @@ export default function PartenaireEmployeDetailPage() {
                 type="button"
                 className="min-w-[100px] rounded-full bg-emerald-600 px-8 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
                 onClick={() => {
-                  /* TODO: handle delete */
-                  setShowDeleteModal(false);
+                  void handleDelete();
                 }}
               >
                 Oui
@@ -271,9 +479,7 @@ export default function PartenaireEmployeDetailPage() {
                 type="button"
                 className="mt-5 w-full rounded-full bg-emerald-600 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700"
                 onClick={() => {
-                  /* TODO: handle deactivation */
-                  setShowDeactivateModal(false);
-                  setDeactivatePassword("");
+                  void handleToggleActive();
                 }}
               >
                 Désactiver

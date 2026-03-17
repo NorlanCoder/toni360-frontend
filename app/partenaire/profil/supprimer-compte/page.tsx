@@ -18,12 +18,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const menuItems = [
-  { icon: LayoutGrid, label: "Tableau de bord", active: true },
-  { icon: Users, label: "Gestion des employés", active: false },
-  { icon: PlusSquare, label: "Gestion des médicaments", active: false },
-  { icon: FileText, label: "Historique des actions", active: false },
-  { icon: HelpCircle, label: "Assistance et support", active: false },
-  { icon: LogOut, label: "Déconnexion", active: false },
+  { icon: LayoutGrid, label: "Tableau de bord", href: "/partenaire/dashboard", active: false },
+  { icon: Users, label: "Gestion des employés", href: "/partenaire/employes", active: false },
+  { icon: PlusSquare, label: "Gestion des médicaments", href: "/partenaire/medicaments", active: false },
+  { icon: FileText, label: "Historique des actions", href: "/partenaire/employes/historique", active: false },
+  { icon: HelpCircle, label: "Assistance et support", href: "#", active: false },
+  { icon: LogOut, label: "Déconnexion", href: "/partenaire/deconnexion", active: false },
 ];
 
 export default function SupprimerComptePage() {
@@ -72,8 +72,9 @@ export default function SupprimerComptePage() {
           {menuItems.map((item, idx) => {
             const Icon = item.icon;
             return (
-              <button
+              <Link
                 key={idx}
+                href={item.href}
                 className={`flex items-center gap-4 w-full px-4 py-[18px] rounded-xl text-[18px] font-semibold text-left transition-colors ${
                   item.active
                     ? "bg-[#e0f8ef] text-[#10b981]"
@@ -87,7 +88,7 @@ export default function SupprimerComptePage() {
                   strokeWidth={2.2}
                 />
                 <span>{item.label}</span>
-              </button>
+              </Link>
             );
           })}
         </nav>
@@ -110,7 +111,7 @@ export default function SupprimerComptePage() {
           {/* Right actions */}
           <div className="flex items-center gap-2 md:gap-4">
             {/* Notifications */}
-            <button className="flex items-center gap-3 pl-4 md:pl-6 pr-3 py-[10px] rounded-full border-[2px] border-[#10b981] text-[#10b981] hover:bg-[#ecf9f4] transition-colors">
+            <Link href="/partenaire/notifications" className="flex items-center gap-3 pl-4 md:pl-6 pr-3 py-[10px] rounded-full border-[2px] border-[#10b981] text-[#10b981] hover:bg-[#ecf9f4] transition-colors">
               <span className="text-[15px] md:text-[18px] font-bold">Notifications</span>
               <span className="flex items-center justify-center w-[44px] h-[44px] rounded-full bg-[#10b981]">
                 <Bell
@@ -119,10 +120,10 @@ export default function SupprimerComptePage() {
                   strokeWidth={0}
                 />
               </span>
-            </button>
+            </Link>
 
             {/* Mon Compte */}
-            <button className="flex items-center gap-3 pl-4 md:pl-6 pr-3 py-[10px] rounded-full border-[2px] border-[#10b981] text-[#10b981] hover:bg-[#ecf9f4] transition-colors">
+            <Link href="/partenaire/profil" className="flex items-center gap-3 pl-4 md:pl-6 pr-3 py-[10px] rounded-full border-[2px] border-[#10b981] text-[#10b981] hover:bg-[#ecf9f4] transition-colors">
               <span className="text-[15px] md:text-[18px] font-bold">Mon Compte</span>
               <span className="flex items-center justify-center w-[44px] h-[44px] rounded-full bg-[#10b981]">
                 <User
@@ -131,7 +132,7 @@ export default function SupprimerComptePage() {
                   strokeWidth={2}
                 />
               </span>
-            </button>
+            </Link>
           </div>
         </header>
 

@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Bell, User, Search, Menu, ArrowLeft } from "lucide-react";
 import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import { getAuthSession } from "@/lib/api/session";
+import { rejeterPartnerOrdonnance, validerPartnerOrdonnance } from "@/lib/api/partner";
+import { ApiError } from "@/lib/api/errors";
 
 /* ════════════════════════════ PAGE ════════════════════════════ */
 export default function OrdonnancePage() {
@@ -14,6 +17,8 @@ export default function OrdonnancePage() {
   const [notification, setNotification] = useState("");
   const [decision, setDecision] = useState<"valide" | "refuse" | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   /* Auto-close success modal after 2.5 s then go back */
   useEffect(() => {
@@ -25,22 +30,51 @@ export default function OrdonnancePage() {
     return () => clearTimeout(timer);
   }, [showSuccess, router, id]);
 
-  function handleValider() {
-    setDecision("valide");
-    // TODO: appel API – valider l'ordonnance
-    router.push(`/partenaire/commandes/${id}`);
+  async function handleValider() {
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token || !id) {
+      setError("Session partenaire invalide.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await validerPartnerOrdonnance(session.token, id);
+      setDecision("valide");
+      setError(null);
+      router.push(`/partenaire/commandes/${id}`);
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : "Validation impossible.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function handleRefuser() {
     setDecision("refuse");
   }
 
-  function handleEnvoyer() {
+  async function handleEnvoyer() {
     if (!notification.trim()) return;
-    // TODO: appel API – envoyer la notification au patient
-    setShowSuccess(true);
-    setNotification("");
-    setDecision(null);
+
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token || !id) {
+      setError("Session partenaire invalide.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await rejeterPartnerOrdonnance(session.token, id, notification.trim());
+      setShowSuccess(true);
+      setNotification("");
+      setDecision(null);
+      setError(null);
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : "Envoi impossible.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -70,14 +104,14 @@ export default function OrdonnancePage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <Link
+              href="/partenaire/notifications"
               aria-label="Voir les notifications"
               className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
               <span className="hidden sm:inline">Notifications</span>
               <Bell className="h-5 w-5" />
-            </button>
+            </Link>
             <button
               type="button"
               aria-label="Accéder à mon compte"
@@ -91,6 +125,11 @@ export default function OrdonnancePage() {
 
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10 bg-emerald-50">
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
           {/* Back + Title */}
           <div className="mb-8 flex items-center gap-4">
@@ -226,6 +265,7 @@ export default function OrdonnancePage() {
                 <button
                   type="button"
                   onClick={handleValider}
+                  disabled={isSubmitting}
                   className={`flex-1 rounded-full px-8 py-3 text-base font-semibold transition-colors ${
                     decision === "valide"
                       ? "bg-emerald-700 text-white"
@@ -237,6 +277,7 @@ export default function OrdonnancePage() {
                 <button
                   type="button"
                   onClick={handleRefuser}
+                  disabled={isSubmitting}
                   className={`flex-1 rounded-full border-2 px-8 py-3 text-base font-semibold transition-colors ${
                     decision === "refuse"
                       ? "border-red-600 bg-red-50 text-red-700"
@@ -260,10 +301,10 @@ export default function OrdonnancePage() {
                   <button
                     type="button"
                     onClick={handleEnvoyer}
-                    disabled={!notification.trim()}
+                    disabled={!notification.trim() || isSubmitting}
                     className="rounded-full border-2 border-emerald-600 px-10 py-3 text-base font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    Envoyer
+                    {isSubmitting ? "Envoi..." : "Envoyer"}
                   </button>
                 </div>
               </div>

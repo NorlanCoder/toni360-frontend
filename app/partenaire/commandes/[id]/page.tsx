@@ -1,10 +1,19 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, User, Search, Menu, ArrowLeft, Download } from "lucide-react";
 import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import { getAuthSession } from "@/lib/api/session";
+import {
+  getPartnerCommande,
+  marquerPartnerCommandePrete,
+  preparerPartnerCommande,
+  PartnerCommande,
+} from "@/lib/api/partner";
+import { ApiError } from "@/lib/api/errors";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type OrderStatus = "a-preparer" | "prete" | "recuperee";
@@ -30,27 +39,6 @@ interface OrderDetail {
   statut: OrderStatus;
 }
 
-/* ──────────────────────── Mock data ──────────────────────────── */
-const mockOrderDetail: OrderDetail = {
-  id: "527785445666",
-  cmdRef: "CMD 254-656",
-  patient: "Franck Aissi",
-  telephone: "+229 01 00 00 00 00",
-  date: "12-25-2024",
-  heure: "10h00",
-  paiement: "momo",
-  pieceJointe: "ordonnance.pdf",
-  items: [
-    { medicament: "Paracétamol 500 mg", qte: 2, pu: 100, total: 1000 },
-    { medicament: "Paracétamol 500 mg", qte: 2, pu: 100, total: 1000 },
-    { medicament: "Paracétamol 500 mg", qte: 2, pu: 100, total: 1000 },
-    { medicament: "Paracétamol 500 mg", qte: 2, pu: 100, total: 1000 },
-    { medicament: "Paracétamol 500 mg", qte: 2, pu: 100, total: 1000 },
-  ],
-  montantTotal: 50000,
-  statut: "a-preparer",
-};
-
 
 /* ──────────────────── Format helpers ────────────────────────── */
 function formatPrice(n: number) {
@@ -67,12 +55,111 @@ export default function CommandeDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [order, setOrder] = useState<OrderDetail | null>(null);
+  const [backendStatus, setBackendStatus] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // In real app: fetch order by id. For now use mock.
-  const order: OrderDetail = { ...mockOrderDetail, id: id ?? mockOrderDetail.id };
   const fromSection = searchParams.get("from");
-  const initialStatut: OrderStatus = fromSection === "recuperees" ? "recuperee" : order.statut;
-  const [statut, setStatut] = useState<OrderStatus>(initialStatut);
+  const [statut, setStatut] = useState<OrderStatus>(fromSection === "recuperees" ? "recuperee" : "a-preparer");
+
+  useEffect(() => {
+    const toViewStatus = (statutCommande: string): OrderStatus => {
+      if (statutCommande === "RECUPEREE") {
+        return "recuperee";
+      }
+      if (statutCommande === "PRETE") {
+        return "prete";
+      }
+      return "a-preparer";
+    };
+
+    const mapToOrderDetail = (commande: PartnerCommande): OrderDetail => {
+      const createdAt = commande.created_at ? new Date(commande.created_at) : null;
+      const firstOrdonnanceUrl = commande.produits.find((p) => p.ordonnance?.fichier_url)?.ordonnance?.fichier_url ?? null;
+      const pieceJointe = firstOrdonnanceUrl ? firstOrdonnanceUrl.split("/").pop() ?? null : null;
+
+      return {
+        id: commande.id,
+        cmdRef: commande.numero_commande,
+        patient: commande.patient?.nom_complet ?? "Patient inconnu",
+        telephone: commande.patient?.telephone ?? "-",
+        date: createdAt
+          ? createdAt.toLocaleDateString("fr-FR")
+          : "-",
+        heure: createdAt
+          ? createdAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+          : "-",
+        paiement: "momo",
+        pieceJointe,
+        items: commande.produits.map((produit) => ({
+          medicament: produit.produit?.nom ?? "Médicament",
+          qte: produit.quantite ?? 0,
+          pu: produit.prix_unitaire ?? 0,
+          total: produit.prix_total ?? 0,
+        })),
+        montantTotal: commande.montant_total ?? 0,
+        statut: toViewStatus(commande.statut),
+      };
+    };
+
+    const loadOrder = async () => {
+      const session = getAuthSession();
+      if (!session || session.userType !== "user" || !session.token || !id) {
+        setError("Session partenaire invalide.");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await getPartnerCommande(session.token, id);
+        const commande = response.data.commande;
+        setOrder(mapToOrderDetail(commande));
+        setBackendStatus(commande.statut);
+        setStatut(fromSection === "recuperees" ? "recuperee" : toViewStatus(commande.statut));
+        setError(null);
+      } catch (err: unknown) {
+        setError(err instanceof ApiError ? err.message : "Impossible de charger la commande.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadOrder();
+  }, [fromSection, id]);
+
+  const handleReady = async () => {
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token || !id) {
+      setError("Session partenaire invalide.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (backendStatus === "PAYEE") {
+        await preparerPartnerCommande(session.token, id);
+      }
+
+      await marquerPartnerCommandePrete(session.token, id);
+      setBackendStatus("PRETE");
+      setStatut("prete");
+      setError(null);
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : "Impossible de marquer la commande prête.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="p-6 text-sm text-gray-600">Chargement des détails de la commande...</div>;
+  }
+
+  if (!order) {
+    return <div className="p-6 text-sm text-red-600">{error ?? "Commande introuvable."}</div>;
+  }
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
@@ -101,14 +188,14 @@ export default function CommandeDetailPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <Link
+              href="/partenaire/notifications"
               aria-label="Voir les notifications"
               className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
               <span className="hidden sm:inline">Notifications</span>
               <Bell className="h-5 w-5" />
-            </button>
+            </Link>
             <button
               type="button"
               aria-label="Accéder à mon compte"
@@ -122,6 +209,11 @@ export default function CommandeDetailPage() {
 
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10 bg-emerald-50">
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
           {/* Back + Title */}
           <div className="mb-6 flex items-center gap-4">
@@ -260,10 +352,11 @@ export default function CommandeDetailPage() {
 
                 <button
                   type="button"
-                  onClick={() => setStatut("prete")}
+                  onClick={handleReady}
+                  disabled={isSubmitting}
                   className="rounded-full border-2 border-emerald-600 bg-emerald-600 px-12 py-3 text-base font-semibold text-white hover:bg-emerald-700 hover:border-emerald-700 transition-colors"
                 >
-                  Prête
+                  {isSubmitting ? "Traitement..." : "Prête"}
                 </button>
               </>
             )}
