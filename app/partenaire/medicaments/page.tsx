@@ -2,30 +2,25 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Bell, User, Search, Upload, Menu } from "lucide-react";
 import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import { getAuthSession } from "@/lib/api/session";
+import { ApiError } from "@/lib/api/errors";
+import { extractCollection, getPartnerProduits } from "@/lib/api/partner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type FilterKey = "tous" | "disponible" | "au-seuil" | "indisponible" | "desactives";
 
 interface Medicine {
-  id: number;
+  id: string;
   nom: string;
   prix: string;
   statut: "Disponible" | "Au seuil" | "Indisponible" | "Désactivé";
 }
 
 /* ──────────────────────── Mock data ──────────────────────────── */
-const mockMedicines: Medicine[] = [
-  { id: 1, nom: "Paracétamol", prix: "10 000 XOF FCFA", statut: "Disponible" },
-  { id: 2, nom: "Paracétamol", prix: "10 000 XOF FCFA", statut: "Disponible" },
-  { id: 3, nom: "Paracétamol", prix: "10 000 XOF FCFA", statut: "Au seuil" },
-  { id: 4, nom: "Paracétamol", prix: "10 000 XOF FCFA", statut: "Indisponible" },
-  { id: 5, nom: "Paracétamol", prix: "10 000 XOF FCFA", statut: "Disponible" },
-  { id: 6, nom: "Paracétamol", prix: "10 000 XOF FCFA", statut: "Désactivé" },
-  { id: 7, nom: "Paracétamol", prix: "10 000 XOF FCFA", statut: "Disponible" },
-];
+const mockMedicines: Medicine[] = [];
 
 
 /* ──────────────────────── Helpers ────────────────────────────── */
@@ -48,6 +43,9 @@ const filterMap: Record<FilterKey, Medicine["statut"] | null> = {
 export default function PartenaireMedicamentsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("tous");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [medicines, setMedicines] = useState<Medicine[]>(mockMedicines);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const filters: { key: FilterKey; label: string }[] = [
     { key: "tous", label: "Tous" },
@@ -59,8 +57,61 @@ export default function PartenaireMedicamentsPage() {
 
   const filteredMedicines =
     activeFilter === "tous"
-      ? mockMedicines
-      : mockMedicines.filter((m) => m.statut === filterMap[activeFilter]);
+      ? medicines
+      : medicines.filter((m) => m.statut === filterMap[activeFilter]);
+
+  const moneyFormat = useMemo(
+    () =>
+      new Intl.NumberFormat("fr-FR", {
+        style: "currency",
+        currency: "XOF",
+        maximumFractionDigits: 0,
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    const loadMedicines = async () => {
+      const session = getAuthSession();
+      if (!session || session.userType !== "user" || !session.token) {
+        setError("Session partenaire invalide.");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await getPartnerProduits(session.token, { per_page: 200 });
+        const produits = extractCollection(response.data);
+
+        setMedicines(
+          produits.map((produit) => {
+            let statut: Medicine["statut"] = "Disponible";
+            if (!produit.is_active) {
+              statut = "Désactivé";
+            } else if ((produit.stock?.quantite ?? 0) <= 0) {
+              statut = "Indisponible";
+            } else if (produit.stock?.en_alerte) {
+              statut = "Au seuil";
+            }
+
+            return {
+              id: produit.id,
+              nom: produit.nom,
+              prix: moneyFormat.format(produit.prix_vente ?? 0),
+              statut,
+            };
+          }),
+        );
+        setError(null);
+      } catch (err: unknown) {
+        setError(err instanceof ApiError ? err.message : "Impossible de charger les médicaments.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadMedicines();
+  }, [moneyFormat]);
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
@@ -92,14 +143,14 @@ export default function PartenaireMedicamentsPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <Link
+              href="/partenaire/notifications"
               aria-label="Voir les notifications"
               className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
               <span className="hidden sm:inline">Notifications</span>
               <Bell className="h-5 w-5" />
-            </button>
+            </Link>
             <button
               type="button"
               aria-label="Accéder à mon compte"
@@ -166,6 +217,11 @@ export default function PartenaireMedicamentsPage() {
 
           {/* Table */}
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            {isLoading ? (
+              <div className="px-6 py-6 text-sm text-gray-500">Chargement des médicaments...</div>
+            ) : error ? (
+              <div className="px-6 py-6 text-sm text-red-600">{error}</div>
+            ) : (
             <table className="min-w-[520px] w-full table-auto text-sm lg:text-base">
               <thead>
                 <tr className="bg-gray-50">
@@ -215,6 +271,7 @@ export default function PartenaireMedicamentsPage() {
                 ))}
               </tbody>
             </table>
+            )}
           </div>
         </main>
       </div>

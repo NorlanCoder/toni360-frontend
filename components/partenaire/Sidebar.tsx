@@ -5,11 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  Package,
+  Boxes,
   Users,
   UserRound,
   Pill,
   History,
   HelpCircle,
+  Bell,
   LogOut,
 } from "lucide-react";
 import { filterPartnerNavigationByPermissions } from "@/lib/auth/authorization";
@@ -17,11 +20,14 @@ import { getAuthSession } from "@/lib/api/session";
 
 /* ──────────────────── Nav items ─────────────────────── */
 const navItems = [
-  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/commandes" },
+  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/dashboard" },
+  { label: "Gestion de commande", icon: Package, href: "/partenaire/commandes" },
+  { label: "Gestion de Stocks", icon: Boxes, href: "/partenaire/stocks" },
   { label: "Clients", icon: UserRound, href: "http://localhost:3000/" },
   { label: "Gestion des employés", icon: Users, href: "/partenaire/employes" },
   { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
   { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
+  { label: "Notifications", icon: Bell, href: "/partenaire/notifications" },
   { label: "Assistance et support", icon: HelpCircle, href: "#" },
 ];
 

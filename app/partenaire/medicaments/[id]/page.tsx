@@ -2,10 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { Bell, User, Search, Menu, ChevronDown } from "lucide-react";
 import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import { getAuthSession } from "@/lib/api/session";
+import { ApiError } from "@/lib/api/errors";
+import { deactivatePartnerProduit, getPartnerProduit, updatePartnerProduit, updatePartnerProduitSeuil } from "@/lib/api/partner";
 
 
 /* ──────────────── Delete confirmation modal ─────────────────── */
@@ -77,27 +80,98 @@ function DeleteConfirmationModal({
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireMedicamentDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   /* ── Form state (pre-filled with mock data) ── */
-  const [nom, setNom] = useState("Paracétamol 500mg");
-  const [nomGenerique, setNomGenerique] = useState("Paracétamol");
+  const [nom, setNom] = useState("");
+  const [nomGenerique, setNomGenerique] = useState("");
   const [forme, setForme] = useState("Comprimés");
-  const [prix, setPrix] = useState("700 XOF CFA");
-  const [stockActuel, setStockActuel] = useState("100");
-  const [seuil, setSeuil] = useState("100");
+  const [prix, setPrix] = useState("0");
+  const [stockActuel, setStockActuel] = useState("0");
+  const [seuil, setSeuil] = useState("0");
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadProduit = async () => {
+      const session = getAuthSession();
+      if (!session || session.userType !== "user" || !session.token || !id) {
+        setError("Session partenaire invalide.");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await getPartnerProduit(session.token, id);
+        const produit = response.data.produit;
+        setNom(produit.nom);
+        setNomGenerique(produit.dci ?? "");
+        setForme(produit.forme);
+        setPrix(String(produit.prix_vente ?? 0));
+        setStockActuel(String(produit.stock?.quantite ?? 0));
+        setSeuil(String(produit.stock?.seuil_alerte ?? 0));
+      } catch (err: unknown) {
+        setError(err instanceof ApiError ? err.message : "Impossible de charger le médicament.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadProduit();
+  }, [id]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: handle save
+
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token || !id) {
+      setError("Session partenaire invalide.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await updatePartnerProduit(session.token, id, {
+        nom,
+        dci: nomGenerique,
+        forme,
+        prix_vente: Number(prix),
+      });
+      await updatePartnerProduitSeuil(session.token, id, Number(seuil));
+      setError(null);
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : "Sauvegarde impossible.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDelete = () => {
-    setShowDeleteModal(false);
-    router.push("/partenaire/medicaments");
+  const handleDelete = async () => {
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token || !id) {
+      setError("Session partenaire invalide.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await deactivatePartnerProduit(session.token, id);
+      setShowDeleteModal(false);
+      router.push("/partenaire/medicaments");
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : "Suppression impossible.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (isLoading) {
+    return <div className="p-6 text-sm text-gray-600">Chargement du médicament...</div>;
+  }
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
@@ -129,14 +203,14 @@ export default function PartenaireMedicamentDetailPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <Link
+              href="/partenaire/notifications"
               aria-label="Voir les notifications"
               className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
               <span className="hidden sm:inline">Notifications</span>
               <Bell className="h-5 w-5" />
-            </button>
+            </Link>
             <button
               type="button"
               aria-label="Accéder à mon compte"
@@ -150,6 +224,11 @@ export default function PartenaireMedicamentDetailPage() {
 
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto p-2 px-4 sm:px-12 lg:px-32 py-16 lg:py-24">
+          {error && (
+            <div className="mx-auto mb-4 w-full max-w-[920px] rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
           <form
             onSubmit={handleSave}
             className="mx-auto w-full max-w-[920px] rounded-xl bg-white p-6 sm:p-8"
@@ -224,6 +303,7 @@ export default function PartenaireMedicamentDetailPage() {
                   type="text"
                   value={stockActuel}
                   onChange={(e) => setStockActuel(e.target.value)}
+                  disabled
                   className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 />
                 <p className="mt-1 text-xs text-emerald-600">
@@ -257,9 +337,10 @@ export default function PartenaireMedicamentDetailPage() {
               </button>
               <button
                 type="submit"
+                disabled={isSubmitting}
                 className="rounded-full bg-emerald-600 px-12 py-3.5 text-base font-semibold text-white transition-colors hover:bg-emerald-700 text-center"
               >
-                Sauvegarder
+                {isSubmitting ? "Sauvegarde..." : "Sauvegarder"}
               </button>
               <button
                 type="button"

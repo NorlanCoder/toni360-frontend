@@ -1,10 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bell, User, Search, Package, Clock, CheckCircle, ChevronDown, Menu } from "lucide-react";
 import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import { getAuthSession } from "@/lib/api/session";
+import { extractCollection, getPartnerCommandes, PartnerCommande } from "@/lib/api/partner";
+import { ApiError } from "@/lib/api/errors";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type TabKey = "a-preparer" | "en-attente" | "recuperees";
@@ -15,14 +18,6 @@ interface Order {
   date: string;
   statut: string;
 }
-
-/* ──────────────────────── Mock data ──────────────────────────── */
-const mockOrders: Order[] = Array.from({ length: 7 }, () => ({
-  id: "527785445666",
-  patient: "Djibril Mohamed",
-  date: "20-09-2024",
-  statut: "À préparer",
-}));
 
 
 /* ──────────────────────── Helpers ────────────────────────────── */
@@ -85,14 +80,75 @@ function DateSelect({ label, className = "" }: { label: string; className?: stri
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireDashboardPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>("a-preparer");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const tabs: { key: TabKey; label: string; icon: React.ElementType; href: string }[] = [
     { key: "a-preparer", label: "A préparer", icon: Package, href: "/partenaire/commandes" },
     { key: "en-attente", label: "En attente", icon: Clock, href: "/partenaire/commandes/en-attente" },
     { key: "recuperees", label: "Récupérées", icon: CheckCircle, href: "/partenaire/commandes/recuperees" },
   ];
+
+  const formatDate = useMemo(
+    () =>
+      new Intl.DateTimeFormat("fr-FR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      const session = getAuthSession();
+      if (!session || session.userType !== "user" || !session.token) {
+        setError("Session partenaire invalide.");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const [payeesResponse, preparationResponse] = await Promise.all([
+          getPartnerCommandes(session.token, { statut: "PAYEE", per_page: 100 }),
+          getPartnerCommandes(session.token, { statut: "EN_PREPARATION", per_page: 100 }),
+        ]);
+
+        const combined: PartnerCommande[] = [
+          ...extractCollection(payeesResponse.data),
+          ...extractCollection(preparationResponse.data),
+        ];
+
+        combined.sort((a, b) => {
+          const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return db - da;
+        });
+
+        setOrders(
+          combined.map((commande) => ({
+            id: commande.id,
+            patient: commande.patient?.nom_complet ?? "Patient inconnu",
+            date: commande.created_at
+              ? formatDate.format(new Date(commande.created_at))
+              : "-",
+            statut: commande.statut_label || "À préparer",
+          })),
+        );
+        setError(null);
+      } catch (err: unknown) {
+        setError(err instanceof ApiError ? err.message : "Impossible de charger les commandes.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadOrders();
+  }, [formatDate]);
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
@@ -124,14 +180,14 @@ export default function PartenaireDashboardPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <Link
+              href="/partenaire/notifications"
               aria-label="Voir les notifications"
               className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
               <span className="hidden sm:inline">Notifications</span>
               <Bell className="h-5 w-5" />
-            </button>
+            </Link>
             <button
               type="button"
               aria-label="Accéder à mon compte"
@@ -179,6 +235,11 @@ export default function PartenaireDashboardPage() {
 
           {/* Table */}
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            {isLoading ? (
+              <div className="px-8 py-8 text-sm text-gray-500">Chargement des commandes...</div>
+            ) : error ? (
+              <div className="px-8 py-8 text-sm text-red-600">{error}</div>
+            ) : (
             <table className="min-w-[520px] w-full table-auto text-sm lg:text-base">
               <thead>
                 <tr className="bg-gray-50">
@@ -197,11 +258,11 @@ export default function PartenaireDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {mockOrders.map((order, idx) => (
+                {orders.map((order, idx) => (
                   <tr
-                    key={idx}
+                    key={order.id}
                     className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60 hover:border-l-4 hover:border-l-emerald-500 transition-all cursor-pointer"
-                    onClick={() => window.location.href = `/partenaire/commandes/${order.id}`}
+                    onClick={() => router.push(`/partenaire/commandes/${order.id}`)}
                   >
                     <td className="px-8 py-6 text-base font-mono text-gray-700">
                       {order.id}
@@ -221,6 +282,7 @@ export default function PartenaireDashboardPage() {
                   ))}
               </tbody>
             </table>
+              )}
           </div>
         </main>
       </div>
