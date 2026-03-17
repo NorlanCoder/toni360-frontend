@@ -3,16 +3,25 @@ import { Trash2 } from "lucide-react";
 interface NotificationCardProps {
   title: string;
   description: string;
+  isRead?: boolean;
+  onClick?: () => void;
   onDelete: () => void;
 }
 
 export default function NotificationCard({
   title,
   description,
+  isRead = false,
+  onClick,
   onDelete,
 }: NotificationCardProps) {
   return (
-    <div className="bg-white rounded-lg p-6 flex items-start gap-4 shadow-sm border border-gray-200">
+    <div
+      onClick={onClick}
+      className={`bg-white rounded-lg p-6 flex items-start gap-4 shadow-sm border border-gray-200 ${
+        isRead ? "opacity-80" : ""
+      }`}
+    >
       {/* Logo */}
       <div className="flex-shrink-0">
         <div className="w-12 h-12 rounded-full border-2 border-toni-green-dark-2 flex items-center justify-center bg-white">

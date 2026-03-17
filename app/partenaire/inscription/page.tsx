@@ -56,7 +56,22 @@ export default function DevenirPartenairePage() {
       return;
     }
 
+    if (formData.heureOuvrables.length < 8) {
+      window.alert("Le mot de passe doit contenir au moins 8 caracteres.");
+      return;
+    }
+
     const telephone = `${formData.indicatif}${formData.telephone}`.replace(/\s+/g, "");
+
+    if (telephone.length > 20) {
+      window.alert("Le numero de telephone est trop long.");
+      return;
+    }
+
+    if (formData.licence && formData.licence.size > 5 * 1024 * 1024) {
+      window.alert("La licence ne doit pas depasser 5 Mo.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -214,7 +229,7 @@ export default function DevenirPartenairePage() {
             {/* Mot de pass */}
             <div>
               <input
-                type="text"
+                type={showPassword ? "text" : "password"}
                 placeholder="Mot de pass"
                 value={formData.heureOuvrables}
                 onChange={(e) =>

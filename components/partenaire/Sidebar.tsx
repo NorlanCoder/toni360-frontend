@@ -12,6 +12,8 @@ import {
   HelpCircle,
   LogOut,
 } from "lucide-react";
+import { filterPartnerNavigationByPermissions } from "@/lib/auth/authorization";
+import { getAuthSession } from "@/lib/api/session";
 
 /* ──────────────────── Nav items ─────────────────────── */
 const navItems = [
@@ -24,8 +26,8 @@ const navItems = [
 ];
 
 /* Finds the most specific matching nav item for the current path */
-function getActiveHref(pathname: string): string {
-  const matches = navItems.filter(
+function getActiveHref(pathname: string, items: Array<{ href: string }>): string {
+  const matches = items.filter(
     (item) =>
       item.href !== "#" &&
       (pathname === item.href || pathname.startsWith(item.href + "/")),
@@ -45,7 +47,9 @@ interface PartenaireSidebarProps {
 /* ═════════════════════ COMPONENT ════════════════════════ */
 export default function PartenaireSidebar({ isOpen, onClose }: PartenaireSidebarProps) {
   const pathname = usePathname();
-  const activeHref = getActiveHref(pathname);
+  const session = getAuthSession();
+  const visibleNavItems = filterPartnerNavigationByPermissions(session, navItems);
+  const activeHref = getActiveHref(pathname, visibleNavItems);
 
   return (
     <>
@@ -78,7 +82,7 @@ export default function PartenaireSidebar({ isOpen, onClose }: PartenaireSidebar
 
         {/* Nav */}
         <nav className="flex flex-1 flex-col gap-1 px-3 pt-4" aria-label="Navigation partenaire">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.href === activeHref;
             return (
@@ -100,7 +104,7 @@ export default function PartenaireSidebar({ isOpen, onClose }: PartenaireSidebar
           <div className="flex-1" />
 
           <Link
-            href="#"
+            href="/partenaire/deconnexion"
             className="mb-6 flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
           >
             <LogOut className="h-5 w-5 shrink-0" />

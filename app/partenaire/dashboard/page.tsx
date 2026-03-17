@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -14,6 +15,10 @@ import {
   User,
   Menu,
 } from "lucide-react";
+import { getPartnerProfile } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/errors";
+import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import { filterPartnerNavigationByPermissions } from "@/lib/auth/authorization";
 
 /* ──────────────────── Sidebar nav items ─────────────────────── */
 const navItems = [
@@ -56,7 +61,39 @@ function ArrowButton() {
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireDashboardPage() {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [displayName, setDisplayName] = useState("Dr Roopesh");
+  const [visibleNavItems, setVisibleNavItems] = useState(navItems);
+
+  useEffect(() => {
+    const syncProfile = async () => {
+      const session = getAuthSession();
+      if (!session || session.userType !== "user" || !session.token) {
+        clearAuthSession();
+        router.replace("/partenaire/connexion");
+        return;
+      }
+
+      try {
+        const response = await getPartnerProfile(session.token);
+        const user = response.data.user;
+        const name = user.nom_complet || `${user.prenom ?? ""} ${user.nom ?? ""}`.trim();
+        if (name) {
+          setDisplayName(name);
+        }
+
+        setVisibleNavItems(filterPartnerNavigationByPermissions(session, navItems));
+      } catch (error: unknown) {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+          clearAuthSession();
+          router.replace("/partenaire/connexion");
+        }
+      }
+    };
+
+    void syncProfile();
+  }, [router]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-white">
@@ -89,7 +126,7 @@ export default function PartenaireDashboardPage() {
 
         {/* Nav */}
         <nav className="flex flex-1 flex-col gap-1 px-3 pt-4" aria-label="Navigation partenaire">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             return (
               <Link
@@ -112,7 +149,7 @@ export default function PartenaireDashboardPage() {
 
           {/* Déconnexion */}
           <Link
-            href="#"
+            href="/partenaire/deconnexion"
             className="mb-6 flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
           >
             <LogOut className="h-5 w-5 shrink-0" />
@@ -137,7 +174,7 @@ export default function PartenaireDashboardPage() {
 
           {/* Welcome text */}
           <h1 className="text-xl font-bold text-gray-900 min-w-0 truncate">
-            Bienvenue, Dr Roopesh
+            Bienvenue, {displayName}
           </h1>
 
           {/* Actions */}

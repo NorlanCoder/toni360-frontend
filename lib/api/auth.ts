@@ -54,6 +54,34 @@ export interface PatientProfileResponse {
   };
 }
 
+export interface PartnerProfileResponse {
+  success: boolean;
+  data: {
+    user: {
+      id: string;
+      nom: string;
+      prenom: string;
+      nom_complet?: string;
+      email: string;
+      telephone: string;
+      is_active?: boolean;
+      pharmacie?: {
+        id: string;
+        nom: string;
+        code?: string;
+        adresse?: string;
+        telephone?: string;
+      };
+    };
+    permissions?: string[];
+  };
+}
+
+export interface LogoutResponse {
+  success: boolean;
+  message?: string;
+}
+
 export async function registerPatient(payload: PatientRegisterPayload): Promise<AuthApiResponse> {
   const json = buildJsonRequest(payload);
   return apiRequest<AuthApiResponse>("/patient/auth/register", {
@@ -111,6 +139,27 @@ export async function loginPartner(payload: LoginPayload): Promise<AuthApiRespon
 export async function getPatientProfile(token: string): Promise<PatientProfileResponse> {
   return apiRequest<PatientProfileResponse>("/patient/profile", {
     method: "GET",
+    token,
+  });
+}
+
+export async function getPartnerProfile(token: string): Promise<PartnerProfileResponse> {
+  return apiRequest<PartnerProfileResponse>("/pharmacie/profile", {
+    method: "GET",
+    token,
+  });
+}
+
+export async function logoutPatient(token: string): Promise<LogoutResponse> {
+  return apiRequest<LogoutResponse>("/patient/auth/logout", {
+    method: "POST",
+    token,
+  });
+}
+
+export async function logoutPartner(token: string): Promise<LogoutResponse> {
+  return apiRequest<LogoutResponse>("/pharmacie/auth/logout", {
+    method: "POST",
     token,
   });
 }

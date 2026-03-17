@@ -6,7 +6,7 @@ import { Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
-import { loginPartner } from "@/lib/api/auth";
+import { getPartnerProfile, loginPartner } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
 
@@ -50,12 +50,14 @@ export default function ConnexionPartenairePage() {
         password: formData.password,
       });
 
+      const profileResponse = await getPartnerProfile(response.data.token);
+
       saveAuthSession({
         userType: "user",
         token: response.data.token,
         tokenType: response.data.token_type,
-        profile: response.data.user ?? null,
-        permissions: response.data.permissions ?? [],
+        profile: profileResponse.data.user ?? response.data.user ?? null,
+        permissions: profileResponse.data.permissions ?? response.data.permissions ?? [],
       });
 
       window.alert(response.message ?? "Connexion réussie.");

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
-import { loginPatient } from "@/lib/api/auth";
+import { getPatientProfile, loginPatient } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
 
@@ -45,11 +45,13 @@ export default function ConnexionPage() {
         password: formData.password,
       });
 
+      const profileResponse = await getPatientProfile(response.data.token);
+
       saveAuthSession({
         userType: "patient",
         token: response.data.token,
         tokenType: response.data.token_type,
-        profile: response.data.patient ?? null,
+        profile: profileResponse.data.patient ?? response.data.patient ?? null,
       });
 
       window.alert(response.message ?? "Connexion réussie.");

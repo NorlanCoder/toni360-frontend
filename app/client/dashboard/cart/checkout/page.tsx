@@ -1,48 +1,303 @@
 "use client";
-
-import Image from "next/image";
-import { useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { Camera, Upload } from "lucide-react";
+import {
+  clearPanier,
+  createCommande,
+  getCommande,
+  getPanier,
+  removePanierItem,
+  updatePanierItemQuantity,
+  uploadOrdonnanceForProduitCommande,
+} from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
+import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 
 interface CartItem {
-  id: number;
+  id: string;
   name: string;
   type: string;
   qty: number;
   price: number;
+  requiresPrescription: boolean;
 }
 
 export default function CartPage() {
+  return (
+    <Suspense fallback={<div className="px-6 pb-8 flex-1" />}>
+      <CartPageContent />
+    </Suspense>
+  );
+}
+
+function CartPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const pharmacyName = searchParams.get("pharmacy") || "Pharmacie";
+  const pharmacyNameFromUrl = searchParams.get("pharmacy") || "Pharmacie";
+  const commandeIdFromUrl = searchParams.get("commande");
+  const isCommandeValidationMode = Boolean(commandeIdFromUrl);
 
-  const [items, setItems] = useState<CartItem[]>([
-    { id: 1, name: "Paracetamol 500 mg", type: "Plaquette", qty: 2, price: 1000 },
-    { id: 2, name: "Tramadol 500 mg", type: "Plaquette", qty: 2, price: 1000 },
-    { id: 3, name: "Ibuprofen 400 mg", type: "Plaquette", qty: 2, price: 800 },
-    { id: 4, name: "Aspirin 300 mg", type: "Plaquette", qty: 2, price: 600 },
-  ]);
+  const [panierId, setPanierId] = useState<string | null>(null);
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [message, setMessage] = useState("");
+  const [pending, setPending] = useState(false);
+  const [ordonnanceFile, setOrdonnanceFile] = useState<File | null>(null);
+  const [pharmacyName, setPharmacyName] = useState(pharmacyNameFromUrl);
+  const [prescriptionCount, setPrescriptionCount] = useState(0);
 
-  const updateQty = (id: number, delta: number) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
-      )
+  const token = useMemo(() => {
+    const session = getAuthSession();
+    if (!session || session.userType !== "patient") {
+      return null;
+    }
+    return session.token;
+  }, []);
+
+  const loadPanier = async () => {
+    if (!token) {
+      clearAuthSession();
+      router.replace("/client/connexion");
+      return;
+    }
+
+    try {
+      const response = await getPanier(token);
+      const panier = response.data.panier;
+      setPanierId(panier.id);
+      const resolvedPharmacyName = panier.pharmacies[0]?.pharmacie?.nom ?? pharmacyNameFromUrl;
+      setPharmacyName(resolvedPharmacyName);
+
+      const mappedItems = panier.pharmacies.flatMap((pharmacieBloc) =>
+        pharmacieBloc.produits.map((item) => ({
+          id: item.id,
+          name: item.produit.nom,
+          type: [item.produit.forme, item.produit.dosage].filter(Boolean).join(" ") || "Produit",
+          qty: item.quantite,
+          price: Number(item.prix_unitaire ?? 0),
+          requiresPrescription: Boolean(item.produit.necessite_ordonnance),
+        })),
+      );
+
+      setItems(mappedItems);
+      setPrescriptionCount(panier.produits_avec_ordonnance.length);
+      if (mappedItems.length === 0) {
+        setMessage("Votre panier est vide.");
+      }
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setMessage(error.message);
+      }
+    }
+  };
+
+  const loadCommande = async (commandeId: string) => {
+    if (!token) {
+      clearAuthSession();
+      router.replace("/client/connexion");
+      return;
+    }
+
+    try {
+      const response = await getCommande(token, commandeId);
+      const commande = response.data.commande;
+      setPanierId(null);
+      setPharmacyName(commande.pharmacie?.nom ?? pharmacyNameFromUrl);
+
+      const mappedItems: CartItem[] = commande.produits.map((item) => ({
+        id: item.id,
+        name: item.produit?.nom ?? "Produit",
+        type: "Produit",
+        qty: Number(item.quantite ?? 1),
+        price: Number(item.prix_unitaire ?? 0),
+        requiresPrescription: Boolean(item.ordonnance_requise),
+      }));
+
+      setItems(mappedItems);
+      setPrescriptionCount(mappedItems.filter((item) => item.requiresPrescription).length);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setMessage(error.message);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isCommandeValidationMode && commandeIdFromUrl) {
+      void loadCommande(commandeIdFromUrl);
+      return;
+    }
+
+    void loadPanier();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, isCommandeValidationMode, commandeIdFromUrl]);
+
+  const uploadOrdonnances = async (commandeId: string, file: File) => {
+    if (!token) {
+      return;
+    }
+
+    const commandeDetail = await getCommande(token, commandeId);
+    const produitsAvecOrdonnance = commandeDetail.data.commande.produits.filter(
+      (produit) => produit.ordonnance_requise,
     );
+
+    for (const produit of produitsAvecOrdonnance) {
+      await uploadOrdonnanceForProduitCommande(token, produit.id, file);
+    }
   };
 
-  const removeItem = (id: number) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
+  const updateQty = async (id: string, delta: number) => {
+    if (!token) {
+      return;
+    }
+
+    const item = items.find((entry) => entry.id === id);
+    if (!item) {
+      return;
+    }
+
+    const nextQty = Math.max(1, item.qty + delta);
+    setPending(true);
+    try {
+      await updatePanierItemQuantity(token, id, nextQty);
+      await loadPanier();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setMessage(error.message);
+      }
+    } finally {
+      setPending(false);
+    }
   };
 
-  const formatPrice = (value: number) =>
-    value.toLocaleString("fr-FR").replace(/,/g, " ");
+  const removeItem = async (id: string) => {
+    if (!token) {
+      return;
+    }
+
+    setPending(true);
+    try {
+      await removePanierItem(token, id);
+      await loadPanier();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setMessage(error.message);
+      }
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!token) {
+      return;
+    }
+
+    setPending(true);
+    try {
+      await clearPanier(token);
+      router.push("/client/dashboard/cart");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setMessage(error.message);
+      }
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleCheckout = async () => {
+    if (pending) {
+      return;
+    }
+
+    if (isCommandeValidationMode && commandeIdFromUrl) {
+      if (prescriptionCount > 0 && !ordonnanceFile) {
+        setMessage("Cette commande nécessite une ordonnance. Veuillez importer un fichier.");
+        return;
+      }
+
+      setPending(true);
+      setMessage("");
+      try {
+        if (ordonnanceFile) {
+          await uploadOrdonnances(commandeIdFromUrl, ordonnanceFile);
+        }
+
+        router.push("/client/orders");
+      } catch (error) {
+        if (error instanceof ApiError) {
+          setMessage(error.message);
+        }
+      } finally {
+        setPending(false);
+      }
+
+      return;
+    }
+
+    if (!token || !panierId || items.length === 0) {
+      setMessage("Votre panier est vide.");
+      return;
+    }
+
+    setPending(true);
+    setMessage("");
+    try {
+      const creation = await createCommande(token, panierId);
+      const commandeId = creation.data.commande.id;
+
+      if (creation.data.necessite_ordonnance && ordonnanceFile) {
+        await uploadOrdonnances(commandeId, ordonnanceFile);
+      }
+
+      router.push(`/client/orders?commande=${encodeURIComponent(creation.data.commande.numero_commande)}`);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setMessage(error.message);
+      }
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handlePutOnHold = async () => {
+    if (pending) {
+      return;
+    }
+
+    if (!token || !panierId || items.length === 0) {
+      setMessage("Votre panier est vide.");
+      return;
+    }
+
+    setPending(true);
+    setMessage("");
+    try {
+      const creation = await createCommande(token, panierId, "Commande mise en attente par le patient");
+      if (creation.data.necessite_ordonnance && ordonnanceFile) {
+        await uploadOrdonnances(creation.data.commande.id, ordonnanceFile);
+      }
+      router.push(`/client/orders?commande=${encodeURIComponent(creation.data.commande.numero_commande)}`);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setMessage(error.message);
+      }
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const formatPrice = (value: number | null | undefined) =>
+    Number(value ?? 0).toLocaleString("fr-FR").replace(/,/g, " ");
 
   const total = items.reduce((sum, item) => sum + item.qty * item.price, 0);
 
   return (
     <div className="px-6 pb-8 flex-1">
+          {message && <p className="mb-4 text-sm text-red-500">{message}</p>}
           {/* Pharmacy Card */}
           <div className="rounded-xl overflow-hidden mb-5 max-w-4xl"
             style={{
@@ -93,6 +348,11 @@ export default function CartPage() {
                 <div>
                   <p className="text-sm font-semibold text-gray-800">{item.name}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{item.type}</p>
+                  {item.requiresPrescription && (
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[11px] font-semibold">
+                      Ordonnance requise
+                    </span>
+                  )}
                 </div>
 
                 {/* Quantity */}
@@ -100,6 +360,7 @@ export default function CartPage() {
                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
                     <button
                       onClick={() => updateQty(item.id, -1)}
+                      disabled={isCommandeValidationMode}
                       className="px-2 py-1.5 text-gray-500 hover:bg-gray-50 text-sm font-medium transition-colors"
                     >
                       −
@@ -109,6 +370,7 @@ export default function CartPage() {
                     </span>
                     <button
                       onClick={() => updateQty(item.id, 1)}
+                      disabled={isCommandeValidationMode}
                       className="px-2 py-1.5 text-[#0fa37f] hover:bg-green-50 text-sm font-medium transition-colors"
                     >
                       +
@@ -129,6 +391,7 @@ export default function CartPage() {
                 {/* Delete */}
                 <button
                   onClick={() => removeItem(item.id)}
+                  disabled={isCommandeValidationMode}
                   className="w-8 flex items-center justify-center text-red-400 hover:text-red-600 transition-colors"
                 >
                   <TrashIcon />
@@ -147,6 +410,11 @@ export default function CartPage() {
 
           {/* Add Prescription */}
           <div className="flex flex-col gap-3 mt-6 px-4">
+            <p className="text-sm text-gray-600">
+              {prescriptionCount > 0
+                ? `${prescriptionCount} médicament(s) de cette commande nécessitent une ordonnance.`
+                : "Aucun médicament de cette commande ne nécessite d'ordonnance."}
+            </p>
             <p className="text-sm font-semibold text-gray-700">Ajouter une ordonnance</p>
             <div className="flex flex-wrap items-center gap-3">
               <button
@@ -160,21 +428,38 @@ export default function CartPage() {
                 aria-label="Importer un fichier"
               >
                 <Upload size={20} />
-                <input type="file" accept="image/*,.pdf" className="hidden" />
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  className="hidden"
+                  onChange={(event) => setOrdonnanceFile(event.target.files?.[0] ?? null)}
+                />
               </label>
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex items-center justify-start gap-3 mt-10 w-full px-4">
-            <button className="px-10 py-3 border-2 border-red-500 text-red-600 rounded-full text-lg font-semibold hover:bg-red-50 transition-colors min-w-[180px]">
+            <button
+              onClick={handleCancel}
+              disabled={pending || isCommandeValidationMode}
+              className="px-10 py-3 border-2 border-red-500 text-red-600 rounded-full text-lg font-semibold hover:bg-red-50 transition-colors min-w-[180px]"
+            >
               Annuler
             </button>
-            <button className="px-10 py-3 bg-gray-200 text-gray-600 rounded-full text-lg font-semibold hover:bg-gray-300 transition-colors min-w-[180px]">
+            <button
+              onClick={handlePutOnHold}
+              disabled={pending || items.length === 0}
+              className="px-10 py-3 bg-gray-200 text-gray-600 rounded-full text-lg font-semibold hover:bg-gray-300 transition-colors min-w-[180px] disabled:opacity-60 disabled:cursor-not-allowed"
+            >
               Mettre en attente
             </button>
-            <button className="px-10 py-3 bg-[#0fa37f] text-white rounded-full text-lg font-semibold hover:bg-[#0e9272] transition-colors min-w-[200px]">
-              Valider la commande
+            <button
+              onClick={handleCheckout}
+              disabled={pending || items.length === 0}
+              className="px-10 py-3 bg-[#0fa37f] text-white rounded-full text-lg font-semibold hover:bg-[#0e9272] transition-colors min-w-[200px] disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {pending ? "Traitement..." : isCommandeValidationMode ? "Valider cette commande" : "Valider la commande"}
             </button>
           </div>
     </div>

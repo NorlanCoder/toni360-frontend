@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "./config";
 import { ApiError, extractApiErrorMessage } from "./errors";
+import { clearAuthSession, getAuthSession, redirectToLoginBySession } from "./session";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -29,6 +30,12 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     : null;
 
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      const session = getAuthSession();
+      clearAuthSession();
+      redirectToLoginBySession(session);
+    }
+
     const message = extractApiErrorMessage(payload, "Une erreur est survenue.");
     throw new ApiError(message, response.status, payload);
   }

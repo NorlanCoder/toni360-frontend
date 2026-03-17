@@ -33,7 +33,19 @@ export function getAuthSession(): AuthSession | null {
   }
 
   try {
-    return JSON.parse(raw) as AuthSession;
+    const parsed = JSON.parse(raw) as Partial<AuthSession>;
+    if (
+      (parsed.userType !== "patient" && parsed.userType !== "user") ||
+      typeof parsed.token !== "string" ||
+      parsed.token.trim() === "" ||
+      typeof parsed.tokenType !== "string" ||
+      parsed.tokenType.trim() === ""
+    ) {
+      localStorage.removeItem(AUTH_SESSION_KEY);
+      return null;
+    }
+
+    return parsed as AuthSession;
   } catch {
     localStorage.removeItem(AUTH_SESSION_KEY);
     return null;
@@ -46,4 +58,17 @@ export function clearAuthSession(): void {
   }
 
   localStorage.removeItem(AUTH_SESSION_KEY);
+}
+
+export function redirectToLoginBySession(session: AuthSession | null): void {
+  if (!isBrowser()) {
+    return;
+  }
+
+  if (session?.userType === "user") {
+    window.location.replace("/partenaire/connexion");
+    return;
+  }
+
+  window.location.replace("/client/connexion");
 }
