@@ -181,10 +181,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
         {/* Footer sidebar */}
         <div className="text-xs text-toni-green-dark-2 leading-relaxed">
-          <Link href="/client/privacy" className="hover:underline block">
+          <Link href="/client/help/privacy" className="hover:underline block">
             Politiques de confidentialité,
           </Link>
-          <Link href="/client/return-policy" className="hover:underline block">
+          <Link href="/client/help/return-policy" className="hover:underline block">
             Conditions générales de retour,
           </Link>
           <Link href="/client/contact" className="hover:underline block">
