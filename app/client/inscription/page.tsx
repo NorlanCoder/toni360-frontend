@@ -5,22 +5,85 @@ import { useRouter } from "next/navigation";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
+import { registerPatient } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/errors";
+import { saveAuthSession } from "@/lib/api/session";
 
 export default function InscriptionPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
     indicatif: COUNTRY_CODES[0].code,
     telephone: "",
     password: "",
+    confirmPassword: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
-    router.push("/client/accueil");
+
+    if (submitting) {
+      return;
+    }
+
+    const fullName = formData.nom.trim();
+    if (!fullName || !formData.email.trim() || !formData.telephone.trim() || !formData.password) {
+      window.alert("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      window.alert("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      window.alert("Le mot de passe doit contenir au moins 8 caracteres.");
+      return;
+    }
+
+    const nameParts = fullName.split(/\s+/).filter(Boolean);
+    const prenom = nameParts[0] ?? fullName;
+    const nom = nameParts.slice(1).join(" ") || nameParts[0] || fullName;
+    const telephone = `${formData.indicatif}${formData.telephone}`.replace(/\s+/g, "");
+
+    if (telephone.length > 20) {
+      window.alert("Le numero de telephone est trop long.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await registerPatient({
+        nom,
+        prenom,
+        email: formData.email.trim(),
+        telephone,
+        password: formData.password,
+        password_confirmation: formData.password,
+      });
+
+      saveAuthSession({
+        userType: "patient",
+        token: response.data.token,
+        tokenType: response.data.token_type,
+        profile: response.data.patient ?? null,
+      });
+
+      window.alert(response.message ?? "Inscription réussie.");
+      router.push("/client/accueil");
+    } catch (error: unknown) {
+      if (error instanceof ApiError) {
+        window.alert(error.message);
+      } else {
+        window.alert("Une erreur est survenue pendant l'inscription.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -130,9 +193,9 @@ export default function InscriptionPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Confirmer le mot de passe"
-                value={formData.password}
+                value={formData.confirmPassword}
                 onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
+                  setFormData({ ...formData, confirmPassword: e.target.value })
                 }
                 className="w-full pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
@@ -141,9 +204,10 @@ export default function InscriptionPage() {
             {/* Bouton S'inscrire */}
             <button
               type="submit"
+              disabled={submitting}
               className="w-full bg-toni-green-dark-2 text-white font-bold py-3 rounded-md hover:bg-toni-green-dark transition"
             >
-              S&apos;inscrire
+              {submitting ? "Inscription..." : "S\'inscrire"}
             </button>
           </form>
 

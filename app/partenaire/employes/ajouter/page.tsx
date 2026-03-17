@@ -112,7 +112,7 @@ export default function PartenaireAjouterEmployePage() {
 
           {/* Déconnexion */}
           <Link
-            href="#"
+            href="/partenaire/deconnexion"
             className="mb-6 flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
           >
             <LogOut className="h-5 w-5 shrink-0" />

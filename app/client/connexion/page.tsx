@@ -5,11 +5,15 @@ import { useRouter } from "next/navigation";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
+import { getPatientProfile, loginPatient } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/errors";
+import { saveAuthSession } from "@/lib/api/session";
 
 export default function ConnexionPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [loginMethod, setLoginMethod] = useState<"phone" | "email">("phone");
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     indicatif: COUNTRY_CODES[0].code,
     telephone: "",
@@ -18,10 +22,49 @@ export default function ConnexionPage() {
     rememberMe: false,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login submitted:", formData);
-    router.push("/client/accueil");
+
+    if (submitting) {
+      return;
+    }
+
+    const loginValue = loginMethod === "phone"
+      ? `${formData.indicatif}${formData.telephone}`.replace(/\s+/g, "")
+      : formData.email.trim();
+
+    if (!loginValue || !formData.password) {
+      window.alert("Veuillez renseigner vos identifiants.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await loginPatient({
+        login: loginValue,
+        password: formData.password,
+      });
+
+      const profileResponse = await getPatientProfile(response.data.token);
+
+      saveAuthSession({
+        userType: "patient",
+        token: response.data.token,
+        tokenType: response.data.token_type,
+        profile: profileResponse.data.patient ?? response.data.patient ?? null,
+      });
+
+      window.alert(response.message ?? "Connexion réussie.");
+      router.push("/client/accueil");
+    } catch (error: unknown) {
+      if (error instanceof ApiError) {
+        window.alert(error.message);
+      } else {
+        window.alert("Une erreur est survenue pendant la connexion.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -158,9 +201,10 @@ export default function ConnexionPage() {
             {/* Bouton Se connecter */}
             <button
               type="submit"
+              disabled={submitting}
               className="w-full bg-toni-green-dark-2 text-white font-bold py-3 rounded-md hover:bg-toni-green-dark transition"
             >
-              Se connecter
+              {submitting ? "Connexion..." : "Se connecter"}
             </button>
           </form>
 

@@ -1,14 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
+import { getPartnerProfile, loginPartner } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/errors";
+import { saveAuthSession } from "@/lib/api/session";
 
 export default function ConnexionPartenairePage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [loginMethod, setLoginMethod] = useState<"phone" | "email">("phone");
+  const [submitting, setSubmitting] = useState(false);
 
   const beninCode =
     COUNTRY_CODES.find((c) => c.code === "+229") || COUNTRY_CODES[0];
@@ -21,9 +27,50 @@ export default function ConnexionPartenairePage() {
     rememberMe: false,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login submitted:", formData);
+
+    if (submitting) {
+      return;
+    }
+
+    const loginValue = loginMethod === "phone"
+      ? `${formData.indicatif}${formData.telephone}`.replace(/\s+/g, "")
+      : formData.email.trim();
+
+    if (!loginValue || !formData.password) {
+      window.alert("Veuillez renseigner vos identifiants.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await loginPartner({
+        login: loginValue,
+        password: formData.password,
+      });
+
+      const profileResponse = await getPartnerProfile(response.data.token);
+
+      saveAuthSession({
+        userType: "user",
+        token: response.data.token,
+        tokenType: response.data.token_type,
+        profile: profileResponse.data.user ?? response.data.user ?? null,
+        permissions: profileResponse.data.permissions ?? response.data.permissions ?? [],
+      });
+
+      window.alert(response.message ?? "Connexion réussie.");
+      router.push("/partenaire/dashboard");
+    } catch (error: unknown) {
+      if (error instanceof ApiError) {
+        window.alert(error.message);
+      } else {
+        window.alert("Une erreur est survenue pendant la connexion.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -205,10 +252,11 @@ export default function ConnexionPartenairePage() {
             {/* Bouton Continuer */}
             <button
               type="submit"
+              disabled={submitting}
               className="w-full py-4 text-white font-bold text-base rounded-lg transition hover:opacity-90"
               style={{ backgroundColor: "#137551" }}
             >
-              Continuer
+              {submitting ? "Connexion..." : "Continuer"}
             </button>
           </form>
 

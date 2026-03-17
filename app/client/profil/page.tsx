@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Lock } from "lucide-react";
+import { getPatientProfile } from "@/lib/api/auth";
+import { updatePatientProfile } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
+import { clearAuthSession, getAuthSession, saveAuthSession } from "@/lib/api/session";
 
 export default function ProfilPage() {
   const [activeTab, setActiveTab] = useState<"info" | "delete">("info");
+  const [message, setMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     nomComplet: "",
     email: "",
@@ -13,18 +19,88 @@ export default function ProfilPage() {
   });
   const [deletePassword, setDeletePassword] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const session = useMemo(() => getAuthSession(), []);
+  const token = session?.userType === "patient" ? session.token : null;
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!token) {
+        clearAuthSession();
+        return;
+      }
+
+      try {
+        const response = await getPatientProfile(token);
+        const patient = response.data.patient;
+        const nomComplet = patient.nom_complet || `${patient.prenom} ${patient.nom}`.trim();
+
+        setFormData((prev) => ({
+          ...prev,
+          nomComplet,
+          email: patient.email,
+          telephone: patient.telephone,
+        }));
+      } catch (error) {
+        if (error instanceof ApiError) {
+          setMessage(error.message);
+        }
+      }
+    };
+
+    void loadProfile();
+  }, [token]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
+
+    if (!token || !session) {
+      clearAuthSession();
+      return;
+    }
+
+    const parts = formData.nomComplet.trim().split(/\s+/).filter(Boolean);
+    const prenom = parts[0] ?? "";
+    const nom = parts.slice(1).join(" ") || prenom;
+
+    setIsSaving(true);
+    setMessage("");
+    try {
+      const response = await updatePatientProfile(token, {
+        nom,
+        prenom,
+        email: formData.email,
+        telephone: formData.telephone,
+      });
+
+      saveAuthSession({
+        ...session,
+        profile: response.data.patient,
+      });
+
+      setMessage("Profil mis à jour avec succès.");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setMessage(error.message);
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDeleteAccount = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Delete account with password:", deletePassword);
+    if (!deletePassword.trim()) {
+      setMessage("Entrez votre mot de passe pour continuer.");
+      return;
+    }
+
+    setMessage("La suppression de compte sera activée dans une phase dédiée.");
   };
 
   return (
     <div className="max-w-4xl">
+      {message && <p className="mb-4 text-sm text-gray-600">{message}</p>}
+
       {/* Tabs */}
       <div className="flex gap-20 border-b border-gray-300 mb-8">
               <button
@@ -102,6 +178,7 @@ export default function ProfilPage() {
           <div className="mt-8">
             <button
               type="submit"
+              disabled={isSaving}
               className="px-12 py-3 bg-toni-green-dark-2 text-white font-bold text-lg rounded-full hover:bg-toni-green-dark transition"
             >
               Enregistrer

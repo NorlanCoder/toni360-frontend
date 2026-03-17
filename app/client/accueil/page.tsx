@@ -1,9 +1,47 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getPatientProfile } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/errors";
+import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+
 export default function AccueilClientPage() {
+  const router = useRouter();
+  const [displayName, setDisplayName] = useState("Mr Vagelas");
+
+  useEffect(() => {
+    const syncProfile = async () => {
+      const session = getAuthSession();
+      if (!session || session.userType !== "patient" || !session.token) {
+        clearAuthSession();
+        router.replace("/client/connexion");
+        return;
+      }
+
+      try {
+        const response = await getPatientProfile(session.token);
+        const patient = response.data.patient;
+        const name = patient.nom_complet || `${patient.prenom ?? ""} ${patient.nom ?? ""}`.trim();
+        if (name) {
+          setDisplayName(name);
+        }
+      } catch (error: unknown) {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+          clearAuthSession();
+          router.replace("/client/connexion");
+        }
+      }
+    };
+
+    void syncProfile();
+  }, [router]);
+
   return (
     <>
       {/* Welcome */}
       <h1 className="text-2xl font-bold text-gray-900 mb-6">
-        Bienvenue, Mr Vagelas
+        Bienvenue, {displayName}
       </h1>
 
       {/* Hero card */}
