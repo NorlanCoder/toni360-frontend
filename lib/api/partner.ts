@@ -268,6 +268,20 @@ export async function marquerPartnerCommandePrete(token: string, commandeId: str
   });
 }
 
+export async function livrerPartnerCommande(
+  token: string,
+  commandeId: string,
+  motif = "Bypass test: récupération sans QR",
+): Promise<PartnerCommandeDetailResponse> {
+  const json = buildJsonRequest({ motif });
+  return apiRequest<PartnerCommandeDetailResponse>(`/pharmacie/commandes/${commandeId}/livrer`, {
+    method: "POST",
+    token,
+    body: json.body,
+    headers: json.headers,
+  });
+}
+
 export async function validerPartnerOrdonnance(
   token: string,
   commandeId: string,
