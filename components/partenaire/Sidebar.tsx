@@ -15,7 +15,7 @@ import {
 
 /* ──────────────────── Nav items ─────────────────────── */
 const navItems = [
-  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/commandes" },
+  { label: "Commandes", icon: LayoutDashboard, href: "/partenaire/commandes" },
   { label: "Clients", icon: UserRound, href: "http://localhost:3000/" },
   { label: "Gestion des employés", icon: Users, href: "/partenaire/employes" },
   { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
@@ -85,7 +85,7 @@ export default function PartenaireSidebar({ isOpen, onClose }: PartenaireSidebar
               <Link
                 key={item.label}
                 href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-4 py-4 text-base font-medium transition-colors ${
+                className={`flex items-center gap-3 rounded-lg px-4 py-4 text-[15px] font-medium transition-colors ${
                   isActive
                     ? "bg-emerald-50 text-emerald-700"
                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
@@ -101,7 +101,7 @@ export default function PartenaireSidebar({ isOpen, onClose }: PartenaireSidebar
 
           <Link
             href="#"
-            className="mb-6 flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+            className="mb-6 flex items-center gap-3 rounded-lg px-4 py-3 text-[15px] font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
           >
             <LogOut className="h-5 w-5 shrink-0" />
             Déconnexion

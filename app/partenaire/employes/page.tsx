@@ -3,19 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import {
-  LayoutDashboard,
-  Users,
-  Pill,
-  History,
-  HelpCircle,
-  LogOut,
-  Bell,
-  User,
-  Search,
-  ChevronDown,
-  Menu,
-} from "lucide-react";
+import { Bell, Search, ShoppingCart, ChevronDown, Menu } from "lucide-react";
+import PartenaireSidebar from "@/components/partenaire/Sidebar";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type FilterKey = "tous" | "disponible" | "au-seuil" | "indisponible" | "desactives";
@@ -39,14 +28,6 @@ const mockEmployees: Employee[] = [
   { id: 8, nom: "Luc ASSOGBA", role: "Assistant pharmacien", statut: "Inactif" },
 ];
 
-/* ──────────────────── Sidebar nav items ─────────────────────── */
-const navItems = [
-  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/commandes" },
-  { label: "Gestion des employés", icon: Users, href: "/partenaire/employes", active: true },
-  { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
-  { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
-  { label: "Assistance et support", icon: HelpCircle, href: "#" },
-];
 
 /* ──────────────────────── Helpers ────────────────────────────── */
 const statusStyles: Record<Employee["statut"], string> = {
@@ -67,6 +48,7 @@ const filterMap: Record<FilterKey, Employee["statut"] | null> = {
 export default function PartenaireEmployesPage() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("tous");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   const filters: { key: FilterKey; label: string }[] = [
     { key: "tous", label: "Tous" },
@@ -83,71 +65,12 @@ export default function PartenaireEmployesPage() {
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
-      {/* ───────────── MOBILE OVERLAY ───────────── */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ───────────── SIDEBAR ───────────── */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 lg:relative lg:z-auto lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
-      >
-        {/* Logo */}
-        <div className="flex h-20 items-center px-5">
-          <Link href="/partenaire/commandes" className="flex items-center gap-2">
-            <Image
-              src="/images/logo.png"
-              alt="Toni 360°"
-              width={180}
-              height={56}
-              priority
-            />
-          </Link>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex flex-1 flex-col gap-1 px-3 pt-4" aria-label="Navigation partenaire">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-4 py-4 text-base font-medium transition-colors ${
-                  item.active
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <Icon className="h-6 w-6 shrink-0" />
-                {item.label}
-              </Link>
-            );
-          })}
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Déconnexion */}
-          <Link
-            href="#"
-            className="mb-6 flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
-          >
-            <LogOut className="h-5 w-5 shrink-0" />
-            Déconnexion
-          </Link>
-        </nav>
-      </aside>
+      <PartenaireSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* ───────────── MAIN AREA ──────────── */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* ─── HEADER ─── */}
-        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
+        <header className="flex items-center justify-between px-8 pt-16 pb-6 border-b-2 border-gray-300">
           {/* Hamburger (mobile) */}
           <button
             type="button"
@@ -159,33 +82,35 @@ export default function PartenaireEmployesPage() {
           </button>
 
           {/* Search */}
-          <div className="relative min-w-0 flex-1 max-w-lg">
-            <Search className="absolute left-3 sm:left-5 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
+          <div className="relative flex-1 max-w-xl ml-10">
             <input
               type="text"
-              placeholder="Rechercher un médicament"
-              className="w-full rounded-full border-0 bg-emerald-50/60 py-2 sm:py-3 pl-9 sm:pl-14 pr-3 sm:pr-4 text-sm sm:text-base text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Rechercher un médicament..."
+              className="w-full pl-5 pr-12 py-3.5 rounded-full border border-gray-300 text-base focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-gray-700"
             />
+            <button className="absolute right-0 top-0 bottom-0 px-4 bg-toni-green-dark-2 rounded-r-full flex items-center justify-center text-white hover:bg-toni-green-dark transition">
+              <Search size={20} />
+            </button>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+          <div className="flex items-center gap-4 -translate-x-12">
+            <Link
+              href="#"
+              className="flex items-center gap-2 px-4 py-2 rounded-full border border-toni-green-dark-2 text-toni-green-dark-2 text-base font-semibold hover:bg-toni-green-light transition"
             >
-              <span className="hidden sm:inline">Notifications</span>
-              <Bell className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+              <Bell size={16} />
+              Notifications
+            </Link>
+            <Link
+              href="#"
+              className="flex items-center gap-2 px-4 py-2 rounded-full border border-toni-green-dark-2 text-toni-green-dark-2 text-base font-semibold hover:bg-toni-green-light transition"
             >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </button>
+              <ShoppingCart size={16} />
+              Mon Panier
+            </Link>
           </div>
         </header>
 

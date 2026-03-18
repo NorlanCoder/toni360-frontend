@@ -95,7 +95,6 @@ export default function DevenirPartenairePage() {
             {/* Téléphone avec indicatif +229 */}
             <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-[#137551]">
               <div className="flex items-center gap-1.5 px-3 border-r border-gray-300 bg-white">
-                <span className="text-lg leading-none">{beninCode.flag}</span>
                 <select
                   value={formData.indicatif}
                   onChange={(e) =>

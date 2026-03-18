@@ -6,6 +6,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import Image from "next/image";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -18,7 +19,14 @@ export default function Header() {
       <div className="max-w-[98vw] xl:max-w-[1600px] mx-auto flex items-center justify-between">
         {/* Logo Toni360 à gauche */}
         <div className="flex items-center">
-          <span className="text-2xl font-bold text-toni-green">Toni360</span>
+          <Image
+            src="/images/logo.png"
+            alt="Toni360"
+            width={120}
+            height={40}
+            className="object-contain"
+            priority
+          />
         </div>
 
         {/* Boutons d'authentification à droite - cachés sur mobile */}

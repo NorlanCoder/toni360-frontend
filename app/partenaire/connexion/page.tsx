@@ -110,7 +110,6 @@ export default function ConnexionPartenairePage() {
                 style={{ backgroundColor: "#f1f1f1", border: "1px solid #e0e0e0" }}
               >
                 <div className="flex items-center gap-1.5 px-4 py-4">
-                  <span className="text-lg leading-none">{beninCode.flag}</span>
                   <select
                     value={formData.indicatif}
                     onChange={(e) =>
@@ -214,13 +213,13 @@ export default function ConnexionPartenairePage() {
 
           {/* Lien inscription */}
           <p className="text-center mt-8 text-base text-gray-600">
-            Déjà un compte ?{" "}
+            Pas de compte ?{" "}
             <Link
               href="/partenaire/inscription"
               className="font-bold hover:underline"
               style={{ color: "#137551" }}
             >
-              Je me connecte
+              Je m'inscris
             </Link>
           </p>
         </div>
