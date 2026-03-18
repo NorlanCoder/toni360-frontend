@@ -126,6 +126,12 @@ export default function PartenaireRecupereesPage() {
     };
 
     void loadOrders();
+
+    const intervalId = setInterval(() => {
+      void loadOrders();
+    }, 30000);
+
+    return () => clearInterval(intervalId);
   }, [moneyFormat]);
 
   return (
@@ -161,14 +167,14 @@ export default function PartenaireRecupereesPage() {
               <span className="hidden sm:inline">Notifications</span>
               <Bell className="h-5 w-5" />
             </Link>
-            <button
-              type="button"
+            <Link
+              href="/partenaire/profil"
               aria-label="Accéder à mon compte"
               className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
               <span className="hidden sm:inline">Mon Compte</span>
               <User className="h-5 w-5" />
-            </button>
+            </Link>
           </div>
         </header>
 

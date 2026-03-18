@@ -24,6 +24,7 @@ import { filterPartnerNavigationByPermissions } from "@/lib/auth/authorization";
 import {
   getPartnerCommandeCompteurs,
   getPartnerNotificationCount,
+  getPartnerPharmacieProfile,
   getPartnerStockStats,
   getPartnerUsers,
 } from "@/lib/api/partner";
@@ -41,7 +42,7 @@ const navItems = [
 
 /* ─────────────────────── Donut Chart ───────────────────────── */
 const CIRCUMFERENCE = 251.33;
-const DEFAULT_TITULAIRE_LABEL = "Titulaire Zogbadje";
+const DEFAULT_PHARMACIE_LABEL = "Nom de la pharmacie";
 
 interface RoleCounts {
   gestionnaireOperationnel: number;
@@ -91,27 +92,6 @@ function buildDonutSegments(counts: RoleCounts): DonutSegment[] {
   });
 }
 
-function getUsersCount(responseData: unknown): number {
-  if (!responseData || typeof responseData !== "object") {
-    return 0;
-  }
-
-  if (Array.isArray(responseData)) {
-    return responseData.length;
-  }
-
-  const paginated = responseData as { total?: number; data?: unknown[] };
-  if (typeof paginated.total === "number") {
-    return paginated.total;
-  }
-
-  if (Array.isArray(paginated.data)) {
-    return paginated.data.length;
-  }
-
-  return 0;
-}
-
 function getPaginatorMeta(responseData: unknown): { lastPage: number; users: PartnerUserLike[] } {
   if (!responseData || typeof responseData !== "object") {
     return { lastPage: 1, users: [] };
@@ -152,6 +132,17 @@ function formatTitulaireFullName(nomComplet: string | undefined, prenom: string 
   return nomComplet?.trim() ?? "";
 }
 
+function getPharmacieName(value: unknown): string {
+  if (value && typeof value === "object" && "nom" in value) {
+    const nom = (value as { nom?: unknown }).nom;
+    if (typeof nom === "string" && nom.trim()) {
+      return nom.trim();
+    }
+  }
+
+  return DEFAULT_PHARMACIE_LABEL;
+}
+
 /* ────────────────── Arrow button (green circle) ──────────────── */
 function ArrowButton() {
   return (
@@ -174,7 +165,7 @@ function ArrowButton() {
 export default function PartenaireDashboardPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [displayName, setDisplayName] = useState(DEFAULT_TITULAIRE_LABEL);
+  const [displayName, setDisplayName] = useState(DEFAULT_PHARMACIE_LABEL);
   const [visibleNavItems, setVisibleNavItems] = useState(navItems);
   const [aPreparerCount, setAPreparerCount] = useState(0);
   const [enAttenteCount, setEnAttenteCount] = useState(0);
@@ -199,17 +190,20 @@ export default function PartenaireDashboardPage() {
       }
 
       try {
-        const [response, compteursResponse, stockStats, notifications, usersPage1] = await Promise.all([
+        const [response, compteursResponse, stockStats, notifications, usersPage1, pharmacieProfile] = await Promise.all([
           getPartnerProfile(session.token),
           getPartnerCommandeCompteurs(session.token),
           getPartnerStockStats(session.token),
           getPartnerNotificationCount(session.token),
           getPartnerUsers(session.token, { page: 1 }),
+          getPartnerPharmacieProfile(session.token).catch(() => null),
         ]);
 
         const user = response.data.user;
         const titulaireName = formatTitulaireFullName(user.nom_complet, user.prenom, user.nom);
-        setDisplayName(titulaireName || DEFAULT_TITULAIRE_LABEL);
+        const profilePharmacieName = getPharmacieName(pharmacieProfile?.data);
+        const fallbackPharmacieName = user?.pharmacie?.nom?.trim() || titulaireName || DEFAULT_PHARMACIE_LABEL;
+        setDisplayName(profilePharmacieName !== DEFAULT_PHARMACIE_LABEL ? profilePharmacieName : fallbackPharmacieName);
 
         const compteurs = compteursResponse.data;
         setAPreparerCount((compteurs.payee ?? 0) + (compteurs.en_preparation ?? 0));
@@ -257,11 +251,18 @@ export default function PartenaireDashboardPage() {
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
           clearAuthSession();
           router.replace("/partenaire/connexion");
+          return;
         }
       }
     };
 
     void syncProfile();
+
+    const intervalId = setInterval(() => {
+      void syncProfile();
+    }, 30000);
+
+    return () => clearInterval(intervalId);
   }, [router]);
 
   return (

@@ -9,6 +9,7 @@ import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import { getAuthSession } from "@/lib/api/session";
 import {
   getPartnerCommande,
+  livrerPartnerCommande,
   marquerPartnerCommandePrete,
   preparerPartnerCommande,
   PartnerCommande,
@@ -38,6 +39,8 @@ interface OrderDetail {
   montantTotal: number;
   statut: OrderStatus;
 }
+
+const READY_ALLOWED_STATUSES = new Set(["EN_ATTENTE_PAIEMENT", "PAYEE", "EN_PREPARATION"]);
 
 
 /* ──────────────────── Format helpers ────────────────────────── */
@@ -136,18 +139,44 @@ export default function CommandeDetailPage() {
       return;
     }
 
+    if (!READY_ALLOWED_STATUSES.has(backendStatus)) {
+      setError("Cette commande ne peut pas encore être marquée prête.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       if (backendStatus === "PAYEE") {
-        await preparerPartnerCommande(session.token, id);
+        const prepResponse = await preparerPartnerCommande(session.token, id);
+        setBackendStatus(prepResponse.data.commande.statut);
       }
 
-      await marquerPartnerCommandePrete(session.token, id);
-      setBackendStatus("PRETE");
+      const readyResponse = await marquerPartnerCommandePrete(session.token, id);
+      setBackendStatus(readyResponse.data.commande.statut);
       setStatut("prete");
       setError(null);
     } catch (err: unknown) {
       setError(err instanceof ApiError ? err.message : "Impossible de marquer la commande prête.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRecuperer = async () => {
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token || !id) {
+      setError("Session partenaire invalide.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const recupResponse = await livrerPartnerCommande(session.token, id);
+      setBackendStatus(recupResponse.data.commande.statut);
+      setStatut("recuperee");
+      setError(null);
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : "Impossible de marquer la commande récupérée.");
     } finally {
       setIsSubmitting(false);
     }
@@ -160,6 +189,8 @@ export default function CommandeDetailPage() {
   if (!order) {
     return <div className="p-6 text-sm text-red-600">{error ?? "Commande introuvable."}</div>;
   }
+
+  const canMarkReady = READY_ALLOWED_STATUSES.has(backendStatus);
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
@@ -333,13 +364,23 @@ export default function CommandeDetailPage() {
                 Commande récupérée
               </button>
             ) : statut === "prete" ? (
-              <button
-                type="button"
-                disabled
-                className="rounded-full bg-emerald-50 border-2 border-emerald-400 px-12 py-3 text-base font-semibold text-emerald-700 cursor-default"
-              >
-                En attente d&apos;être récupérée
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled
+                  className="rounded-full bg-emerald-50 border-2 border-emerald-400 px-12 py-3 text-base font-semibold text-emerald-700 cursor-default"
+                >
+                  En attente d&apos;être récupérée
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRecuperer}
+                  disabled={isSubmitting}
+                  className="rounded-full border-2 border-emerald-600 bg-emerald-600 px-12 py-3 text-base font-semibold text-white hover:bg-emerald-700 hover:border-emerald-700 transition-colors"
+                >
+                  {isSubmitting ? "Traitement..." : "Récupérer"}
+                </button>
+              </>
             ) : (
               <>
                 <button
@@ -353,8 +394,12 @@ export default function CommandeDetailPage() {
                 <button
                   type="button"
                   onClick={handleReady}
-                  disabled={isSubmitting}
-                  className="rounded-full border-2 border-emerald-600 bg-emerald-600 px-12 py-3 text-base font-semibold text-white hover:bg-emerald-700 hover:border-emerald-700 transition-colors"
+                  disabled={isSubmitting || !canMarkReady}
+                  className={`rounded-full border-2 px-12 py-3 text-base font-semibold transition-colors ${
+                    canMarkReady
+                      ? "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:border-emerald-700"
+                      : "border-gray-300 bg-gray-200 text-gray-500 cursor-not-allowed"
+                  }`}
                 >
                   {isSubmitting ? "Traitement..." : "Prête"}
                 </button>
