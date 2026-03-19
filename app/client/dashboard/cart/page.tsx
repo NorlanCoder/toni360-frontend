@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -48,6 +48,7 @@ type SearchProductResult = {
   key: string;
   rechercheId: string;
   produitId: string;
+  pharmacieId: string;
   nom: string;
   type: string;
   pharmacieNom: string;
@@ -83,6 +84,7 @@ function ClientCartPageContent() {
   const [hasLocalized, setHasLocalized] = useState(false);
   const [searchRadiusKm, setSearchRadiusKm] = useState<number | null>(null);
   const [localizationSummary, setLocalizationSummary] = useState<string>("");
+  const autoSearchAttemptedRef = useRef(false);
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -189,10 +191,16 @@ function ClientCartPageContent() {
     setSearchProducts([]);
     setSearchRadiusKm(null);
     setLocalizationSummary("");
+    autoSearchAttemptedRef.current = false;
   }, [searchTerm]);
 
   const runProductSearch = useCallback(async () => {
     if (!token) {
+      return;
+    }
+
+    if (isSearchMode && searchTerm.length < 2) {
+      setMessage("Saisissez au moins 2 caracteres pour lancer la recherche.");
       return;
     }
 
@@ -243,6 +251,7 @@ function ClientCartPageContent() {
           key: `${item.pharmacie.id}-${produit.id}`,
           rechercheId: response.data.recherche_id,
           produitId: produit.id,
+          pharmacieId: item.pharmacie.id,
           nom: produit.nom,
           type: [produit.forme, produit.dosage].filter(Boolean).join(" ") || "Produit",
           pharmacieNom: item.pharmacie.nom,
@@ -274,6 +283,17 @@ function ClientCartPageContent() {
       return;
     }
 
+    if (searchTerm.length < 2) {
+      setMessage("Saisissez au moins 2 caracteres pour lancer la recherche.");
+      return;
+    }
+
+    if (autoSearchAttemptedRef.current) {
+      return;
+    }
+
+    autoSearchAttemptedRef.current = true;
+
     void runProductSearch();
   }, [shouldAutoSearch, searchTerm, hasLocalized, isLocating, runProductSearch]);
 
@@ -286,14 +306,50 @@ function ClientCartPageContent() {
     setBusySearchProductKey(result.key);
     setMessage("");
     try {
-      await addPanierItem(token, result.produitId, 1, result.rechercheId);
+      await addPanierItem(token, result.produitId, 1, result.rechercheId, result.pharmacieId);
       const refreshed = await loadPanier();
       const currentQty =
         refreshed.find((entry) => entry.produitId === result.produitId)?.qty ?? (previousQty + 1);
       setMessage(`Produit ajouté (x${currentQty}).`);
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        const details = error.details as {
+          data?: {
+            action_requise?: string;
+            pharmacie_produit?: string;
+            pharmacies_autorisees?: string[];
+          };
+        };
+
+        if (details?.data?.action_requise === "VIDER_PANIER") {
+          try {
+            await clearPanier(token);
+            await addPanierItem(token, result.produitId, 1, result.rechercheId, result.pharmacieId);
+            const refreshed = await loadPanier();
+            const currentQty =
+              refreshed.find((entry) => entry.produitId === result.produitId)?.qty ?? (previousQty + 1);
+            setMessage(`Panier réinitialisé pour la nouvelle recherche. Produit ajouté (x${currentQty}).`);
+            return;
+          } catch (retryError) {
+            if (retryError instanceof ApiError) {
+              setMessage(retryError.message);
+            } else {
+              setMessage("Impossible de réinitialiser le panier automatiquement.");
+            }
+            return;
+          }
+        }
+
+        const pharmacieProduit = details?.data?.pharmacie_produit;
+        const pharmaciesAutorisees = details?.data?.pharmacies_autorisees;
+
+        if (pharmacieProduit && Array.isArray(pharmaciesAutorisees) && pharmaciesAutorisees.length > 0) {
+          setMessage(
+            `${error.message} Produit: ${pharmacieProduit}. Autorisees: ${pharmaciesAutorisees.join(", ")}.`,
+          );
+        } else {
+          setMessage(error.message);
+        }
       }
     } finally {
       setBusySearchProductKey(null);

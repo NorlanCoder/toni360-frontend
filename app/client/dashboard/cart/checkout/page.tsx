@@ -8,6 +8,7 @@ import {
   createCommande,
   getCommande,
   getPanier,
+  initierCommandePaiement,
   removePanierItem,
   updatePanierItemQuantity,
   uploadOrdonnanceForProduitCommande,
@@ -39,13 +40,23 @@ function CartPageContent() {
   const commandeIdFromUrl = searchParams.get("commande");
   const isCommandeValidationMode = Boolean(commandeIdFromUrl);
 
-  const [panierId, setPanierId] = useState<string | null>(null);
   const [items, setItems] = useState<CartItem[]>([]);
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
   const [ordonnanceFile, setOrdonnanceFile] = useState<File | null>(null);
   const [pharmacyName, setPharmacyName] = useState(pharmacyNameFromUrl);
   const [prescriptionCount, setPrescriptionCount] = useState(0);
+
+  const resolvePaymentPhone = (): string => {
+    const session = getAuthSession();
+    const rawPhone = session && typeof session.profile === "object" && session.profile
+      ? String((session.profile as { telephone?: unknown }).telephone ?? "")
+      : "";
+
+    const digits = rawPhone.replace(/\D/g, "");
+    const last8 = digits.length >= 8 ? digits.slice(-8) : "";
+    return last8 || "97000000";
+  };
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -65,7 +76,6 @@ function CartPageContent() {
     try {
       const response = await getPanier(token);
       const panier = response.data.panier;
-      setPanierId(panier.id);
       const resolvedPharmacyName = panier.pharmacies[0]?.pharmacie?.nom ?? pharmacyNameFromUrl;
       setPharmacyName(resolvedPharmacyName);
 
@@ -102,7 +112,6 @@ function CartPageContent() {
     try {
       const response = await getCommande(token, commandeId);
       const commande = response.data.commande;
-      setPanierId(null);
       setPharmacyName(commande.pharmacie?.nom ?? pharmacyNameFromUrl);
 
       const mappedItems: CartItem[] = commande.produits.map((item) => ({
@@ -115,7 +124,10 @@ function CartPageContent() {
       }));
 
       setItems(mappedItems);
-      setPrescriptionCount(mappedItems.filter((item) => item.requiresPrescription).length);
+      const missingPrescriptionCount = commande.produits.filter(
+        (item) => item.ordonnance_requise && !item.ordonnance,
+      ).length;
+      setPrescriptionCount(missingPrescriptionCount);
     } catch (error) {
       if (error instanceof ApiError) {
         setMessage(error.message);
@@ -139,13 +151,39 @@ function CartPageContent() {
     }
 
     const commandeDetail = await getCommande(token, commandeId);
-    const produitsAvecOrdonnance = commandeDetail.data.commande.produits.filter(
-      (produit) => produit.ordonnance_requise,
+    const produitsSansOrdonnance = commandeDetail.data.commande.produits.filter(
+      (produit) => produit.ordonnance_requise && !produit.ordonnance,
     );
 
-    for (const produit of produitsAvecOrdonnance) {
-      await uploadOrdonnanceForProduitCommande(token, produit.id, file);
+    for (const produit of produitsSansOrdonnance) {
+      try {
+        await uploadOrdonnanceForProduitCommande(token, produit.id, file);
+      } catch (error) {
+        if (!(error instanceof ApiError)) {
+          throw error;
+        }
+
+        const normalized = error.message.toLowerCase();
+        const alreadySubmitted =
+          normalized.includes("deja en cours de traitement")
+          || normalized.includes("déjà en cours de traitement");
+
+        if (!alreadySubmitted) {
+          throw error;
+        }
+      }
     }
+  };
+
+  const resolveActivePanierId = async (): Promise<string | null> => {
+    if (!token) {
+      return null;
+    }
+
+    const response = await getPanier(token);
+    const livePanierId = response.data.panier.id ?? null;
+
+    return livePanierId;
   };
 
   const updateQty = async (id: string, delta: number) => {
@@ -214,8 +252,9 @@ function CartPageContent() {
     }
 
     if (isCommandeValidationMode && commandeIdFromUrl) {
-      if (prescriptionCount > 0 && !ordonnanceFile) {
-        setMessage("Cette commande nécessite une ordonnance. Veuillez importer un fichier.");
+      if (!token) {
+        clearAuthSession();
+        router.replace("/client/connexion");
         return;
       }
 
@@ -224,6 +263,17 @@ function CartPageContent() {
       try {
         if (ordonnanceFile) {
           await uploadOrdonnances(commandeIdFromUrl, ordonnanceFile);
+        }
+
+        const paiement = await initierCommandePaiement(
+          token,
+          commandeIdFromUrl,
+          "MTN",
+          resolvePaymentPhone(),
+        );
+
+        if (!paiement.data.reference && !paiement.data.qr_code?.code) {
+          setMessage("Paiement validé mais QR code non généré. Réessayez dans quelques secondes.");
         }
 
         router.push("/client/orders");
@@ -238,7 +288,7 @@ function CartPageContent() {
       return;
     }
 
-    if (!token || !panierId || items.length === 0) {
+    if (!token || items.length === 0) {
       setMessage("Votre panier est vide.");
       return;
     }
@@ -246,7 +296,13 @@ function CartPageContent() {
     setPending(true);
     setMessage("");
     try {
-      const creation = await createCommande(token, panierId);
+      const livePanierId = await resolveActivePanierId();
+      if (!livePanierId) {
+        setMessage("Panier introuvable. Rechargez la page puis réessayez.");
+        return;
+      }
+
+      const creation = await createCommande(token, livePanierId);
       const commandeId = creation.data.commande.id;
 
       if (creation.data.necessite_ordonnance && ordonnanceFile) {
@@ -268,7 +324,7 @@ function CartPageContent() {
       return;
     }
 
-    if (!token || !panierId || items.length === 0) {
+    if (!token || items.length === 0) {
       setMessage("Votre panier est vide.");
       return;
     }
@@ -276,7 +332,13 @@ function CartPageContent() {
     setPending(true);
     setMessage("");
     try {
-      const creation = await createCommande(token, panierId, "Commande mise en attente par le patient");
+      const livePanierId = await resolveActivePanierId();
+      if (!livePanierId) {
+        setMessage("Panier introuvable. Rechargez la page puis réessayez.");
+        return;
+      }
+
+      const creation = await createCommande(token, livePanierId, "Commande mise en attente par le patient");
       if (creation.data.necessite_ordonnance && ordonnanceFile) {
         await uploadOrdonnances(creation.data.commande.id, ordonnanceFile);
       }

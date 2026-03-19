@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Clock, MapPin, Plus, Trash2 } from "lucide-react";
 import {
   annulerCommande,
   extractCollection,
+  getCommande,
   getCommandeQrCode,
   getClientCommandeCompteurs,
   getClientCommandes,
-  suivreCommande,
+  initierCommandePaiement,
 } from "@/lib/api/client";
+import { API_BASE_URL } from "@/lib/api/config";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 
@@ -30,8 +32,56 @@ interface OrderQrState {
   orderNumber: string;
   code: string;
   imageUrl?: string | null;
+  imageDataUrl?: string | null;
   expiresAt?: string | null;
   pharmacyName?: string;
+}
+
+const PENDING_PATIENT_STATUSES = new Set([
+  "en_attente_ordonnance",
+  "ordonnance_en_verification",
+  "ordonnance_rejetee",
+]);
+
+const TERMINATED_PATIENT_STATUSES = new Set([
+  "en_attente_paiement",
+  "payee",
+  "en_preparation",
+  "prete",
+  "annulee",
+]);
+
+const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
+
+function resolveQrImageSrc(imageDataUrl?: string | null, imageUrl?: string | null): string | null {
+  if (imageDataUrl) {
+    return imageDataUrl;
+  }
+
+  if (!imageUrl) {
+    return null;
+  }
+
+  if (imageUrl.startsWith("/")) {
+    return `${API_ORIGIN}${imageUrl}`;
+  }
+
+  try {
+    const parsed = new URL(imageUrl);
+    const apiOrigin = new URL(API_ORIGIN);
+
+    if (
+      parsed.hostname === "localhost"
+      && parsed.port === ""
+      && parsed.pathname.startsWith("/storage/")
+    ) {
+      return `${apiOrigin.origin}${parsed.pathname}`;
+    }
+  } catch {
+    return imageUrl;
+  }
+
+  return imageUrl;
 }
 
 export default function ClientOrdersPage() {
@@ -50,6 +100,7 @@ export default function ClientOrdersPage() {
     "Terminees"
   );
   const [loadingQrOrderId, setLoadingQrOrderId] = useState<string | null>(null);
+  const [validatingOrderId, setValidatingOrderId] = useState<string | null>(null);
   const [selectedQr, setSelectedQr] = useState<OrderQrState | null>(null);
 
   const token = useMemo(() => {
@@ -60,49 +111,66 @@ export default function ClientOrdersPage() {
     return session.token;
   }, []);
 
+  const resolvePaymentPhone = (): string => {
+    const session = getAuthSession();
+    const rawPhone = session && typeof session.profile === "object" && session.profile
+      ? String((session.profile as { telephone?: unknown }).telephone ?? "")
+      : "";
+
+    const digits = rawPhone.replace(/\D/g, "");
+    const last8 = digits.length >= 8 ? digits.slice(-8) : "";
+    return last8 || "97000000";
+  };
+
+  const loadOrders = useCallback(async () => {
+    if (!token) {
+      clearAuthSession();
+      return;
+    }
+
+    const [ordersResponse, counterResponse] = await Promise.all([
+      getClientCommandes(token),
+      getClientCommandeCompteurs(token),
+    ]);
+
+    const mappedOrders = extractCollection(ordersResponse.data).map((order) => {
+      const createdAt = order.created_at ? new Date(order.created_at) : new Date();
+      return {
+        id: order.id,
+        numero: order.numero_commande,
+        date: createdAt.toLocaleDateString("fr-FR"),
+        time: createdAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+        status: order.statut_label,
+        statusKey: String(order.statut ?? "").toLowerCase(),
+        pharmacy: order.pharmacie?.nom ?? "Pharmacie",
+        montant: order.montant_total,
+      };
+    });
+
+    setOrders(mappedOrders);
+    setStats({
+      terminees:
+        counterResponse.data.en_attente_paiement
+        + counterResponse.data.payee
+        + counterResponse.data.en_preparation
+        + counterResponse.data.prete
+        + counterResponse.data.annulee,
+      enAttente:
+        counterResponse.data.en_attente_ordonnance
+        + counterResponse.data.ordonnance_en_verification
+        + counterResponse.data.ordonnance_rejetee,
+      recuperees: counterResponse.data.recuperee,
+    });
+
+    setTimelineByOrder(
+      Object.fromEntries(mappedOrders.map((order) => [order.id, order.status] as const)),
+    );
+  }, [token]);
+
   useEffect(() => {
     const load = async () => {
-      if (!token) {
-        clearAuthSession();
-        return;
-      }
-
       try {
-        const [ordersResponse, counterResponse] = await Promise.all([
-          getClientCommandes(token),
-          getClientCommandeCompteurs(token),
-        ]);
-
-        const mappedOrders = extractCollection(ordersResponse.data).map((order) => {
-          const createdAt = order.created_at ? new Date(order.created_at) : new Date();
-          return {
-            id: order.id,
-            numero: order.numero_commande,
-            date: createdAt.toLocaleDateString("fr-FR"),
-            time: createdAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
-            status: order.statut_label,
-            statusKey: String(order.statut ?? "").toLowerCase(),
-            pharmacy: order.pharmacie?.nom ?? "Pharmacie",
-            montant: order.montant_total,
-          };
-        });
-
-        setOrders(mappedOrders);
-        setStats({
-          terminees: counterResponse.data.payee + counterResponse.data.prete,
-          enAttente: counterResponse.data.en_cours,
-          recuperees: counterResponse.data.recuperee,
-        });
-
-        const suivis = await Promise.all(
-          mappedOrders.slice(0, 8).map(async (order) => {
-            const suivi = await suivreCommande(token, order.id);
-            const prochaineEtape = suivi.data.etapes.find((etape) => !etape.complete)?.label;
-            return [order.id, prochaineEtape ?? suivi.data.commande.statut_label] as const;
-          }),
-        );
-
-        setTimelineByOrder(Object.fromEntries(suivis));
+        await loadOrders();
       } catch (error) {
         if (error instanceof ApiError) {
           setMessage(error.message);
@@ -111,7 +179,7 @@ export default function ClientOrdersPage() {
     };
 
     void load();
-  }, [token]);
+  }, [loadOrders]);
 
   const filteredOrders = orders.filter((order) => {
     const orderDate = new Date(`${order.date.split("/").reverse().join("-")}T00:00:00`);
@@ -135,10 +203,10 @@ export default function ClientOrdersPage() {
     }
 
     if (activeTab === "En attente") {
-      return !["recuperee", "annulee", "payee", "prete"].includes(order.statusKey);
+      return PENDING_PATIENT_STATUSES.has(order.statusKey);
     }
 
-    return ["payee", "prete", "annulee"].includes(order.statusKey);
+    return TERMINATED_PATIENT_STATUSES.has(order.statusKey);
   });
 
   const handleCancel = async (orderId: string) => {
@@ -160,8 +228,45 @@ export default function ClientOrdersPage() {
     }
   };
 
-  const handleValidatePendingOrder = (orderId: string) => {
-    router.push(`/client/dashboard/cart/checkout?commande=${encodeURIComponent(orderId)}`);
+  const handleValidatePendingOrder = async (order: ClientOrderItem) => {
+    if (!token) {
+      return;
+    }
+
+    setValidatingOrderId(order.id);
+    setMessage("");
+    try {
+      await initierCommandePaiement(token, order.id, "MTN", resolvePaymentPhone());
+      try {
+        await loadOrders();
+      } catch {
+        // Fallback UI si le refresh est temporairement throttlé.
+        setOrders((prev) =>
+          prev.map((entry) =>
+            entry.id === order.id
+              ? { ...entry, status: "Paiement effectué", statusKey: "payee" }
+              : entry,
+          ),
+        );
+      }
+      setActiveTab("Terminees");
+      setMessage(`Commande ${order.numero} validée et déplacée dans Terminées.`);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const fallbackToCheckout =
+          error.status === 400
+          && /ordonnance|vérification|verification/i.test(error.message);
+
+        if (fallbackToCheckout) {
+          router.push(`/client/dashboard/cart/checkout?commande=${encodeURIComponent(order.id)}`);
+          return;
+        }
+
+        setMessage(error.message);
+      }
+    } finally {
+      setValidatingOrderId(null);
+    }
   };
 
   const handleShowQr = async (order: ClientOrderItem) => {
@@ -179,6 +284,7 @@ export default function ClientOrdersPage() {
         orderNumber: response.data.commande?.numero ?? order.numero,
         code: response.data.qr_code.code,
         imageUrl: response.data.qr_code.image_url,
+        imageDataUrl: response.data.qr_code.image_data_url,
         expiresAt: response.data.qr_code.expires_at,
         pharmacyName: response.data.pharmacie?.nom,
       });
@@ -360,10 +466,11 @@ export default function ClientOrdersPage() {
                 </button>
                 {activeTab === "En attente" && (
                   <button
-                    onClick={() => handleValidatePendingOrder(order.id)}
+                    onClick={() => void handleValidatePendingOrder(order)}
+                    disabled={validatingOrderId === order.id}
                     className="rounded-full bg-[#dff1ea] px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] sm:px-4 sm:text-sm"
                   >
-                    Valider
+                    {validatingOrderId === order.id ? "Validation..." : "Valider"}
                   </button>
                 )}
                 {["payee", "en_preparation", "prete"].includes(order.statusKey) && (
@@ -396,10 +503,10 @@ export default function ClientOrdersPage() {
             )}
 
             <div className="mt-4 rounded-xl bg-[#e8faf3] p-4 text-center">
-              {selectedQr.imageUrl ? (
+              {resolveQrImageSrc(selectedQr.imageDataUrl, selectedQr.imageUrl) ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={selectedQr.imageUrl}
+                  src={resolveQrImageSrc(selectedQr.imageDataUrl, selectedQr.imageUrl) ?? undefined}
                   alt={`QR commande ${selectedQr.orderNumber}`}
                   className="mx-auto h-44 w-44 object-contain sm:h-52 sm:w-52"
                 />

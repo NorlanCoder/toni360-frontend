@@ -162,8 +162,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 alt="Toni360"
                 width={160}
                 height={80}
-                priority
-                className="h-20 w-auto"
               />
             </Link>
           </div>
@@ -213,10 +211,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               <Image
                 src="/images/logo.png"
                 alt="Toni360"
-                width={126}
-                height={63}
-                priority
-                className="h-12 w-auto"
+                width={96}
+                height={48}
               />
             </Link>
             <button

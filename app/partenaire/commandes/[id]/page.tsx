@@ -146,7 +146,7 @@ export default function CommandeDetailPage() {
 
     setIsSubmitting(true);
     try {
-      if (backendStatus === "PAYEE") {
+      if (backendStatus !== "EN_PREPARATION") {
         const prepResponse = await preparerPartnerCommande(session.token, id);
         setBackendStatus(prepResponse.data.commande.statut);
       }
