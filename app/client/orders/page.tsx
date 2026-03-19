@@ -51,6 +51,13 @@ const TERMINATED_PATIENT_STATUSES = new Set([
   "annulee",
 ]);
 
+const QR_VISIBLE_PATIENT_STATUSES = new Set([
+  "en_attente_paiement",
+  "payee",
+  "en_preparation",
+  "prete",
+]);
+
 const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
 function resolveQrImageSrc(imageDataUrl?: string | null, imageUrl?: string | null): string | null {
@@ -214,8 +221,22 @@ export default function ClientOrdersPage() {
       return;
     }
 
+    const targetOrder = orders.find((order) => order.id === orderId);
+    const isRecuperee = targetOrder?.statusKey === "recuperee";
+
     try {
       await annulerCommande(token, orderId);
+
+      if (isRecuperee) {
+        setOrders((prev) => prev.filter((order) => order.id !== orderId));
+        setStats((prev) => ({
+          ...prev,
+          recuperees: Math.max(0, prev.recuperees - 1),
+        }));
+        setMessage("Commande retirée de l'historique.");
+        return;
+      }
+
       setOrders((prev) =>
         prev.map((order) =>
           order.id === orderId ? { ...order, status: "Annulée", statusKey: "annulee" } : order,
@@ -237,6 +258,31 @@ export default function ClientOrdersPage() {
     setMessage("");
     try {
       await initierCommandePaiement(token, order.id, "MTN", resolvePaymentPhone());
+
+      // Optimistic UI: après une validation réussie, rendre l'action QR immédiatement visible.
+      setOrders((prev) =>
+        prev.map((entry) =>
+          entry.id === order.id
+            ? { ...entry, status: "Paiement effectué", statusKey: "payee" }
+            : entry,
+        ),
+      );
+
+      try {
+        const qrResponse = await getCommandeQrCode(token, order.id);
+        setSelectedQr({
+          orderId: order.id,
+          orderNumber: qrResponse.data.commande?.numero ?? order.numero,
+          code: qrResponse.data.qr_code.code,
+          imageUrl: qrResponse.data.qr_code.image_url,
+          imageDataUrl: qrResponse.data.qr_code.image_data_url,
+          expiresAt: qrResponse.data.qr_code.expires_at,
+          pharmacyName: qrResponse.data.pharmacie?.nom,
+        });
+      } catch {
+        // Le QR pourra toujours être récupéré via le bouton "Voir QR".
+      }
+
       try {
         await loadOrders();
       } catch {
@@ -250,7 +296,7 @@ export default function ClientOrdersPage() {
         );
       }
       setActiveTab("Terminees");
-      setMessage(`Commande ${order.numero} validée et déplacée dans Terminées.`);
+      setMessage(`Commande ${order.numero} validée. Le QR code est disponible.`);
     } catch (error) {
       if (error instanceof ApiError) {
         const fallbackToCheckout =
@@ -277,6 +323,18 @@ export default function ClientOrdersPage() {
     try {
       setLoadingQrOrderId(order.id);
       setMessage("");
+
+      if (order.statusKey === "en_attente_paiement") {
+        await initierCommandePaiement(token, order.id, "MTN", resolvePaymentPhone());
+        setOrders((prev) =>
+          prev.map((entry) =>
+            entry.id === order.id
+              ? { ...entry, status: "Paiement effectué", statusKey: "payee" }
+              : entry,
+          ),
+        );
+      }
+
       const response = await getCommandeQrCode(token, order.id);
 
       setSelectedQr({
@@ -430,7 +488,7 @@ export default function ClientOrdersPage() {
 
       {/* Orders list */}
       <div className="bg-[#e8faf3] border-2 border-gray-300 rounded-2xl overflow-hidden">
-        <div className="max-h-[420px] overflow-y-auto">
+        <div className="max-h-105 overflow-y-auto">
           {filteredOrders.map((order, index) => (
             <div
               key={`${order.id}-${index}`}
@@ -473,7 +531,7 @@ export default function ClientOrdersPage() {
                     {validatingOrderId === order.id ? "Validation..." : "Valider"}
                   </button>
                 )}
-                {["payee", "en_preparation", "prete"].includes(order.statusKey) && (
+                {QR_VISIBLE_PATIENT_STATUSES.has(order.statusKey) && (
                   <button
                     onClick={() => handleShowQr(order)}
                     disabled={loadingQrOrderId === order.id}
