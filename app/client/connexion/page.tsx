@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
@@ -70,7 +71,7 @@ export default function ConnexionPage() {
   return (
     <div className="flex min-h-screen">
       {/* Section Image - Gauche - Cachée sur mobile */}
-      <div className="hidden lg:block lg:w-3/5 relative">
+      <div className="relative hidden lg:block lg:w-3/5">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('/images/ph6.png')" }}
@@ -78,26 +79,36 @@ export default function ConnexionPage() {
       </div>
 
       {/* Section Formulaire - Droite */}
-      <div className="w-full lg:w-2/5 flex flex-col items-center justify-center px-6 py-12" style={{ backgroundColor: '#eafff8' }}>
-        <div className="w-full max-w-sm">
+      <div
+        className="flex w-full flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-10 lg:w-2/5 lg:px-8 lg:py-12"
+        style={{ backgroundColor: "#eafff8" }}
+      >
+        <div className="w-full max-w-md">
           {/* Logo */}
-          <div className="mb-8 text-center">
+          <div className="mb-6 text-center sm:mb-8">
             <Link href="/" aria-label="Accueil">
-              <img src="/images/logo.png" alt="Toni360" className="h-28 mx-auto" />
+              <Image
+                src="/images/logo.png"
+                alt="Toni360"
+                width={192}
+                height={96}
+                priority
+                className="mx-auto h-20 w-auto sm:h-24"
+              />
             </Link>
           </div>
 
           {/* Titre */}
-          <h2 className="text-5xl text-gray-800 text-center mb-12">
+          <h2 className="mb-8 text-center text-3xl text-gray-800 sm:mb-10 sm:text-4xl lg:text-5xl">
             Connexion
           </h2>
 
           {/* Tabs pour choisir la méthode de connexion */}
-          <div className="flex mb-6 border-b-2 border-gray-300">
+          <div className="mb-5 grid grid-cols-2 border-b-2 border-gray-300 sm:mb-6">
             <button
               type="button"
               onClick={() => setLoginMethod("phone")}
-              className={`flex-1 py-3 text-sm font-semibold transition ${
+              className={`px-1 py-2.5 text-xs font-semibold tracking-wide transition sm:py-3 sm:text-sm ${
                 loginMethod === "phone"
                   ? "border-b-4 border-toni-green-dark-2 text-toni-green-dark-2"
                   : "text-gray-600"
@@ -108,7 +119,7 @@ export default function ConnexionPage() {
             <button
               type="button"
               onClick={() => setLoginMethod("email")}
-              className={`flex-1 py-3 text-sm font-semibold transition ${
+              className={`px-1 py-2.5 text-xs font-semibold tracking-wide transition sm:py-3 sm:text-sm ${
                 loginMethod === "email"
                   ? "border-b-4 border-toni-green-dark-2 text-toni-green-dark-2"
                   : "text-gray-600"
@@ -119,15 +130,14 @@ export default function ConnexionPage() {
           </div>
 
           {/* Formulaire */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             {/* Téléphone ou Email selon l'onglet actif */}
             {loginMethod === "phone" ? (
               <div className="relative flex gap-2">
                 <select
                   value={formData.indicatif}
                   onChange={e => setFormData({ ...formData, indicatif: e.target.value })}
-                  className="px-2 py-3 border border-black rounded-md text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
-                  style={{ fontSize: '0.75rem', width: '70px' }}
+                  className="w-[78px] rounded-md border border-black px-1.5 py-2.5 text-xs text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:w-[88px] sm:py-3"
                 >
                   {COUNTRY_CODES.map((c) => (
                     <option key={c.code} value={c.code}>
@@ -142,7 +152,7 @@ export default function ConnexionPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, telephone: e.target.value })
                   }
-                  className="flex-1 px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                  className="min-w-0 flex-1 rounded-md border border-black px-4 py-2.5 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
                 />
               </div>
             ) : (
@@ -154,7 +164,7 @@ export default function ConnexionPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                  className="w-full rounded-md border border-black px-4 py-2.5 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
                 />
               </div>
             )}
@@ -169,7 +179,7 @@ export default function ConnexionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full rounded-md border border-black py-2.5 pl-12 pr-12 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
               />
               <button
                 type="button"
@@ -181,7 +191,7 @@ export default function ConnexionPage() {
             </div>
 
             {/* Se souvenir de moi & Mot de passe oublié */}
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -191,9 +201,9 @@ export default function ConnexionPage() {
                   }
                   className="w-4 h-4 border-gray-300 rounded focus:ring-toni-green-dark-2"
                 />
-                <span className="text-gray-700">Se souvenir de moi</span>
+                <span className="text-sm text-gray-700">Se souvenir de moi</span>
               </label>
-              <Link href="/mot-de-passe-oublie" className="text-gray-700 hover:text-toni-green-dark-2">
+              <Link href="/mot-de-passe-oublie" className="text-sm text-gray-700 hover:text-toni-green-dark-2 sm:text-right">
                 Mot de passe oublié ?
               </Link>
             </div>
@@ -202,14 +212,14 @@ export default function ConnexionPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-toni-green-dark-2 text-white font-bold py-3 rounded-md hover:bg-toni-green-dark transition"
+              className="w-full rounded-md bg-toni-green-dark-2 py-2.5 text-sm font-bold text-white transition hover:bg-toni-green-dark sm:py-3 sm:text-base"
             >
               {submitting ? "Connexion..." : "Se connecter"}
             </button>
           </form>
 
           {/* Lien vers inscription */}
-          <p className="text-center text-sm text-gray-700 mt-6">
+          <p className="mt-5 text-center text-sm text-gray-700 sm:mt-6">
             Pas encore de compte ?{" "}
             <Link href="/client/inscription" className="text-toni-green-dark-2 font-semibold hover:underline">
               Inscrivez-vous.

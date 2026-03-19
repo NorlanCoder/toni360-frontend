@@ -193,16 +193,16 @@ export default function ClientOrdersPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-5xl rounded-3xl p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Mes commandes</h1>
+      <div className="mx-auto w-full max-w-5xl rounded-3xl px-3 py-4 sm:px-4 sm:py-6">
+        <h1 className="mb-6 text-2xl font-bold text-gray-900 sm:text-3xl">Mes commandes</h1>
 
       {message && <p className="mb-4 text-sm text-red-500">{message}</p>}
 
       {/* Summary + Orders section */}
-      <div className="rounded-3xl p-6">
+      <div className="rounded-3xl p-0 sm:p-2">
         {/* Summary cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-          <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-5 py-4 transition hover:shadow-sm hover:border-[#008F4F] hover:bg-[#d8f5ea]">
+        <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:mb-10 lg:grid-cols-4 lg:gap-4">
+          <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-[#008F4F] hover:bg-[#d8f5ea] hover:shadow-sm sm:px-5 sm:py-4">
           <div className="w-11 h-11 rounded-full bg-[#e8faf3] flex items-center justify-center">
             <CheckCircle2 className="text-[#008F4F]" size={18} />
           </div>
@@ -211,7 +211,7 @@ export default function ClientOrdersPage() {
             <p className="text-xl font-bold text-gray-900">{stats.terminees}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-5 py-4 transition hover:shadow-sm hover:border-[#008F4F] hover:bg-[#d8f5ea]">
+        <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-[#008F4F] hover:bg-[#d8f5ea] hover:shadow-sm sm:px-5 sm:py-4">
           <div className="w-11 h-11 rounded-full bg-[#fff3e8] flex items-center justify-center">
             <Clock className="text-[#f97316]" size={18} />
           </div>
@@ -220,7 +220,7 @@ export default function ClientOrdersPage() {
             <p className="text-xl font-bold text-gray-900">{stats.enAttente}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-5 py-4 transition hover:shadow-sm hover:border-[#008F4F] hover:bg-[#d8f5ea]">
+        <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-[#008F4F] hover:bg-[#d8f5ea] hover:shadow-sm sm:px-5 sm:py-4">
           <div className="w-11 h-11 rounded-full bg-[#e8faf3] flex items-center justify-center">
             <MapPin className="text-[#008F4F]" size={18} />
           </div>
@@ -231,7 +231,7 @@ export default function ClientOrdersPage() {
         </div>
         <button
           onClick={() => router.push("/client/dashboard/cart")}
-          className="flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-3 text-[#008F4F] font-semibold hover:bg-[#d8f5ea] transition"
+          className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 font-semibold text-[#008F4F] transition hover:bg-[#d8f5ea]"
         >
           <Plus size={18} />
           Ajouter
@@ -239,11 +239,11 @@ export default function ClientOrdersPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-6 mb-10 text-base text-gray-600">
-        <div className="flex items-center gap-2">
+      <div className="mb-8 flex flex-col gap-3 text-sm text-gray-600 sm:mb-10 sm:gap-4 sm:text-base">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <span>Du</span>
-          <div className="flex items-center gap-2">
-            <select value={fromDay} onChange={(e) => setFromDay(e.target.value)} className="w-16 px-3 py-2 pr-6 rounded-full border border-gray-200 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 bg-white">
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={fromDay} onChange={(e) => setFromDay(e.target.value)} className="w-16 rounded-full border border-gray-200 bg-white px-3 py-2 pr-6 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2">
               <option>JJ</option>
               {Array.from({ length: 31 }, (_, i) => (
                 <option key={`du-j-${i + 1}`} value={i + 1}>
@@ -251,7 +251,7 @@ export default function ClientOrdersPage() {
                 </option>
               ))}
             </select>
-            <select value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} className="w-16 px-3 py-2 pr-6 rounded-full border border-gray-200 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 bg-white">
+            <select value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} className="w-16 rounded-full border border-gray-200 bg-white px-3 py-2 pr-6 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2">
               <option>MM</option>
               {Array.from({ length: 12 }, (_, i) => (
                 <option key={`du-m-${i + 1}`} value={i + 1}>
@@ -259,7 +259,7 @@ export default function ClientOrdersPage() {
                 </option>
               ))}
             </select>
-            <select value={fromYear} onChange={(e) => setFromYear(e.target.value)} className="w-24 px-3 py-2 pr-6 rounded-full border border-gray-200 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 bg-white">
+            <select value={fromYear} onChange={(e) => setFromYear(e.target.value)} className="w-24 rounded-full border border-gray-200 bg-white px-3 py-2 pr-6 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2">
               <option>AAAA</option>
               {[2024, 2025, 2026].map((year) => (
                 <option key={`du-y-${year}`} value={year}>
@@ -269,10 +269,10 @@ export default function ClientOrdersPage() {
             </select>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <span>Au</span>
-          <div className="flex items-center gap-2">
-            <select value={toDay} onChange={(e) => setToDay(e.target.value)} className="w-16 px-3 py-2 pr-6 rounded-full border border-gray-200 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 bg-white">
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={toDay} onChange={(e) => setToDay(e.target.value)} className="w-16 rounded-full border border-gray-200 bg-white px-3 py-2 pr-6 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2">
               <option>JJ</option>
               {Array.from({ length: 31 }, (_, i) => (
                 <option key={`au-j-${i + 1}`} value={i + 1}>
@@ -280,7 +280,7 @@ export default function ClientOrdersPage() {
                 </option>
               ))}
             </select>
-            <select value={toMonth} onChange={(e) => setToMonth(e.target.value)} className="w-16 px-3 py-2 pr-6 rounded-full border border-gray-200 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 bg-white">
+            <select value={toMonth} onChange={(e) => setToMonth(e.target.value)} className="w-16 rounded-full border border-gray-200 bg-white px-3 py-2 pr-6 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2">
               <option>MM</option>
               {Array.from({ length: 12 }, (_, i) => (
                 <option key={`au-m-${i + 1}`} value={i + 1}>
@@ -288,7 +288,7 @@ export default function ClientOrdersPage() {
                 </option>
               ))}
             </select>
-            <select value={toYear} onChange={(e) => setToYear(e.target.value)} className="w-24 px-3 py-2 pr-6 rounded-full border border-gray-200 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 bg-white">
+            <select value={toYear} onChange={(e) => setToYear(e.target.value)} className="w-24 rounded-full border border-gray-200 bg-white px-3 py-2 pr-6 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2">
               <option>AAAA</option>
               {[2024, 2025, 2026].map((year) => (
                 <option key={`au-y-${year}`} value={year}>
@@ -301,7 +301,7 @@ export default function ClientOrdersPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-20 mb-8 text-lg font-semibold text-gray-600">
+      <div className="mb-6 flex gap-4 overflow-x-auto pb-2 text-sm font-semibold text-gray-600 sm:mb-8 sm:gap-8 sm:text-lg">
         {[
           { label: "Terminées", value: "Terminees" as const, icon: CheckCircle2 },
           { label: "En attente", value: "En attente" as const, icon: Clock },
@@ -310,7 +310,7 @@ export default function ClientOrdersPage() {
           <button
             key={tab.value}
             onClick={() => setActiveTab(tab.value)}
-            className={`pb-2 border-b-2 transition-colors flex items-center gap-2 ${
+            className={`shrink-0 border-b-2 pb-2 transition-colors flex items-center gap-2 ${
               activeTab === tab.value
                 ? "border-[#008F4F] text-[#008F4F]"
                 : "border-transparent hover:text-gray-900"
@@ -328,27 +328,27 @@ export default function ClientOrdersPage() {
           {filteredOrders.map((order, index) => (
             <div
               key={`${order.id}-${index}`}
-              className="flex items-center justify-between px-6 py-4 border-b-2 border-gray-300 last:border-b-0"
+              className="flex flex-col gap-3 border-b-2 border-gray-300 px-4 py-4 last:border-b-0 sm:px-6 md:flex-row md:items-center md:justify-between"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="text-base font-bold text-gray-900">
                   Commande NO {order.numero}
                 </p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="mt-1 text-sm text-gray-500">
                   Étape actuelle: {timelineByOrder[order.id] ?? order.status} ({order.pharmacy})
                 </p>
-                <div className="text-sm text-gray-400 mt-2">
+                <div className="mt-2 text-sm text-gray-400">
                   {order.date} &nbsp; {order.time}
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:justify-end">
                 {activeTab === "En attente" ? (
-                  <span className="px-4 py-1.5 rounded-full bg-red-100 text-red-600 text-sm font-semibold">
+                  <span className="rounded-full bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-600 sm:px-4 sm:text-sm">
                     En attente
                   </span>
                 ) : (
-                  <span className="px-4 py-1.5 rounded-full bg-[#dff1ea] text-[#1f8a5b] text-sm font-semibold">
+                  <span className="rounded-full bg-[#dff1ea] px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] sm:px-4 sm:text-sm">
                     {activeTab === "Recuperees" ? "Récupérée" : "Terminée"}
                   </span>
                 )}
@@ -361,7 +361,7 @@ export default function ClientOrdersPage() {
                 {activeTab === "En attente" && (
                   <button
                     onClick={() => handleValidatePendingOrder(order.id)}
-                    className="px-4 py-1.5 rounded-full bg-[#dff1ea] text-[#1f8a5b] text-sm font-semibold"
+                    className="rounded-full bg-[#dff1ea] px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] sm:px-4 sm:text-sm"
                   >
                     Valider
                   </button>
@@ -370,7 +370,7 @@ export default function ClientOrdersPage() {
                   <button
                     onClick={() => handleShowQr(order)}
                     disabled={loadingQrOrderId === order.id}
-                    className="px-4 py-1.5 rounded-full bg-white border border-[#1f8a5b] text-[#1f8a5b] text-sm font-semibold disabled:opacity-60"
+                    className="rounded-full border border-[#1f8a5b] bg-white px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] disabled:opacity-60 sm:px-4 sm:text-sm"
                   >
                     {loadingQrOrderId === order.id ? "Chargement..." : "Voir QR"}
                   </button>
@@ -388,8 +388,8 @@ export default function ClientOrdersPage() {
 
       {selectedQr && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6">
-            <h2 className="text-xl font-bold text-gray-900">QR de retrait</h2>
+          <div className="w-full max-w-md rounded-2xl bg-white p-4 sm:p-6">
+            <h2 className="text-lg font-bold text-gray-900 sm:text-xl">QR de retrait</h2>
             <p className="mt-1 text-sm text-gray-600">Commande NO {selectedQr.orderNumber}</p>
             {selectedQr.pharmacyName && (
               <p className="text-sm text-gray-500">{selectedQr.pharmacyName}</p>
@@ -401,7 +401,7 @@ export default function ClientOrdersPage() {
                 <img
                   src={selectedQr.imageUrl}
                   alt={`QR commande ${selectedQr.orderNumber}`}
-                  className="mx-auto h-52 w-52 object-contain"
+                  className="mx-auto h-44 w-44 object-contain sm:h-52 sm:w-52"
                 />
               ) : (
                 <p className="text-sm text-gray-600">Code: {selectedQr.code}</p>
