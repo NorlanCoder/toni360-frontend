@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { getPatientProfile } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
@@ -38,22 +39,24 @@ export default function AccueilClientPage() {
   }, [router]);
 
   return (
-    <>
+    <section className="mx-auto w-full max-w-6xl px-3 py-2 sm:px-6 sm:py-4 lg:px-8">
       {/* Welcome */}
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">
+      <h1 className="mb-4 break-words text-xl font-bold leading-tight text-gray-900 sm:mb-6 sm:text-3xl lg:text-4xl">
         Bienvenue, {displayName}
       </h1>
 
       {/* Hero card */}
-      <div
-        className="relative rounded-2xl overflow-hidden"
-        style={{ maxWidth: "750px", height: "420px" }}
-      >
-        <img
-          src="/images/ph7.png"
-          alt="Pharmacie"
-          className="w-full h-full object-cover"
-        />
+      <div className="relative w-full max-w-5xl overflow-hidden rounded-2xl shadow-sm sm:rounded-3xl">
+        <div className="relative aspect-[3/4] w-full sm:aspect-[16/10] lg:aspect-[16/9]">
+          <Image
+            src="/images/ph7.png"
+            alt="Pharmacie"
+            fill
+            priority
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 960px"
+            className="object-cover"
+          />
+        </div>
         {/* Green gradient overlay */}
         <div
           className="absolute inset-0"
@@ -63,12 +66,12 @@ export default function AccueilClientPage() {
           }}
         />
         {/* Text on image */}
-        <div className="absolute bottom-8 left-8 right-8">
-          <p className="text-white text-2xl font-bold leading-snug">
+        <div className="absolute inset-x-0 bottom-0 p-3 sm:p-6 md:p-8 lg:p-10">
+          <p className="max-w-[20ch] text-base font-bold leading-snug text-white sm:max-w-3xl sm:text-2xl md:text-3xl">
             Trouvez facilement votre médicament.
           </p>
         </div>
       </div>
-    </>
+    </section>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, KeyboardEvent, useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -9,9 +10,11 @@ import {
   Home,
   ListOrdered,
   LogOut,
+  Menu,
   Search,
   ShoppingCart,
   User,
+  X,
 } from "lucide-react";
 import { getProductSuggestions } from "@/lib/api/client";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
@@ -33,6 +36,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isPublicClientPage =
     pathname.startsWith("/client/connexion") || pathname.startsWith("/client/inscription");
@@ -146,14 +150,21 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   };
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen flex-col bg-white lg:flex-row">
       {/* Sidebar */}
-      <aside className="w-72 flex flex-col justify-between py-8 px-6 border-r-2 border-gray-300 bg-white shrink-0">
+      <aside className="hidden w-72 shrink-0 flex-col justify-between border-r-2 border-gray-300 bg-white px-6 py-8 lg:flex">
         <div>
           {/* Logo */}
           <div className="mb-12 mt-6">
             <Link href="/" aria-label="Accueil">
-              <img src="/images/logo.png" alt="Toni360" className="h-20" />
+              <Image
+                src="/images/logo.png"
+                alt="Toni360"
+                width={160}
+                height={80}
+                priority
+                className="h-20 w-auto"
+              />
             </Link>
           </div>
 
@@ -196,9 +207,54 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {/* Main content */}
       <div className="flex-1 flex flex-col">
         {/* Top bar */}
-        <header className="flex items-center justify-between px-8 pt-16 pb-6 border-b-2 border-gray-300">
+        <header className="border-b-2 border-gray-300 px-3 pb-4 pt-4 sm:px-6 lg:px-8 lg:pt-12">
+          <div className="mb-3 flex items-center justify-between lg:hidden">
+            <Link href="/" aria-label="Accueil">
+              <Image
+                src="/images/logo.png"
+                alt="Toni360"
+                width={126}
+                height={63}
+                priority
+                className="h-12 w-auto"
+              />
+            </Link>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              className="rounded-md border border-gray-300 p-2 text-gray-700"
+              aria-label={mobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+            >
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          </div>
+
+          {mobileMenuOpen && (
+            <nav className="mb-4 grid gap-2 rounded-xl border border-gray-200 bg-white p-3 lg:hidden">
+              {navItems.map(({ label, href, icon: Icon }) => {
+                const active = pathname === href || pathname.startsWith(`${href}/`);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      active
+                        ? "bg-toni-green-light text-toni-green-dark-2"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <Icon size={16} />
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
+
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           {/* Search */}
-          <form className="relative flex-1 max-w-xl ml-10" onSubmit={handleSearch}>
+          <form className="relative w-full lg:max-w-xl" onSubmit={handleSearch}>
             <input
               type="text"
               value={search}
@@ -213,13 +269,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 setTimeout(() => setShowSuggestions(false), 120);
               }}
               placeholder="Rechercher un médicament..."
-              className="w-full pl-5 pr-12 py-3.5 rounded-full border border-gray-300 text-base focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-gray-700"
+              className="w-full rounded-full border border-gray-300 py-2.5 pl-4 pr-12 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:pl-5 sm:text-base"
             />
             <button
               type="submit"
-              className="absolute right-0 top-0 bottom-0 px-4 bg-toni-green-dark-2 rounded-r-full flex items-center justify-center text-white hover:bg-toni-green-dark transition"
+              className="absolute bottom-0 right-0 top-0 flex items-center justify-center rounded-r-full bg-toni-green-dark-2 px-4 text-white transition hover:bg-toni-green-dark"
             >
-              <Search size={20} />
+              <Search size={18} />
             </button>
 
             {showSuggestions && (
@@ -241,26 +297,27 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </form>
 
           {/* Actions */}
-          <div className="flex items-center gap-4 -translate-x-12">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
             <Link
               href="/client/notifications"
-              className="flex items-center gap-2 px-4 py-2 rounded-full border border-toni-green-dark-2 text-toni-green-dark-2 text-base font-semibold hover:bg-toni-green-light transition"
+              className="flex items-center justify-center gap-2 rounded-full border border-toni-green-dark-2 px-3 py-2 text-xs font-semibold text-toni-green-dark-2 transition hover:bg-toni-green-light sm:px-4 sm:text-sm"
             >
               <Bell size={16} />
               Notifications
             </Link>
             <Link
               href="/client/dashboard/cart"
-              className="flex items-center gap-2 px-4 py-2 rounded-full border border-toni-green-dark-2 text-toni-green-dark-2 text-base font-semibold hover:bg-toni-green-light transition"
+              className="flex items-center justify-center gap-2 rounded-full border border-toni-green-dark-2 px-3 py-2 text-xs font-semibold text-toni-green-dark-2 transition hover:bg-toni-green-light sm:px-4 sm:text-sm"
             >
               <ShoppingCart size={16} />
               Mon Panier
             </Link>
           </div>
+          </div>
         </header>
 
         {/* Page body */}
-        <main className="flex-1 px-8 py-8 pl-24">{children}</main>
+        <main className="flex-1 px-3 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
@@ -89,7 +90,7 @@ export default function InscriptionPage() {
   return (
     <div className="flex min-h-screen">
       {/* Section Image - Gauche - Cachée sur mobile */}
-      <div className="hidden lg:block lg:w-3/5 relative">
+      <div className="relative hidden lg:block lg:w-3/5">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('/images/ph6.png')" }}
@@ -97,22 +98,32 @@ export default function InscriptionPage() {
       </div>
 
       {/* Section Formulaire - Droite */}
-      <div className="w-full lg:w-2/5 flex flex-col items-center justify-center px-6 py-12" style={{ backgroundColor: '#eafff8' }}>
-        <div className="w-full max-w-sm">
+      <div
+        className="flex w-full flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-10 lg:w-2/5 lg:px-8 lg:py-12"
+        style={{ backgroundColor: "#eafff8" }}
+      >
+        <div className="w-full max-w-md">
           {/* Logo */}
-          <div className="mb-8 text-center">
+          <div className="mb-6 text-center sm:mb-8">
             <Link href="/" aria-label="Accueil">
-              <img src="/images/logo.png" alt="Toni360" className="h-28 mx-auto" />
+              <Image
+                src="/images/logo.png"
+                alt="Toni360"
+                width={192}
+                height={96}
+                priority
+                className="mx-auto h-20 w-auto sm:h-24"
+              />
             </Link>
           </div>
 
           {/* Titre */}
-          <h2 className="text-5xl text-gray-800 text-center mb-12">
+          <h2 className="mb-8 text-center text-3xl text-gray-800 sm:mb-10 sm:text-4xl lg:text-5xl">
             Inscription
           </h2>
 
           {/* Formulaire */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             {/* Nom complet */}
             <div>
               <input
@@ -122,7 +133,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, nom: e.target.value })
                 }
-                className="w-full px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full rounded-md border border-black px-4 py-2.5 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
               />
             </div>
 
@@ -136,7 +147,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full pl-12 pr-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full rounded-md border border-black py-2.5 pl-12 pr-4 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
               />
             </div>
 
@@ -145,8 +156,7 @@ export default function InscriptionPage() {
               <select
                 value={formData.indicatif}
                 onChange={e => setFormData({ ...formData, indicatif: e.target.value })}
-                className="px-2 py-3 border border-black rounded-md text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
-                style={{ fontSize: '0.75rem', width: '70px' }}
+                className="w-[78px] rounded-md border border-black px-1.5 py-2.5 text-xs text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:w-[88px] sm:py-3"
               >
                 {COUNTRY_CODES.map((c) => (
                   <option key={c.code} value={c.code}>
@@ -161,7 +171,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, telephone: e.target.value })
                 }
-                className="flex-1 px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="min-w-0 flex-1 rounded-md border border-black px-4 py-2.5 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
               />
             </div>
 
@@ -175,13 +185,13 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full rounded-md border border-black py-2.5 pl-12 pr-12 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 text-gray-400 hover:text-gray-600"
-                style={{ marginTop: '1px' }}
+                style={{ marginTop: "1px" }}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -197,7 +207,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, confirmPassword: e.target.value })
                 }
-                className="w-full pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full rounded-md border border-black py-2.5 pl-12 pr-12 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
               />
             </div>
 
@@ -205,14 +215,14 @@ export default function InscriptionPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-toni-green-dark-2 text-white font-bold py-3 rounded-md hover:bg-toni-green-dark transition"
+              className="w-full rounded-md bg-toni-green-dark-2 py-2.5 text-sm font-bold text-white transition hover:bg-toni-green-dark sm:py-3 sm:text-base"
             >
               {submitting ? "Inscription..." : "S\'inscrire"}
             </button>
           </form>
 
           {/* Lien connexion */}
-          <p className="text-center mt-6 text-gray-600">
+          <p className="mt-5 text-center text-sm text-gray-600 sm:mt-6 sm:text-base">
             Déjà inscrit ?{" "}
             <Link href="/client/connexion" className="text-toni-green-dark-2 font-semibold hover:underline">
               Connectez-vous.
@@ -220,7 +230,7 @@ export default function InscriptionPage() {
           </p>
 
           {/* Texte légal */}
-          <p className="text-center mt-4 text-sm text-gray-500">
+          <p className="mt-3 text-center text-xs text-gray-500 sm:mt-4 sm:text-sm">
             En vous inscrivant, vous acceptez nos{" "}
             <Link href="#" className="text-toni-green-dark-2 hover:underline">
               Conditions d&apos;utilisation

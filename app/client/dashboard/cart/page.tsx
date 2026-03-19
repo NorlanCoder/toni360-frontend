@@ -301,13 +301,13 @@ function ClientCartPageContent() {
   };
 
   return (
-    <>
+    <section className="mx-auto w-full max-w-6xl px-3 pb-6 sm:px-6 sm:pb-8">
       {/* Supprimer tout */}
       <div className="mb-6">
         <button
           onClick={removeAll}
           disabled={globalBusy}
-          className="text-toni-green-dark-2 text-base font-medium hover:underline"
+          className="text-sm font-medium text-toni-green-dark-2 hover:underline sm:text-base"
         >
           Supprimer tout
         </button>
@@ -316,19 +316,16 @@ function ClientCartPageContent() {
       {message && <p className="mb-4 text-sm text-red-500">{message}</p>}
 
       {/* Products grid */}
-      <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-        style={{ maxWidth: "920px" }}
-      >
+      <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
         {items.map((item) => (
           <div
             key={item.id}
-            className="relative border border-gray-200 rounded-2xl p-6 bg-white"
+            className="relative rounded-2xl border border-gray-200 bg-white p-4 sm:p-6"
           >
             {item.requiresPrescription && (
               <FileText size={18} className="absolute right-4 top-4 text-red-500" />
             )}
-            <div className="mb-6">
+            <div className="mb-5 sm:mb-6">
               <h3 className="text-base font-bold text-gray-900">{item.name}</h3>
               <p className="text-sm text-gray-400">{item.type}</p>
             </div>
@@ -377,19 +374,19 @@ function ClientCartPageContent() {
       </p>
 
       {/* Localiser */}
-      <div className="mt-6" style={{ maxWidth: "920px" }}>
+      <div className="mt-6 w-full">
         {!isSearchMode && (
           <button
             onClick={handleLocaliser}
             disabled={isLocating}
-            className="w-2/5 mx-auto py-3 bg-toni-green-dark-2 text-white rounded-full text-lg font-bold hover:bg-toni-green-dark transition"
+            className="mx-auto block w-full rounded-full bg-toni-green-dark-2 py-3 text-base font-bold text-white transition hover:bg-toni-green-dark sm:w-auto sm:min-w-64 sm:px-10 sm:text-lg"
           >
             Localiser
           </button>
         )}
 
         {!isSearchMode && hasLocalized && showNearbyPharmacies && (
-          <div className="mt-6 bg-white border border-gray-200 rounded-2xl p-6">
+          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-4 sm:p-6">
             <h3 className="text-base font-bold text-gray-900 mb-4">
               Pharmacies à moins de {searchRadiusKm !== null ? `${searchRadiusKm.toString().replace(".", ",")} km` : "20 km"}
             </h3>
@@ -400,7 +397,7 @@ function ClientCartPageContent() {
               {nearbyPharmacies.map((pharmacy) => (
                 <div
                   key={pharmacy.id}
-                  className="group flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3 transition-colors hover:bg-[#008F4F]"
+                  className="group flex flex-col gap-3 rounded-xl border border-gray-100 px-4 py-3 transition-colors hover:bg-[#008F4F] sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900">{pharmacy.name}</p>
@@ -416,13 +413,13 @@ function ClientCartPageContent() {
                       ))}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
                     <span className="text-sm font-semibold text-toni-green-dark-2 group-hover:text-white">
                       {pharmacy.distance}
                     </span>
                     <Link
                       href={`/client/dashboard/cart/checkout?pharmacy=${encodeURIComponent(pharmacy.name)}`}
-                      className="px-4 py-2 rounded-full bg-white text-[#008F4F] text-sm font-semibold border border-white hover:bg-gray-50 transition"
+                      className="rounded-full border border-white bg-white px-4 py-2 text-sm font-semibold text-[#008F4F] transition hover:bg-gray-50"
                     >
                       Commander
                     </Link>
@@ -438,18 +435,18 @@ function ClientCartPageContent() {
         )}
 
         {hasLocalized && isSearchMode && (
-          <div className="mt-6 bg-white border border-gray-200 rounded-2xl p-6">
+          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-4 sm:p-6">
             <h3 className="text-base font-bold text-gray-900 mb-4">
-              Médicaments trouvés pour "{searchTerm}"
+              Médicaments trouvés pour &quot;{searchTerm}&quot;
             </h3>
             {searchProducts.length > 0 ? (
               <div className="space-y-3">
                 {searchProducts.map((produit) => (
                   <div
                     key={produit.key}
-                    className="flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3"
+                    className="flex flex-col gap-3 rounded-xl border border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-semibold text-gray-900 flex items-center gap-2">
                         {produit.nom}
                         {produit.ordonnance && <FileText size={14} className="text-red-500" />}
@@ -459,14 +456,14 @@ function ClientCartPageContent() {
                         {produit.pharmacieNom} · Stock: {produit.stock}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-toni-green-dark-2">
+                    <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
+                      <span className="text-sm font-semibold text-toni-green-dark-2 sm:text-base">
                         {Number(produit.prix ?? 0).toLocaleString("fr-FR")} FCFA
                       </span>
                       <button
                         onClick={() => handleAddSearchProductToCart(produit)}
                         disabled={busySearchProductKey === produit.key}
-                        className="px-4 py-2 rounded-full bg-toni-green-dark-2 text-white text-sm font-semibold hover:bg-toni-green-dark transition"
+                        className="rounded-full bg-toni-green-dark-2 px-4 py-2 text-sm font-semibold text-white transition hover:bg-toni-green-dark"
                       >
                         Ajouter
                       </button>
@@ -480,6 +477,6 @@ function ClientCartPageContent() {
           </div>
         )}
       </div>
-    </>
+    </section>
   );
 }
