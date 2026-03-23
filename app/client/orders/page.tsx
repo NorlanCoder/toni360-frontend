@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Clock, MapPin, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   annulerCommande,
   extractCollection,
@@ -94,7 +95,6 @@ function resolveQrImageSrc(imageDataUrl?: string | null, imageUrl?: string | nul
 export default function ClientOrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<ClientOrderItem[]>([]);
-  const [message, setMessage] = useState("");
   const [timelineByOrder, setTimelineByOrder] = useState<Record<string, string>>({});
   const [stats, setStats] = useState({ terminees: 0, enAttente: 0, recuperees: 0 });
   const [fromDay, setFromDay] = useState("");
@@ -180,7 +180,7 @@ export default function ClientOrdersPage() {
         await loadOrders();
       } catch (error) {
         if (error instanceof ApiError) {
-          setMessage(error.message);
+          toast.error(error.message);
         }
       }
     };
@@ -233,7 +233,7 @@ export default function ClientOrdersPage() {
           ...prev,
           recuperees: Math.max(0, prev.recuperees - 1),
         }));
-        setMessage("Commande retirée de l'historique.");
+        toast.success("Commande retirée de l'historique.");
         return;
       }
 
@@ -244,7 +244,7 @@ export default function ClientOrdersPage() {
       );
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     }
   };
@@ -255,7 +255,6 @@ export default function ClientOrdersPage() {
     }
 
     setValidatingOrderId(order.id);
-    setMessage("");
     try {
       await initierCommandePaiement(token, order.id, "MTN", resolvePaymentPhone());
 
@@ -296,7 +295,7 @@ export default function ClientOrdersPage() {
         );
       }
       setActiveTab("Terminees");
-      setMessage(`Commande ${order.numero} validée. Le QR code est disponible.`);
+      toast.success(`Commande ${order.numero} validée. Le QR code est disponible.`);
     } catch (error) {
       if (error instanceof ApiError) {
         const fallbackToCheckout =
@@ -308,7 +307,7 @@ export default function ClientOrdersPage() {
           return;
         }
 
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setValidatingOrderId(null);
@@ -322,7 +321,6 @@ export default function ClientOrdersPage() {
 
     try {
       setLoadingQrOrderId(order.id);
-      setMessage("");
 
       if (order.statusKey === "en_attente_paiement") {
         await initierCommandePaiement(token, order.id, "MTN", resolvePaymentPhone());
@@ -348,7 +346,7 @@ export default function ClientOrdersPage() {
       });
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setLoadingQrOrderId(null);
@@ -359,8 +357,6 @@ export default function ClientOrdersPage() {
     <div className="min-h-screen">
       <div className="mx-auto w-full max-w-5xl rounded-3xl px-3 py-4 sm:px-4 sm:py-6">
         <h1 className="mb-6 text-2xl font-bold text-gray-900 sm:text-3xl">Mes commandes</h1>
-
-      {message && <p className="mb-4 text-sm text-red-500">{message}</p>}
 
       {/* Summary + Orders section */}
       <div className="rounded-3xl p-0 sm:p-2">

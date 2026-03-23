@@ -10,6 +10,7 @@ import {
   MapPin,
   Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   addPanierItem,
   clearPanier,
@@ -75,7 +76,6 @@ function ClientCartPageContent() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [busyByItem, setBusyByItem] = useState<Record<string, boolean>>({});
   const [globalBusy, setGlobalBusy] = useState(false);
-  const [message, setMessage] = useState<string>("");
   const [showNearbyPharmacies, setShowNearbyPharmacies] = useState(false);
   const [nearbyPharmacies, setNearbyPharmacies] = useState<NearbyPharmacy[]>([]);
   const [searchProducts, setSearchProducts] = useState<SearchProductResult[]>([]);
@@ -117,7 +117,7 @@ function ClientCartPageContent() {
       return mappedItems;
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
       return [];
     }
@@ -136,7 +136,7 @@ function ClientCartPageContent() {
       await loadPanier();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setBusyByItem((prev) => ({ ...prev, [id]: false }));
@@ -154,7 +154,7 @@ function ClientCartPageContent() {
       await loadPanier();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setBusyByItem((prev) => ({ ...prev, [id]: false }));
@@ -172,7 +172,7 @@ function ClientCartPageContent() {
       await loadPanier();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setGlobalBusy(false);
@@ -200,7 +200,7 @@ function ClientCartPageContent() {
     }
 
     if (isSearchMode && searchTerm.length < 2) {
-      setMessage("Saisissez au moins 2 caracteres pour lancer la recherche.");
+      toast.warning("Saisissez au moins 2 caracteres pour lancer la recherche.");
       return;
     }
 
@@ -209,12 +209,11 @@ function ClientCartPageContent() {
       : items.map((item) => ({ terme: item.name, quantite: item.qty }));
 
     if (produitsToSearch.length === 0) {
-      setMessage("Ajoutez d'abord un médicament au panier avant de localiser.");
+      toast.warning("Ajoutez d'abord un médicament au panier avant de localiser.");
       return;
     }
 
     setIsLocating(true);
-    setMessage("");
     try {
       const coordinates = await getBrowserCoordinates();
       const response = await searchProduits(
@@ -267,7 +266,7 @@ function ClientCartPageContent() {
       setShowNearbyPharmacies(true);
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setIsLocating(false);
@@ -284,7 +283,7 @@ function ClientCartPageContent() {
     }
 
     if (searchTerm.length < 2) {
-      setMessage("Saisissez au moins 2 caracteres pour lancer la recherche.");
+      toast.warning("Saisissez au moins 2 caracteres pour lancer la recherche.");
       return;
     }
 
@@ -304,13 +303,12 @@ function ClientCartPageContent() {
 
     const previousQty = items.find((entry) => entry.produitId === result.produitId)?.qty ?? 0;
     setBusySearchProductKey(result.key);
-    setMessage("");
     try {
       await addPanierItem(token, result.produitId, 1, result.rechercheId, result.pharmacieId);
       const refreshed = await loadPanier();
       const currentQty =
         refreshed.find((entry) => entry.produitId === result.produitId)?.qty ?? (previousQty + 1);
-      setMessage(`Produit ajouté (x${currentQty}).`);
+      toast.success(`Produit ajouté (x${currentQty}).`);
     } catch (error) {
       if (error instanceof ApiError) {
         const details = error.details as {
@@ -328,13 +326,13 @@ function ClientCartPageContent() {
             const refreshed = await loadPanier();
             const currentQty =
               refreshed.find((entry) => entry.produitId === result.produitId)?.qty ?? (previousQty + 1);
-            setMessage(`Panier réinitialisé pour la nouvelle recherche. Produit ajouté (x${currentQty}).`);
+            toast.success(`Panier réinitialisé pour la nouvelle recherche. Produit ajouté (x${currentQty}).`);
             return;
           } catch (retryError) {
             if (retryError instanceof ApiError) {
-              setMessage(retryError.message);
+              toast.error(retryError.message);
             } else {
-              setMessage("Impossible de réinitialiser le panier automatiquement.");
+              toast.error("Impossible de réinitialiser le panier automatiquement.");
             }
             return;
           }
@@ -344,11 +342,11 @@ function ClientCartPageContent() {
         const pharmaciesAutorisees = details?.data?.pharmacies_autorisees;
 
         if (pharmacieProduit && Array.isArray(pharmaciesAutorisees) && pharmaciesAutorisees.length > 0) {
-          setMessage(
+          toast.error(
             `${error.message} Produit: ${pharmacieProduit}. Autorisees: ${pharmaciesAutorisees.join(", ")}.`,
           );
         } else {
-          setMessage(error.message);
+          toast.error(error.message);
         }
       }
     } finally {
@@ -363,13 +361,11 @@ function ClientCartPageContent() {
         <button
           onClick={removeAll}
           disabled={globalBusy}
-          className="text-sm font-medium text-toni-green-dark-2 hover:underline sm:text-base"
+          className="text-xl font-medium text-toni-green-dark-2 underline sm:text-base"
         >
           Supprimer tout
         </button>
       </div>
-
-      {message && <p className="mb-4 text-sm text-red-500">{message}</p>}
 
       {/* Products grid */}
       <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
@@ -382,8 +378,8 @@ function ClientCartPageContent() {
               <FileText size={18} className="absolute right-4 top-4 text-red-500" />
             )}
             <div className="mb-5 sm:mb-6">
-              <h3 className="text-base font-bold text-gray-900">{item.name}</h3>
-              <p className="text-sm text-gray-400">{item.type}</p>
+              <h3 className="text-xl font-semibold text-gray-900">{item.name}</h3>
+              <p className="text-base text-black">{item.type}</p>
             </div>
 
             <div className="flex items-center justify-between">
@@ -435,7 +431,7 @@ function ClientCartPageContent() {
           <button
             onClick={handleLocaliser}
             disabled={isLocating}
-            className="mx-auto block w-full rounded-full bg-toni-green-dark-2 py-3 text-base font-bold text-white transition hover:bg-toni-green-dark sm:w-auto sm:min-w-64 sm:px-10 sm:text-lg"
+            className="block w-full rounded-full bg-toni-green-dark py-3 text-base font-bold text-white transition hover:bg-toni-green-dark sm:text-lg"
           >
             Localiser
           </button>

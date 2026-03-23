@@ -5,10 +5,12 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { COUNTRY_CODES } from "@/lib/countryCodes";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 import { getPatientProfile, loginPatient } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
+import { toast } from "sonner";
 
 export default function ConnexionPage() {
   const router = useRouter();
@@ -16,8 +18,7 @@ export default function ConnexionPage() {
   const [loginMethod, setLoginMethod] = useState<"phone" | "email">("phone");
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    indicatif: COUNTRY_CODES[0].code,
-    telephone: "",
+    telephone: undefined as string | undefined,
     email: "",
     password: "",
     rememberMe: false,
@@ -31,11 +32,11 @@ export default function ConnexionPage() {
     }
 
     const loginValue = loginMethod === "phone"
-      ? `${formData.indicatif}${formData.telephone}`.replace(/\s+/g, "")
+      ? (formData.telephone ?? "")
       : formData.email.trim();
 
     if (!loginValue || !formData.password) {
-      window.alert("Veuillez renseigner vos identifiants.");
+      toast.warning("Veuillez renseigner vos identifiants.");
       return;
     }
 
@@ -55,13 +56,13 @@ export default function ConnexionPage() {
         profile: profileResponse.data.patient ?? response.data.patient ?? null,
       });
 
-      window.alert(response.message ?? "Connexion réussie.");
+      toast.success(response.message ?? "Connexion réussie.");
       router.push("/client/accueil");
     } catch (error: unknown) {
       if (error instanceof ApiError) {
-        window.alert(error.message);
+        toast.error(error.message);
       } else {
-        window.alert("Une erreur est survenue pendant la connexion.");
+        toast.error("Une erreur est survenue pendant la connexion.");
       }
     } finally {
       setSubmitting(false);
@@ -133,26 +134,13 @@ export default function ConnexionPage() {
           <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             {/* Téléphone ou Email selon l'onglet actif */}
             {loginMethod === "phone" ? (
-              <div className="relative flex gap-2">
-                <select
-                  value={formData.indicatif}
-                  onChange={e => setFormData({ ...formData, indicatif: e.target.value })}
-                  className="w-[78px] rounded-md border border-black px-1.5 py-2.5 text-xs text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:w-[88px] sm:py-3"
-                >
-                  {COUNTRY_CODES.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.flag} {c.code}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="tel"
+              <div className="flex rounded-md border border-black px-3 py-2.5 text-black transition-colors focus-within:border-toni-green-dark-2 sm:py-3">
+                <PhoneInput
+                  international
+                  defaultCountry="BJ"
                   placeholder="Numéro de téléphone"
                   value={formData.telephone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, telephone: e.target.value })
-                  }
-                  className="min-w-0 flex-1 rounded-md border border-black px-4 py-2.5 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
+                  onChange={(value) => setFormData({ ...formData, telephone: value })}
                 />
               </div>
             ) : (
@@ -164,7 +152,7 @@ export default function ConnexionPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full rounded-md border border-black px-4 py-2.5 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
+                  className="w-full rounded-md border border-black px-4 py-2.5 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
                 />
               </div>
             )}
@@ -179,7 +167,7 @@ export default function ConnexionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full rounded-md border border-black py-2.5 pl-12 pr-12 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
+                className="w-full rounded-md border border-black py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
               <button
                 type="button"
@@ -199,7 +187,7 @@ export default function ConnexionPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, rememberMe: e.target.checked })
                   }
-                  className="w-4 h-4 border-gray-300 rounded focus:ring-toni-green-dark-2"
+                  className="w-4 h-4 border-gray-300 rounded outline-none"
                 />
                 <span className="text-sm text-gray-700">Se souvenir de moi</span>
               </label>

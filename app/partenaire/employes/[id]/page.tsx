@@ -9,6 +9,7 @@ import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { getPartnerUser, togglePartnerUserActive, updatePartnerUser } from "@/lib/api/partner";
+import { toast } from "sonner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 interface Permission {
@@ -104,7 +105,6 @@ export default function PartenaireEmployeDetailPage() {
   const [employee, setEmployee] = useState(mockEmployee);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editableName, setEditableName] = useState("");
   const [editablePhone, setEditablePhone] = useState("");
@@ -119,7 +119,7 @@ export default function PartenaireEmployeDetailPage() {
     const loadEmployee = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token || !id) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
@@ -149,7 +149,7 @@ export default function PartenaireEmployeDetailPage() {
         setEditableName(mapped.nom);
         setEditablePhone(mapped.telephone);
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger l'employé.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger l'employé.");
       } finally {
         setIsLoading(false);
       }
@@ -161,7 +161,7 @@ export default function PartenaireEmployeDetailPage() {
   const handleSave = async () => {
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
@@ -182,9 +182,9 @@ export default function PartenaireEmployeDetailPage() {
         telephone: user.telephone,
       }));
       setIsEditing(false);
-      setError(null);
+      toast.success("Employé mis à jour.");
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Erreur lors de la mise à jour.");
+      toast.error(err instanceof ApiError ? err.message : "Erreur lors de la mise à jour.");
     } finally {
       setIsSubmitting(false);
     }
@@ -193,7 +193,7 @@ export default function PartenaireEmployeDetailPage() {
   const handleToggleActive = async () => {
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
@@ -206,9 +206,8 @@ export default function PartenaireEmployeDetailPage() {
       }));
       setShowDeactivateModal(false);
       setDeactivatePassword("");
-      setError(null);
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Action impossible sur cet employé.");
+      toast.error(err instanceof ApiError ? err.message : "Action impossible sur cet employé.");
     } finally {
       setIsSubmitting(false);
     }
@@ -274,11 +273,6 @@ export default function PartenaireEmployeDetailPage() {
 
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-32 py-6 lg:py-12">
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
           <div className="mx-auto w-full max-w-[860px] space-y-8">
             {/* ════════ EMPLOYEE CARD ════════ */}
             <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8">

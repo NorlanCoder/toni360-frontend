@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { BellOff } from "lucide-react";
+import { toast } from "sonner";
 import NotificationCard from "@/components/notifications/NotificationCard";
 import {
   deleteClientNotification,
@@ -24,7 +25,6 @@ interface Notification {
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [message, setMessage] = useState("");
   const [nonReadCount, setNonReadCount] = useState(0);
 
   const token = useMemo(() => {
@@ -59,7 +59,7 @@ export default function NotificationsPage() {
       setNonReadCount(countResponse.data.non_lues ?? countResponse.data.total_non_lues ?? 0);
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     }
   };
@@ -79,7 +79,7 @@ export default function NotificationsPage() {
       await loadNotifications();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     }
   };
@@ -94,7 +94,7 @@ export default function NotificationsPage() {
       await loadNotifications();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     }
   };
@@ -109,7 +109,7 @@ export default function NotificationsPage() {
       await loadNotifications();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     }
   };
@@ -124,14 +124,13 @@ export default function NotificationsPage() {
       await loadNotifications();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     }
   };
 
   return (
     <div>
-      {message && <p className="mb-4 text-sm text-red-500">{message}</p>}
       {nonReadCount > 0 && (
         <p className="mb-4 text-sm text-gray-600">Notifications non lues: {nonReadCount}</p>
       )}

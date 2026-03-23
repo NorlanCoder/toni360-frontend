@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { COUNTRY_CODES } from "@/lib/countryCodes";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 import { getPartnerProfile, loginPartner } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
+import { toast } from "sonner";
 
 export default function ConnexionPartenairePage() {
   const router = useRouter();
@@ -16,12 +18,8 @@ export default function ConnexionPartenairePage() {
   const [loginMethod, setLoginMethod] = useState<"phone" | "email">("phone");
   const [submitting, setSubmitting] = useState(false);
 
-  const beninCode =
-    COUNTRY_CODES.find((c) => c.code === "+229") || COUNTRY_CODES[0];
-
   const [formData, setFormData] = useState({
-    indicatif: beninCode.code,
-    telephone: "",
+    telephone: undefined as string | undefined,
     email: "",
     password: "",
     rememberMe: false,
@@ -35,11 +33,11 @@ export default function ConnexionPartenairePage() {
     }
 
     const loginValue = loginMethod === "phone"
-      ? `${formData.indicatif}${formData.telephone}`.replace(/\s+/g, "")
+      ? (formData.telephone ?? "")
       : formData.email.trim();
 
     if (!loginValue || !formData.password) {
-      window.alert("Veuillez renseigner vos identifiants.");
+      toast.warning("Veuillez renseigner vos identifiants.");
       return;
     }
 
@@ -60,13 +58,13 @@ export default function ConnexionPartenairePage() {
         permissions: profileResponse.data.permissions ?? response.data.permissions ?? [],
       });
 
-      window.alert(response.message ?? "Connexion réussie.");
+      toast.success(response.message ?? "Connexion réussie.");
       router.push("/partenaire/dashboard");
     } catch (error: unknown) {
       if (error instanceof ApiError) {
-        window.alert(error.message);
+        toast.error(error.message);
       } else {
-        window.alert("Une erreur est survenue pendant la connexion.");
+        toast.error("Une erreur est survenue pendant la connexion.");
       }
     } finally {
       setSubmitting(false);
@@ -153,34 +151,15 @@ export default function ConnexionPartenairePage() {
             {/* Champ téléphone ou email */}
             {loginMethod === "phone" ? (
               <div
-                className="flex items-center rounded-lg overflow-hidden"
-                style={{ backgroundColor: "#f1f1f1", border: "1px solid #e0e0e0" }}
+                className="flex items-center rounded-lg overflow-hidden px-3 py-2 border border-[#e0e0e0] transition-colors focus-within:border-[#137551]"
+                style={{ backgroundColor: "#f1f1f1" }}
               >
-                <div className="flex items-center gap-1.5 px-4 py-4">
-                  <span className="text-lg leading-none">{beninCode.flag}</span>
-                  <select
-                    value={formData.indicatif}
-                    onChange={(e) =>
-                      setFormData({ ...formData, indicatif: e.target.value })
-                    }
-                    className="bg-transparent text-sm text-gray-700 focus:outline-none appearance-none cursor-pointer"
-                    style={{ minWidth: "52px" }}
-                  >
-                    {COUNTRY_CODES.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {c.flag} {c.code}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <input
-                  type="tel"
+                <PhoneInput
+                  international
+                  defaultCountry="BJ"
                   placeholder="numéro de téléphone"
                   value={formData.telephone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, telephone: e.target.value })
-                  }
-                  className="flex-1 px-2 py-4 bg-transparent focus:outline-none text-gray-700 text-sm placeholder-gray-400"
+                  onChange={(value) => setFormData({ ...formData, telephone: value })}
                 />
               </div>
             ) : (
@@ -192,19 +171,16 @@ export default function ConnexionPartenairePage() {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full px-4 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137551] text-gray-700 text-sm placeholder-gray-400"
-                  style={{
-                    backgroundColor: "#f1f1f1",
-                    border: "1px solid #e0e0e0",
-                  }}
+                  className="w-full px-4 py-4 rounded-lg outline-none transition-colors border border-[#e0e0e0] focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                  style={{ backgroundColor: "#f1f1f1" }}
                 />
               </div>
             )}
 
             {/* Mot de passe */}
             <div
-              className="relative flex items-center rounded-lg"
-              style={{ backgroundColor: "#f1f1f1", border: "1px solid #e0e0e0" }}
+              className="relative flex items-center rounded-lg border border-[#e0e0e0] transition-colors focus-within:border-[#137551]"
+              style={{ backgroundColor: "#f1f1f1" }}
             >
               <Lock
                 className="absolute left-4 text-gray-400"
@@ -217,7 +193,7 @@ export default function ConnexionPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full pl-11 pr-12 py-4 bg-transparent rounded-lg focus:outline-none text-gray-700 text-sm placeholder-gray-400"
+                className="w-full pl-11 pr-12 py-4 bg-transparent rounded-lg outline-none text-gray-700 text-sm placeholder-gray-400"
               />
               <button
                 type="button"

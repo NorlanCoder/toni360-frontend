@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Lock } from "lucide-react";
+import { toast } from "sonner";
 import { getPatientProfile } from "@/lib/api/auth";
 import { updatePatientProfile } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
@@ -9,7 +10,6 @@ import { clearAuthSession, getAuthSession, saveAuthSession } from "@/lib/api/ses
 
 export default function ProfilPage() {
   const [activeTab, setActiveTab] = useState<"info" | "delete">("info");
-  const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     nomComplet: "",
@@ -42,7 +42,7 @@ export default function ProfilPage() {
         }));
       } catch (error) {
         if (error instanceof ApiError) {
-          setMessage(error.message);
+          toast.error(error.message);
         }
       }
     };
@@ -63,7 +63,6 @@ export default function ProfilPage() {
     const nom = parts.slice(1).join(" ") || prenom;
 
     setIsSaving(true);
-    setMessage("");
     try {
       const response = await updatePatientProfile(token, {
         nom,
@@ -77,10 +76,10 @@ export default function ProfilPage() {
         profile: response.data.patient,
       });
 
-      setMessage("Profil mis à jour avec succès.");
+      toast.success("Profil mis à jour avec succès.");
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setIsSaving(false);
@@ -90,17 +89,15 @@ export default function ProfilPage() {
   const handleDeleteAccount = (e: React.FormEvent) => {
     e.preventDefault();
     if (!deletePassword.trim()) {
-      setMessage("Entrez votre mot de passe pour continuer.");
+      toast.warning("Entrez votre mot de passe pour continuer.");
       return;
     }
 
-    setMessage("La suppression de compte sera activée dans une phase dédiée.");
+    toast.info("La suppression de compte sera activée dans une phase dédiée.");
   };
 
   return (
     <div className="max-w-4xl">
-      {message && <p className="mb-4 text-sm text-gray-600">{message}</p>}
-
       {/* Tabs */}
       <div className="flex gap-20 border-b border-gray-300 mb-8">
               <button

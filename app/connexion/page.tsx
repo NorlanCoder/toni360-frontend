@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
 import { loginPatient } from "@/lib/api/auth";
@@ -34,7 +35,7 @@ export default function ConnexionPage() {
       : formData.email.trim();
 
     if (!loginValue || !formData.password) {
-      window.alert("Veuillez renseigner vos identifiants.");
+      toast.warning("Veuillez renseigner vos identifiants.");
       return;
     }
 
@@ -52,13 +53,13 @@ export default function ConnexionPage() {
         profile: response.data.patient ?? null,
       });
 
-      window.alert(response.message ?? "Connexion réussie.");
+      toast.success(response.message ?? "Connexion réussie.");
       router.push("/client/accueil");
     } catch (error: unknown) {
       if (error instanceof ApiError) {
-        window.alert(error.message);
+        toast.error(error.message);
       } else {
-        window.alert("Une erreur est survenue pendant la connexion.");
+        toast.error("Une erreur est survenue pendant la connexion.");
       }
     } finally {
       setSubmitting(false);

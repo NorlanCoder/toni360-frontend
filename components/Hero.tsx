@@ -4,6 +4,8 @@
  */
 import { Search, Users } from "lucide-react";
 import Link from "next/link";
+import { FaLocationArrow } from "react-icons/fa6";
+
 
 export default function Hero() {
   return (
@@ -36,7 +38,7 @@ export default function Hero() {
             href="/client/connexion"
             className="px-8 py-4 bg-white text-toni-green font-bold rounded-full hover:bg-gray-100 transition flex items-center justify-center gap-2 min-w-[260px]"
           >
-            <Search size={20} />
+            <FaLocationArrow size={20} />
             Trouvez vos médicaments
           </Link>
           
