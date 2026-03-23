@@ -133,7 +133,7 @@ export default function ProfilPage() {
                       type="text"
                       value={formData.nomComplet}
                       onChange={(e) => setFormData({ ...formData, nomComplet: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                      className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
                     />
                   </div>
 
@@ -144,7 +144,7 @@ export default function ProfilPage() {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                      className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
                     />
                   </div>
 
@@ -155,7 +155,7 @@ export default function ProfilPage() {
                       type="tel"
                       value={formData.telephone}
                       onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                      className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
                     />
                   </div>
 
@@ -166,7 +166,7 @@ export default function ProfilPage() {
                       type="text"
                       value={formData.ville}
                       onChange={(e) => setFormData({ ...formData, ville: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                      className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
                     />
                   </div>
                 </div>
@@ -199,7 +199,7 @@ export default function ProfilPage() {
                       placeholder="Entrez votre mot de passe"
                       value={deletePassword}
                       onChange={(e) => setDeletePassword(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 border-2 border-gray-400 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                      className="w-full pl-12 pr-4 py-4 border-2 border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
                     />
                   </div>
 

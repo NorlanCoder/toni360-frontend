@@ -319,10 +319,9 @@ export default function ClientOrdersPage() {
       return;
     }
 
-    try {
-      setLoadingQrOrderId(order.id);
-
-      if (order.statusKey === "en_attente_paiement") {
+    if (order.statusKey === "en_attente_paiement") {
+      try {
+        setLoadingQrOrderId(order.id);
         await initierCommandePaiement(token, order.id, "MTN", resolvePaymentPhone());
         setOrders((prev) =>
           prev.map((entry) =>
@@ -331,26 +330,18 @@ export default function ClientOrdersPage() {
               : entry,
           ),
         );
+      } catch (error) {
+        if (error instanceof ApiError) {
+          toast.error(error.message);
+        }
+        setLoadingQrOrderId(null);
+        return;
+      } finally {
+        setLoadingQrOrderId(null);
       }
-
-      const response = await getCommandeQrCode(token, order.id);
-
-      setSelectedQr({
-        orderId: order.id,
-        orderNumber: response.data.commande?.numero ?? order.numero,
-        code: response.data.qr_code.code,
-        imageUrl: response.data.qr_code.image_url,
-        imageDataUrl: response.data.qr_code.image_data_url,
-        expiresAt: response.data.qr_code.expires_at,
-        pharmacyName: response.data.pharmacie?.nom,
-      });
-    } catch (error) {
-      if (error instanceof ApiError) {
-        toast.error(error.message);
-      }
-    } finally {
-      setLoadingQrOrderId(null);
     }
+
+    router.push(`/client/orders/${order.id}/qrcode`);
   };
 
   return (
@@ -545,47 +536,7 @@ export default function ClientOrdersPage() {
           )}
         </div>
       </div>
-      </div>
-
-      {selectedQr && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-4 sm:p-6">
-            <h2 className="text-lg font-bold text-gray-900 sm:text-xl">QR de retrait</h2>
-            <p className="mt-1 text-sm text-gray-600">Commande NO {selectedQr.orderNumber}</p>
-            {selectedQr.pharmacyName && (
-              <p className="text-sm text-gray-500">{selectedQr.pharmacyName}</p>
-            )}
-
-            <div className="mt-4 rounded-xl bg-[#e8faf3] p-4 text-center">
-              {resolveQrImageSrc(selectedQr.imageDataUrl, selectedQr.imageUrl) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={resolveQrImageSrc(selectedQr.imageDataUrl, selectedQr.imageUrl) ?? undefined}
-                  alt={`QR commande ${selectedQr.orderNumber}`}
-                  className="mx-auto h-44 w-44 object-contain sm:h-52 sm:w-52"
-                />
-              ) : (
-                <p className="text-sm text-gray-600">Code: {selectedQr.code}</p>
-              )}
-              <p className="mt-3 text-xs text-gray-500 break-all">{selectedQr.code}</p>
-              {selectedQr.expiresAt && (
-                <p className="mt-1 text-xs text-gray-500">
-                  Expire le {new Date(selectedQr.expiresAt).toLocaleString("fr-FR")}
-                </p>
-              )}
-            </div>
-
-            <div className="mt-5 flex justify-end">
-              <button
-                onClick={() => setSelectedQr(null)}
-                className="px-4 py-2 rounded-full bg-[#dff1ea] text-[#1f8a5b] text-sm font-semibold"
-              >
-                Fermer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+    </div>
       </div>
     </div>
   );

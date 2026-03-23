@@ -165,6 +165,8 @@ export interface CommandeDetailResponse {
       }>;
       pharmacie?: {
         nom?: string;
+        adresse?: string;
+        telephone?: string;
       } | null;
     };
   };

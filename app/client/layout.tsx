@@ -152,7 +152,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-white font-sans lg:flex-row">
+    <div className="flex h-screen flex-col overflow-hidden bg-white font-sans lg:flex-row">
 
       {/* ── Drawer mobile (slide depuis la gauche) ── */}
       {mobileMenuOpen && (
@@ -220,7 +220,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       )}
 
       {/* ── Sidebar desktop ── */}
-      <aside className="hidden w-64 shrink-0 flex-col justify-between  border-gray-200 bg-white lg:flex">
+      <aside className="hidden w-64 shrink-0 flex-col justify-between border-gray-200 bg-white lg:flex h-screen overflow-y-auto">
         <div>
           <div className="mb-10 mt-7 px-5">
             <Link href="/" aria-label="Accueil">
@@ -257,7 +257,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       </aside>
 
       {/* ── Contenu principal ── */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
         <header className=" border-gray-200 bg-white px-4 py-3 lg:px-8 lg:pt-8 lg:pb-4">
 
@@ -290,7 +290,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <div className="hidden lg:flex lg:flex-row lg:items-center lg:justify-between gap-3">
             {/* Search — clic redirige vers la page de recherche */}
             <form
-              className="relative w-full lg:max-w-xl"
+              className="relative w-full lg:max-w-xs"
               onSubmit={(e) => {
                 e.preventDefault();
                 const term = search.trim();
@@ -303,12 +303,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 onChange={(e) => setSearch(e.target.value)}
                 onFocus={() => router.push(`/client/recherche${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ""}`)}
                 placeholder="Rechercher un médicament..."
-                className="w-full rounded-full border border-gray-300 py-2.5 pl-5 pr-12 text-sm text-gray-700 outline-none transition-colors focus:border-toni-green-dark-2 cursor-pointer"
+                className="w-full rounded-full bg-toni-green-light border-none py-3 pl-6 pr-14 text-sm font-semibold text-gray-500 placeholder:text-gray-400 placeholder:font-semibold outline-none cursor-pointer"
                 readOnly
               />
               <button
                 type="submit"
-                className="absolute bottom-0 right-0 top-0 flex items-center justify-center rounded-r-full bg-toni-green-dark-2 px-4 text-white transition hover:bg-toni-green-dark"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full bg-toni-green-dark-2 p-2.5 text-white transition hover:bg-toni-green-dark"
               >
                 <Search size={18} />
               </button>
@@ -344,12 +344,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               type="text"
               placeholder="Rechercher un médicament..."
               onFocus={() => router.push("/client/recherche")}
-              className="w-full rounded-full border border-gray-300 py-2.5 pl-4 pr-12 text-sm text-gray-700 outline-none transition-colors focus:border-toni-green-dark-2 cursor-pointer"
+              className="w-full rounded-full bg-toni-green-light border-none py-3 pl-6 pr-14 text-sm font-semibold text-gray-500 placeholder:text-gray-400 placeholder:font-semibold outline-none cursor-pointer"
               readOnly
             />
             <button
               type="submit"
-              className="absolute bottom-0 right-0 top-0 flex items-center justify-center rounded-r-full bg-toni-green-dark-2 px-4 text-white"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full bg-toni-green-dark-2 p-2.5 text-white transition hover:bg-toni-green-dark"
             >
               <Search size={16} />
             </button>
@@ -357,7 +357,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </header>
 
         {/* Page body */}
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>
     </div>
   );

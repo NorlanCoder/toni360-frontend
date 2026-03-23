@@ -1,13 +1,11 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   FileText,
   Minus,
   Plus,
-  MapPin,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -30,19 +28,6 @@ type CartItem = {
   type: string;
   qty: number;
   requiresPrescription?: boolean;
-};
-
-type NearbyPharmacy = {
-  id: string;
-  name: string;
-  address: string;
-  distance: string;
-  produits: Array<{
-    id: string;
-    nom: string;
-    quantiteDemandee: number;
-    quantiteDisponible: number;
-  }>;
 };
 
 type SearchProductResult = {
@@ -76,14 +61,10 @@ function ClientCartPageContent() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [busyByItem, setBusyByItem] = useState<Record<string, boolean>>({});
   const [globalBusy, setGlobalBusy] = useState(false);
-  const [showNearbyPharmacies, setShowNearbyPharmacies] = useState(false);
-  const [nearbyPharmacies, setNearbyPharmacies] = useState<NearbyPharmacy[]>([]);
   const [searchProducts, setSearchProducts] = useState<SearchProductResult[]>([]);
   const [busySearchProductKey, setBusySearchProductKey] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [hasLocalized, setHasLocalized] = useState(false);
-  const [searchRadiusKm, setSearchRadiusKm] = useState<number | null>(null);
-  const [localizationSummary, setLocalizationSummary] = useState<string>("");
   const autoSearchAttemptedRef = useRef(false);
 
   const token = useMemo(() => {
@@ -186,11 +167,7 @@ function ClientCartPageContent() {
 
   useEffect(() => {
     setHasLocalized(false);
-    setShowNearbyPharmacies(false);
-    setNearbyPharmacies([]);
     setSearchProducts([]);
-    setSearchRadiusKm(null);
-    setLocalizationSummary("");
     autoSearchAttemptedRef.current = false;
   }, [searchTerm]);
 
@@ -221,29 +198,15 @@ function ClientCartPageContent() {
         produitsToSearch,
         coordinates,
       );
-      setLocalizationSummary(response.message ?? "");
 
-      const rawRadius = (response.data as { rayon_trouve_km?: number; rayon_recherche_km?: number }).rayon_trouve_km
-        ?? (response.data as { rayon_trouve_km?: number; rayon_recherche_km?: number }).rayon_recherche_km;
-      setSearchRadiusKm(typeof rawRadius === "number" ? rawRadius : null);
-
-      const mapped = response.data.pharmacies.map((item) => ({
-        id: item.pharmacie.id,
-        name: item.pharmacie.nom,
-        address: [item.pharmacie.ville, item.pharmacie.quartier, item.pharmacie.adresse]
-          .filter(Boolean)
-          .join(", "),
-        distance:
-          typeof item.pharmacie.distance_km === "number"
-            ? `${item.pharmacie.distance_km.toString().replace(".", ",")} km`
-            : "-",
-        produits: item.produits.map((produit) => ({
-          id: produit.id,
-          nom: produit.nom,
-          quantiteDemandee: Number(produit.quantite_demandee ?? 0),
-          quantiteDisponible: Number(produit.quantite_disponible ?? 0),
-        })),
-      }));
+      if (!isSearchMode) {
+        if (response.data.pharmacies.length === 0) {
+          toast.warning("Aucune pharmacie disponible à proximité pour votre panier.");
+          return;
+        }
+        router.push("/client/dashboard/cart/checkout");
+        return;
+      }
 
       const products = response.data.pharmacies.flatMap((item) =>
         item.produits.map((produit) => ({
@@ -260,10 +223,9 @@ function ClientCartPageContent() {
         })),
       );
 
-      setNearbyPharmacies(mapped);
       setSearchProducts(products);
+
       setHasLocalized(true);
-      setShowNearbyPharmacies(true);
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.message);
@@ -271,7 +233,7 @@ function ClientCartPageContent() {
     } finally {
       setIsLocating(false);
     }
-  }, [token, isSearchMode, searchTerm, items]);
+  }, [token, isSearchMode, searchTerm, items, router]);
 
   const handleLocaliser = async () => {
     await runProductSearch();
@@ -356,6 +318,9 @@ function ClientCartPageContent() {
 
   return (
     <section className="mx-auto w-full max-w-6xl px-3 pb-6 sm:px-6 sm:pb-8">
+
+      {/* ── Vue Panier ── */}
+      <>
       {/* Supprimer tout */}
       <div className="mb-6">
         <button
@@ -431,59 +396,15 @@ function ClientCartPageContent() {
           <button
             onClick={handleLocaliser}
             disabled={isLocating}
-            className="block w-full rounded-full bg-toni-green-dark py-3 text-base font-bold text-white transition hover:bg-toni-green-dark sm:text-lg"
+            className="block w-full rounded-full bg-toni-green-dark-2 py-3 text-base font-bold text-white transition hover:bg-toni-green-dark disabled:opacity-70"
           >
-            Localiser
+            {isLocating ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                Localisation en cours…
+              </span>
+            ) : "Localiser"}
           </button>
-        )}
-
-        {!isSearchMode && hasLocalized && showNearbyPharmacies && (
-          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-4 sm:p-6">
-            <h3 className="text-base font-bold text-gray-900 mb-4">
-              Pharmacies à moins de {searchRadiusKm !== null ? `${searchRadiusKm.toString().replace(".", ",")} km` : "20 km"}
-            </h3>
-            {localizationSummary && (
-              <p className="mb-4 text-sm text-gray-600">{localizationSummary}</p>
-            )}
-            <div className="space-y-4">
-              {nearbyPharmacies.map((pharmacy) => (
-                <div
-                  key={pharmacy.id}
-                  className="group flex flex-col gap-3 rounded-xl border border-gray-100 px-4 py-3 transition-colors hover:bg-[#008F4F] sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <p className="font-semibold text-gray-900">{pharmacy.name}</p>
-                    <p className="flex items-center gap-2 text-sm text-gray-500 group-hover:text-white">
-                      <MapPin size={14} className="text-gray-500 group-hover:text-white" />
-                      {pharmacy.address}
-                    </p>
-                    <div className="mt-2 space-y-1">
-                      {pharmacy.produits.map((produit) => (
-                        <p key={`${pharmacy.id}-${produit.id}`} className="text-xs text-gray-500 group-hover:text-white">
-                          {produit.nom} · Qté demandée: {produit.quantiteDemandee} · Stock: {produit.quantiteDisponible}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
-                    <span className="text-sm font-semibold text-toni-green-dark-2 group-hover:text-white">
-                      {pharmacy.distance}
-                    </span>
-                    <Link
-                      href={`/client/dashboard/cart/checkout?pharmacy=${encodeURIComponent(pharmacy.name)}`}
-                      className="rounded-full border border-white bg-white px-4 py-2 text-sm font-semibold text-[#008F4F] transition hover:bg-gray-50"
-                    >
-                      Commander
-                    </Link>
-                  </div>
-                </div>
-              ))}
-
-              {nearbyPharmacies.length === 0 && (
-                <p className="text-sm text-gray-500">Aucune pharmacie trouvée pour cette recherche.</p>
-              )}
-            </div>
-          </div>
         )}
 
         {hasLocalized && isSearchMode && (
@@ -529,6 +450,7 @@ function ClientCartPageContent() {
           </div>
         )}
       </div>
+      </>
     </section>
   );
 }

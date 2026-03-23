@@ -26,6 +26,39 @@ body {
   font-family: var(--font-montserrat), system-ui, sans-serif;
 }
 
+button,
+a,
+[role="button"],
+[role="link"],
+[role="menuitem"],
+[role="tab"],
+[role="option"],
+[role="checkbox"],
+[role="radio"],
+[role="switch"],
+select,
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"],
+input[type="range"],
+input[type="color"],
+label[for],
+summary,
+[onClick],
+[tabindex]:not([tabindex="-1"]) {
+  cursor: pointer !important;
+}
+
+button[disabled],
+button:disabled,
+input:disabled,
+select:disabled {
+  cursor: not-allowed !important;
+}
+
 /* ── react-phone-number-input ── */
 .PhoneInput {
   display: flex;
