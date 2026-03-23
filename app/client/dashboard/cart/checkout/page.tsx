@@ -44,6 +44,8 @@ function CartPageContent() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [pending, setPending] = useState(false);
   const [ordonnanceFile, setOrdonnanceFile] = useState<File | null>(null);
+  const [uploadRetryCandidateId, setUploadRetryCandidateId] = useState<string | null>(null);
+  const [uploadRetryCandidateNumero, setUploadRetryCandidateNumero] = useState<string | null>(null);
   const [pharmacyName, setPharmacyName] = useState(pharmacyNameFromUrl);
   const [pharmacyAdresse, setPharmacyAdresse] = useState("");
   const [pharmacyTelephone, setPharmacyTelephone] = useState("");
@@ -268,7 +270,15 @@ function CartPageContent() {
       setPending(true);
       try {
         if (ordonnanceFile) {
-          await uploadOrdonnances(commandeIdFromUrl, ordonnanceFile);
+          try {
+            await uploadOrdonnances(commandeIdFromUrl, ordonnanceFile);
+          } catch (uploadError) {
+            setOrdonnanceFile(null);
+            if (uploadError instanceof ApiError) {
+              toast.error("L'ordonnance n'a pas pu être envoyée. Veuillez sélectionner un nouveau fichier et réessayer.");
+            }
+            return;
+          }
         }
 
         const paiement = await initierCommandePaiement(
@@ -299,6 +309,30 @@ function CartPageContent() {
       return;
     }
 
+    // Retry : commande déjà créée mais upload d'ordonnance échoué
+    if (uploadRetryCandidateId && uploadRetryCandidateNumero) {
+      if (!ordonnanceFile) {
+        toast.warning("Veuillez sélectionner un nouveau fichier d'ordonnance.");
+        return;
+      }
+      setPending(true);
+      try {
+        await uploadOrdonnances(uploadRetryCandidateId, ordonnanceFile);
+        const numero = uploadRetryCandidateNumero;
+        setUploadRetryCandidateId(null);
+        setUploadRetryCandidateNumero(null);
+        router.push(`/client/orders?commande=${encodeURIComponent(numero)}`);
+      } catch (error) {
+        setOrdonnanceFile(null);
+        if (error instanceof ApiError) {
+          toast.error("L'ordonnance n'a pas pu être envoyée. Veuillez sélectionner un nouveau fichier et réessayer.");
+        }
+      } finally {
+        setPending(false);
+      }
+      return;
+    }
+
     setPending(true);
     try {
       const livePanierId = await resolveActivePanierId();
@@ -309,12 +343,23 @@ function CartPageContent() {
 
       const creation = await createCommande(token, livePanierId);
       const commandeId = creation.data.commande.id;
+      const commandeNumero = creation.data.commande.numero_commande;
 
       if (creation.data.necessite_ordonnance && ordonnanceFile) {
-        await uploadOrdonnances(commandeId, ordonnanceFile);
+        try {
+          await uploadOrdonnances(commandeId, ordonnanceFile);
+        } catch (uploadError) {
+          setUploadRetryCandidateId(commandeId);
+          setUploadRetryCandidateNumero(commandeNumero);
+          setOrdonnanceFile(null);
+          if (uploadError instanceof ApiError) {
+            toast.error("L'ordonnance n'a pas pu être envoyée. Veuillez sélectionner un nouveau fichier et réessayer.");
+          }
+          return;
+        }
       }
 
-      router.push(`/client/orders?commande=${encodeURIComponent(creation.data.commande.numero_commande)}`);
+      router.push(`/client/orders?commande=${encodeURIComponent(commandeNumero)}`);
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.message);
@@ -343,10 +388,22 @@ function CartPageContent() {
       }
 
       const creation = await createCommande(token, livePanierId, "Commande mise en attente par le patient");
+      const holdCommandeId = creation.data.commande.id;
+      const holdCommandeNumero = creation.data.commande.numero_commande;
       if (creation.data.necessite_ordonnance && ordonnanceFile) {
-        await uploadOrdonnances(creation.data.commande.id, ordonnanceFile);
+        try {
+          await uploadOrdonnances(holdCommandeId, ordonnanceFile);
+        } catch (uploadError) {
+          setUploadRetryCandidateId(holdCommandeId);
+          setUploadRetryCandidateNumero(holdCommandeNumero);
+          setOrdonnanceFile(null);
+          if (uploadError instanceof ApiError) {
+            toast.error("L'ordonnance n'a pas pu être envoyée. Veuillez sélectionner un nouveau fichier et réessayer.");
+          }
+          return;
+        }
       }
-      router.push(`/client/orders?commande=${encodeURIComponent(creation.data.commande.numero_commande)}`);
+      router.push(`/client/orders?commande=${encodeURIComponent(holdCommandeNumero)}`);
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.message);
@@ -482,6 +539,12 @@ function CartPageContent() {
       {/* Ajouter une ordonnance */}
       {hasPrescription && (
         <div className="mt-5 flex flex-col gap-2">
+          {uploadRetryCandidateId && (
+            <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <span className="shrink-0 mt-0.5">⚠️</span>
+              <span>L&apos;envoi de l&apos;ordonnance a échoué. Sélectionnez un nouveau fichier puis cliquez sur &quot;Valider&quot;.</span>
+            </div>
+          )}
           <p className="text-sm text-gray-600 mb-1">
             {prescriptionCount} médicament(s) de cette commande nécessitent une ordonnance.
           </p>
@@ -503,8 +566,27 @@ function CartPageContent() {
             type="file"
             accept=".jpg,.jpeg,.png,.pdf"
             className="hidden"
-            onChange={(e) => setOrdonnanceFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null;
+              if (!file) return;
+              const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+              const MAX_SIZE = 5 * 1024 * 1024; // 5 Mo
+              if (!ALLOWED_TYPES.includes(file.type)) {
+                toast.error("Format non supporté. Seuls les fichiers JPG, PNG et PDF sont acceptés.");
+                e.target.value = "";
+                return;
+              }
+              if (file.size > MAX_SIZE) {
+                toast.error(`Fichier trop volumineux (${(file.size / 1024 / 1024).toFixed(1)} Mo). La taille maximale est de 5 Mo.`);
+                e.target.value = "";
+                return;
+              }
+              setOrdonnanceFile(file);
+            }}
           />
+          <p className="text-xs text-gray-400 mt-1">
+            Formats acceptés : JPG, PNG, PDF — Taille max : 5 Mo
+          </p>
         </div>
       )}
 
@@ -522,7 +604,7 @@ function CartPageContent() {
           <button
             type="button"
             onClick={handlePutOnHold}
-            disabled={pending || items.length === 0}
+            disabled={pending || items.length === 0 || Boolean(uploadRetryCandidateId)}
             className="flex-1 rounded-full bg-gray-200 py-3 text-base font-bold text-gray-500 transition hover:bg-gray-300 disabled:opacity-60"
           >
             Mettre en attente

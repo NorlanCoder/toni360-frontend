@@ -6,21 +6,17 @@ import {
   FileText,
   Minus,
   Plus,
-  MapPin,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   addPanierItem,
   clearPanier,
-  createCommande,
   getBrowserCoordinates,
-  getCommande,
   getPanier,
   removePanierItem,
   searchProduits,
   updatePanierItemQuantity,
-  uploadOrdonnanceForProduitCommande,
 } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
@@ -47,27 +43,6 @@ type SearchProductResult = {
   ordonnance: boolean;
 };
 
-type PharmacyDetailResult = {
-  id: string;
-  rechercheId: string;
-  nom: string;
-  adresse: string;
-  telephone?: string | null;
-  latitude?: number;
-  longitude?: number;
-  distanceKm?: number;
-  produits: Array<{
-    key: string;
-    id: string;
-    nom: string;
-    forme?: string | null;
-    dosage?: string | null;
-    prix: number;
-    ordonnance: boolean;
-    quantiteDemandee: number;
-  }>;
-};
-
 export default function ClientCartPage() {
   return (
     <Suspense fallback={<div />}> 
@@ -90,11 +65,6 @@ function ClientCartPageContent() {
   const [busySearchProductKey, setBusySearchProductKey] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [hasLocalized, setHasLocalized] = useState(false);
-  const [pharmacyDetails, setPharmacyDetails] = useState<PharmacyDetailResult[]>([]);
-  const [resultQtys, setResultQtys] = useState<Record<string, number>>({});
-  const [ordonnanceFiles, setOrdonnanceFiles] = useState<Record<string, File | null>>({});
-  const [isValidating, setIsValidating] = useState(false);
-  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const autoSearchAttemptedRef = useRef(false);
 
   const token = useMemo(() => {
@@ -198,9 +168,6 @@ function ClientCartPageContent() {
   useEffect(() => {
     setHasLocalized(false);
     setSearchProducts([]);
-    setPharmacyDetails([]);
-    setResultQtys({});
-    setOrdonnanceFiles({});
     autoSearchAttemptedRef.current = false;
   }, [searchTerm]);
 
@@ -232,6 +199,15 @@ function ClientCartPageContent() {
         coordinates,
       );
 
+      if (!isSearchMode) {
+        if (response.data.pharmacies.length === 0) {
+          toast.warning("Aucune pharmacie disponible à proximité pour votre panier.");
+          return;
+        }
+        router.push("/client/dashboard/cart/checkout");
+        return;
+      }
+
       const products = response.data.pharmacies.flatMap((item) =>
         item.produits.map((produit) => ({
           key: `${item.pharmacie.id}-${produit.id}`,
@@ -249,34 +225,6 @@ function ClientCartPageContent() {
 
       setSearchProducts(products);
 
-      const details: PharmacyDetailResult[] = response.data.pharmacies.map((ph) => {
-        const coords = ph.pharmacie as typeof ph.pharmacie & { latitude?: number; longitude?: number };
-        return {
-          id: ph.pharmacie.id,
-          rechercheId: response.data.recherche_id,
-          nom: ph.pharmacie.nom,
-          adresse: [ph.pharmacie.quartier, ph.pharmacie.adresse, ph.pharmacie.ville].filter(Boolean).join(", "),
-          telephone: ph.pharmacie.telephone,
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          distanceKm: ph.pharmacie.distance_km,
-          produits: ph.produits.map((p) => ({
-            key: `${ph.pharmacie.id}-${p.id}`,
-            id: p.id,
-            nom: p.nom,
-            forme: p.forme,
-            dosage: p.dosage,
-            prix: Number(p.prix ?? 0),
-            ordonnance: Boolean(p.necessite_ordonnance),
-            quantiteDemandee: Number(p.quantite_demandee ?? 1),
-          })),
-        };
-      });
-      setPharmacyDetails(details);
-      const initQtys: Record<string, number> = {};
-      details.forEach((ph) => ph.produits.forEach((p) => { initQtys[p.key] = p.quantiteDemandee; }));
-      setResultQtys(initQtys);
-
       setHasLocalized(true);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -285,51 +233,10 @@ function ClientCartPageContent() {
     } finally {
       setIsLocating(false);
     }
-  }, [token, isSearchMode, searchTerm, items]);
+  }, [token, isSearchMode, searchTerm, items, router]);
 
   const handleLocaliser = async () => {
     await runProductSearch();
-  };
-
-  const uploadOrdonnancesForCommande = async (commandeId: string, file: File) => {
-    if (!token) return;
-    const commandeDetail = await getCommande(token, commandeId);
-    const produitsSansOrdonnance = commandeDetail.data.commande.produits.filter(
-      (p) => p.ordonnance_requise && !p.ordonnance,
-    );
-    for (const produit of produitsSansOrdonnance) {
-      try {
-        await uploadOrdonnanceForProduitCommande(token, produit.id, file);
-      } catch (error) {
-        if (!(error instanceof ApiError)) throw error;
-        const msg = error.message.toLowerCase();
-        if (!msg.includes("deja en cours") && !msg.includes("déjà en cours")) throw error;
-      }
-    }
-  };
-
-  const handleValiderCommande = async (pharmacy: PharmacyDetailResult) => {
-    if (!token || isValidating) return;
-    setIsValidating(true);
-    try {
-      const panierResp = await getPanier(token);
-      const panierId = panierResp.data.panier.id;
-      if (!panierId) {
-        toast.error("Panier introuvable.");
-        return;
-      }
-      const commandeResp = await createCommande(token, panierId);
-      const commandeId = commandeResp.data.commande.id;
-      const file = ordonnanceFiles[pharmacy.id];
-      if (file) {
-        await uploadOrdonnancesForCommande(commandeId, file);
-      }
-      router.push(`/client/dashboard/cart/checkout?commande=${commandeId}`);
-    } catch (error) {
-      if (error instanceof ApiError) toast.error(error.message);
-    } finally {
-      setIsValidating(false);
-    }
   };
 
   useEffect(() => {
@@ -412,9 +319,8 @@ function ClientCartPageContent() {
   return (
     <section className="mx-auto w-full max-w-6xl px-3 pb-6 sm:px-6 sm:pb-8">
 
-      {/* ── Vue Panier (masquée quand localisé hors mode recherche) ── */}
-      {!(hasLocalized && !isSearchMode) && (
-        <>
+      {/* ── Vue Panier ── */}
+      <>
       {/* Supprimer tout */}
       <div className="mb-6">
         <button
@@ -544,225 +450,7 @@ function ClientCartPageContent() {
           </div>
         )}
       </div>
-        </>
-      )}
-
-      {/* ── Vue Pharmacies (après Localiser) ── */}
-      {hasLocalized && !isSearchMode && (
-        <div className="space-y-10">
-          {pharmacyDetails.length === 0 && (
-            <div className="py-16 text-center text-gray-500">
-              <p>Aucune pharmacie trouvée à proximité.</p>
-              <button
-                type="button"
-                onClick={() => { setHasLocalized(false); setPharmacyDetails([]); }}
-                className="mt-3 text-toni-green-dark-2 underline text-sm"
-              >
-                Retour au panier
-              </button>
-            </div>
-          )}
-
-          {pharmacyDetails.map((pharmacy) => {
-            const total = pharmacy.produits.reduce(
-              (sum, p) => sum + p.prix * (resultQtys[p.key] ?? p.quantiteDemandee), 0
-            );
-            const hasPrescription = pharmacy.produits.some((p) => p.ordonnance);
-            const mapsUrl = pharmacy.latitude && pharmacy.longitude
-              ? `https://www.google.com/maps/dir/?api=1&destination=${pharmacy.latitude},${pharmacy.longitude}`
-              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pharmacy.adresse)}`;
-
-            return (
-              <div key={pharmacy.id}>
-
-                {/* ── Header pharmacie ── */}
-                <div className="rounded-2xl bg-gradient-to-r from-[#004B2F] to-[#00B16F] px-6 py-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex-1">
-                    <h2 className="text-xl font-bold text-white sm:text-2xl leading-snug">{pharmacy.nom}</h2>
-                    <p className="mt-1 text-sm text-green-100 leading-snug">{pharmacy.adresse}</p>
-                  </div>
-                  <div className="flex flex-col gap-1 sm:text-right">
-                    {pharmacy.telephone && (
-                      <p className="text-white text-sm font-medium">{pharmacy.telephone}</p>
-                    )}
-                    {pharmacy.distanceKm != null && (
-                      <p className="text-green-200 text-xs">
-                        à {pharmacy.distanceKm.toFixed(2).replace(".", ",")} km
-                      </p>
-                    )}
-                  </div>
-                  <a
-                    href={mapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 self-start sm:self-auto rounded-full bg-white px-5 py-2.5 text-sm font-bold text-toni-green-dark-2 hover:bg-gray-50 transition shrink-0"
-                  >
-                    <MapPin size={16} />
-                    Itinéraire
-                  </a>
-                </div>
-
-                {/* ── Table produits ── */}
-                <div className="  overflow-hidden bg-white">
-
-                  {/* En-têtes colonnes (desktop) */}
-                  <div className="hidden sm:grid sm:grid-cols-[1fr_180px_150px_150px_44px] gap-2 px-6 py-3 text-base font-bold text-[#B5B5B5] border-b border-[#66666680]">
-                    <span>Nom du produit</span>
-                    <span className="text-center">Qté</span>
-                    <span>Prix</span>
-                    <span>Total</span>
-                    <span />
-                  </div>
-
-                  {pharmacy.produits.map((produit, idx) => {
-                    const qty = resultQtys[produit.key] ?? produit.quantiteDemandee;
-                    return (
-                      <div
-                        key={produit.key}
-                        className={`flex flex-col gap-3 px-6 py-4 sm:grid sm:grid-cols-[1fr_180px_150px_150px_44px] sm:gap-2 sm:items-center ${
-                          idx < pharmacy.produits.length - 1 ? "border-b border-[#66666680]" : ""
-                        }`}
-                      >
-                        {/* Nom */}
-                        <div>
-                          <p className="font-semibold text-gray-900 flex items-center gap-2">
-                            {produit.nom}{produit.dosage ? ` ${produit.dosage}` : ""}
-                            {produit.ordonnance && <FileText size={15} className="text-red-500 shrink-0" />}
-                          </p>
-                          <p className="text-sm text-gray-500">{produit.forme ?? "Produit"}</p>
-                        </div>
-
-                        {/* Qté */}
-                        <div className="flex sm:justify-center">
-                          <div className="inline-flex items-center rounded-full border border-gray-200 px-2 py-1">
-                            <button
-                              type="button"
-                              onClick={() => setResultQtys((prev) => ({ ...prev, [produit.key]: Math.max(1, qty - 1) }))}
-                              className="w-7 h-7 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-50"
-                            >
-                              <Minus size={13} />
-                            </button>
-                            <span className="px-3 text-sm font-semibold text-gray-800 min-w-[24px] text-center">{qty}</span>
-                            <button
-                              type="button"
-                              onClick={() => setResultQtys((prev) => ({ ...prev, [produit.key]: qty + 1 }))}
-                              className="w-7 h-7 rounded-full flex items-center justify-center text-toni-green-dark-2 hover:bg-toni-green-light"
-                            >
-                              <Plus size={13} />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Prix */}
-                        <span className="text-sm text-gray-700 whitespace-nowrap">
-                          <span className="sm:hidden text-gray-400 mr-1">Prix :</span>
-                          {produit.prix.toLocaleString("fr-FR")} XOF CFA
-                        </span>
-
-                        {/* Total */}
-                        <span className="text-sm text-gray-700 whitespace-nowrap">
-                          <span className="sm:hidden text-gray-400 mr-1">Total :</span>
-                          {(produit.prix * qty).toLocaleString("fr-FR")} XOF CFA
-                        </span>
-
-                        {/* Delete */}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setPharmacyDetails((prev) =>
-                              prev.map((ph) =>
-                                ph.id === pharmacy.id
-                                  ? { ...ph, produits: ph.produits.filter((p) => p.key !== produit.key) }
-                                  : ph
-                              )
-                            )
-                          }
-                          className="flex sm:justify-center text-red-400 hover:text-red-600"
-                          aria-label="Supprimer"
-                        >
-                          <Trash2 size={17} />
-                        </button>
-                      </div>
-                    );
-                  })}
-
-                  {/* Montant total */}
-                  <div className="flex items-center justify-between bg-[#D7EFDA] px-6 py-5">
-                    <span className="text-2xl font-bold text-gray-900">Montant total</span>
-                    <span className="text-2xl font-bold text-gray-900">
-                      {total.toLocaleString("fr-FR")} XOF CFA
-                    </span>
-                  </div>
-                </div>
-
-                {/* Ajouter une ordonnance */}
-                {hasPrescription && (
-                  <div className="mt-5 flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRefs.current[pharmacy.id]?.click()}
-                      className="flex items-center gap-3 text-sm font-medium text-gray-700 hover:text-toni-green-dark-2 transition"
-                    >
-                      <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-toni-green-dark-2 text-white shrink-0">
-                        <Plus size={18} />
-                      </span>
-                      {ordonnanceFiles[pharmacy.id]
-                        ? <span className="text-toni-green-dark-2 truncate max-w-[240px]">{ordonnanceFiles[pharmacy.id]!.name}</span>
-                        : "Ajouter une ordonnance"
-                      }
-                    </button>
-                    <input
-                      ref={(el) => { fileInputRefs.current[pharmacy.id] = el; }}
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] ?? null;
-                        setOrdonnanceFiles((prev) => ({ ...prev, [pharmacy.id]: file }));
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={() => { setHasLocalized(false); setPharmacyDetails([]); setResultQtys({}); }}
-                    className="flex-1 rounded-full border-2 border-toni-green-dark-2 py-3 text-base font-bold text-toni-green-dark-2 transition hover:bg-[#E6F6F0]"
-                  >
-                    Retour
-                  </button>
-                  {/* <button
-                    type="button"
-                    className="flex-1 rounded-full bg-gray-200 py-3 text-base font-bold text-gray-500 transition hover:bg-gray-300"
-                  >
-                    Mettre en attente
-                  </button> */}
-                  <button
-                    type="button"
-                    onClick={() => handleValiderCommande(pharmacy)}
-                    disabled={isValidating || (hasPrescription && !ordonnanceFiles[pharmacy.id])}
-                    className="flex-1 rounded-full bg-toni-green-dark-2 py-3 text-base font-bold text-white transition hover:bg-toni-green-dark disabled:opacity-70"
-                  >
-                    {isValidating ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                        Validation…
-                      </span>
-                    ) : "Valider la commande"}
-                  </button>
-                  {hasPrescription && !ordonnanceFiles[pharmacy.id] && (
-                    <p className="text-sm text-red-500 text-center mt-2">
-                      Veuillez ajouter votre ordonnance avant de valider.
-                    </p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      </>
     </section>
   );
 }
