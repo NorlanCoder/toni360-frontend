@@ -21,6 +21,7 @@ import {
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { extractCollection, getPartnerNotifications } from "@/lib/api/partner";
+import { toast } from "sonner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 interface HistoriqueEntry {
@@ -50,13 +51,12 @@ export default function PartenaireHistoriquePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [entries, setEntries] = useState<HistoriqueEntry[]>(mockHistorique);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadHistorique = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
@@ -78,9 +78,8 @@ export default function PartenaireHistoriquePage() {
             };
           }),
         );
-        setError(null);
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger l'historique.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger l'historique.");
       } finally {
         setIsLoading(false);
       }
@@ -214,8 +213,6 @@ export default function PartenaireHistoriquePage() {
           <div className="flex flex-col gap-4">
             {isLoading ? (
               <div className="rounded-xl border border-gray-200 px-4 py-4 text-sm text-gray-500">Chargement de l'historique...</div>
-            ) : error ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">{error}</div>
             ) : entries.map((entry) => (
               <div
                 key={entry.id}

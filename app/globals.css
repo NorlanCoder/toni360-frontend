@@ -5,11 +5,12 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@theme {
+  --color-toni-green: #11ca8c;
+  --color-toni-green-dark: #059669;
+  --color-toni-green-dark-2: #137551;
+  --color-toni-green-light: #E6F6F0;
+  --font-sans: var(--font-montserrat), system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +23,51 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-montserrat), system-ui, sans-serif;
+}
+
+/* ── react-phone-number-input ── */
+.PhoneInput {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 6px;
+}
+.PhoneInputCountry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.PhoneInputCountrySelect {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  color: inherit;
+  cursor: pointer;
+}
+.PhoneInputCountrySelect:focus {
+  outline: none;
+  box-shadow: none;
+}
+.PhoneInputCountryIcon {
+  display: flex;
+  align-items: center;
+}
+.PhoneInputCountryIcon--square {
+  width: 1.5em;
+  height: 1.5em;
+}
+.PhoneInputInput {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  color: inherit;
+}
+.PhoneInputInput::placeholder {
+  color: #9ca3af;
 }

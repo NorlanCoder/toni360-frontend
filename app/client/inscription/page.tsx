@@ -5,10 +5,12 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { COUNTRY_CODES } from "@/lib/countryCodes";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 import { registerPatient } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
+import { toast } from "sonner";
 
 export default function InscriptionPage() {
   const router = useRouter();
@@ -17,8 +19,7 @@ export default function InscriptionPage() {
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
-    indicatif: COUNTRY_CODES[0].code,
-    telephone: "",
+    telephone: undefined as string | undefined,
     password: "",
     confirmPassword: "",
   });
@@ -32,27 +33,27 @@ export default function InscriptionPage() {
 
     const fullName = formData.nom.trim();
     if (!fullName || !formData.email.trim() || !formData.telephone.trim() || !formData.password) {
-      window.alert("Veuillez remplir tous les champs obligatoires.");
+      toast.warning("Veuillez remplir tous les champs obligatoires.");
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      window.alert("Les mots de passe ne correspondent pas.");
+      toast.warning("Les mots de passe ne correspondent pas.");
       return;
     }
 
     if (formData.password.length < 8) {
-      window.alert("Le mot de passe doit contenir au moins 8 caracteres.");
+      toast.warning("Le mot de passe doit contenir au moins 8 caracteres.");
       return;
     }
 
     const nameParts = fullName.split(/\s+/).filter(Boolean);
     const prenom = nameParts[0] ?? fullName;
     const nom = nameParts.slice(1).join(" ") || nameParts[0] || fullName;
-    const telephone = `${formData.indicatif}${formData.telephone}`.replace(/\s+/g, "");
+    const telephone = formData.telephone ?? "";
 
     if (telephone.length > 20) {
-      window.alert("Le numero de telephone est trop long.");
+      toast.warning("Le numero de telephone est trop long.");
       return;
     }
 
@@ -74,13 +75,13 @@ export default function InscriptionPage() {
         profile: response.data.patient ?? null,
       });
 
-      window.alert(response.message ?? "Inscription réussie.");
+      toast.success(response.message ?? "Inscription réussie.");
       router.push("/client/accueil");
     } catch (error: unknown) {
       if (error instanceof ApiError) {
-        window.alert(error.message);
+        toast.error(error.message);
       } else {
-        window.alert("Une erreur est survenue pendant l'inscription.");
+        toast.error("Une erreur est survenue pendant l'inscription.");
       }
     } finally {
       setSubmitting(false);
@@ -133,7 +134,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, nom: e.target.value })
                 }
-                className="w-full rounded-md border border-black px-4 py-2.5 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
+                className="w-full rounded-md border border-black px-4 py-2.5 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
             </div>
 
@@ -147,31 +148,18 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full rounded-md border border-black py-2.5 pl-12 pr-4 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
+                className="w-full rounded-md border border-black py-2.5 pl-12 pr-4 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
             </div>
 
             {/* Téléphone avec indicatif */}
-            <div className="relative flex gap-2">
-              <select
-                value={formData.indicatif}
-                onChange={e => setFormData({ ...formData, indicatif: e.target.value })}
-                className="w-[78px] rounded-md border border-black px-1.5 py-2.5 text-xs text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:w-[88px] sm:py-3"
-              >
-                {COUNTRY_CODES.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.flag} {c.code}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="tel"
+            <div className="flex rounded-md border border-black px-3 py-2.5 text-black transition-colors focus-within:border-toni-green-dark-2 sm:py-3">
+              <PhoneInput
+                international
+                defaultCountry="BJ"
                 placeholder="Numéro de téléphone"
                 value={formData.telephone}
-                onChange={(e) =>
-                  setFormData({ ...formData, telephone: e.target.value })
-                }
-                className="min-w-0 flex-1 rounded-md border border-black px-4 py-2.5 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
+                onChange={(value) => setFormData({ ...formData, telephone: value })}
               />
             </div>
 
@@ -185,7 +173,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full rounded-md border border-black py-2.5 pl-12 pr-12 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
+                className="w-full rounded-md border border-black py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
               <button
                 type="button"
@@ -207,7 +195,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, confirmPassword: e.target.value })
                 }
-                className="w-full rounded-md border border-black py-2.5 pl-12 pr-12 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
+                className="w-full rounded-md border border-black py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
             </div>
 

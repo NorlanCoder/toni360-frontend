@@ -15,6 +15,7 @@ import {
   PartnerCommande,
 } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
+import { toast } from "sonner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type OrderStatus = "a-preparer" | "prete" | "recuperee";
@@ -62,7 +63,6 @@ export default function CommandeDetailPage() {
   const [backendStatus, setBackendStatus] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const fromSection = searchParams.get("from");
   const [statut, setStatut] = useState<OrderStatus>(fromSection === "recuperees" ? "recuperee" : "a-preparer");
@@ -110,7 +110,7 @@ export default function CommandeDetailPage() {
     const loadOrder = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token || !id) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
@@ -121,9 +121,8 @@ export default function CommandeDetailPage() {
         setOrder(mapToOrderDetail(commande));
         setBackendStatus(commande.statut);
         setStatut(fromSection === "recuperees" ? "recuperee" : toViewStatus(commande.statut));
-        setError(null);
-      } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger la commande.");
+              } catch (err: unknown) {
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger la commande.");
       } finally {
         setIsLoading(false);
       }
@@ -135,12 +134,12 @@ export default function CommandeDetailPage() {
   const handleReady = async () => {
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
     if (!READY_ALLOWED_STATUSES.has(backendStatus)) {
-      setError("Cette commande ne peut pas encore être marquée prête.");
+      toast.error("Cette commande ne peut pas encore être marquée prête.");
       return;
     }
 
@@ -154,9 +153,8 @@ export default function CommandeDetailPage() {
       const readyResponse = await marquerPartnerCommandePrete(session.token, id);
       setBackendStatus(readyResponse.data.commande.statut);
       setStatut("prete");
-      setError(null);
-    } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Impossible de marquer la commande prête.");
+          } catch (err: unknown) {
+      toast.error(err instanceof ApiError ? err.message : "Impossible de marquer la commande prête.");
     } finally {
       setIsSubmitting(false);
     }
@@ -165,7 +163,7 @@ export default function CommandeDetailPage() {
   const handleRecuperer = async () => {
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
@@ -174,9 +172,8 @@ export default function CommandeDetailPage() {
       const recupResponse = await livrerPartnerCommande(session.token, id);
       setBackendStatus(recupResponse.data.commande.statut);
       setStatut("recuperee");
-      setError(null);
-    } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Impossible de marquer la commande récupérée.");
+          } catch (err: unknown) {
+      toast.error(err instanceof ApiError ? err.message : "Impossible de marquer la commande récupérée.");
     } finally {
       setIsSubmitting(false);
     }
@@ -187,7 +184,7 @@ export default function CommandeDetailPage() {
   }
 
   if (!order) {
-    return <div className="p-6 text-sm text-red-600">{error ?? "Commande introuvable."}</div>;
+    return <div className="p-6 text-sm text-red-600">Commande introuvable.</div>;
   }
 
   const canMarkReady = READY_ALLOWED_STATUSES.has(backendStatus);
@@ -240,12 +237,6 @@ export default function CommandeDetailPage() {
 
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10 bg-emerald-50">
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
           {/* Back + Title */}
           <div className="mb-6 flex items-center gap-4">
             <button

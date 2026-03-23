@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Download } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { COUNTRY_CODES } from "@/lib/countryCodes";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 import { registerPartner } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
+import { toast } from "sonner";
 
 export default function DevenirPartenairePage() {
   const router = useRouter();
@@ -17,13 +19,10 @@ export default function DevenirPartenairePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const beninCode = COUNTRY_CODES.find((c) => c.code === "+229") || COUNTRY_CODES[0];
-
   const [formData, setFormData] = useState({
     nomPharmacie: "",
     adresseComplete: "",
-    indicatif: beninCode.code,
-    telephone: "",
+    telephone: undefined as string | undefined,
     jourOuverture: "",
     email: "",
     heureOuvrables: "",
@@ -47,29 +46,29 @@ export default function DevenirPartenairePage() {
       !formData.heureOuvrables.trim() ||
       !formData.confirmPassword.trim()
     ) {
-      window.alert("Veuillez remplir les champs obligatoires.");
+      toast.warning("Veuillez remplir les champs obligatoires.");
       return;
     }
 
     if (formData.heureOuvrables !== formData.confirmPassword) {
-      window.alert("Les mots de passe ne correspondent pas.");
+      toast.warning("Les mots de passe ne correspondent pas.");
       return;
     }
 
     if (formData.heureOuvrables.length < 8) {
-      window.alert("Le mot de passe doit contenir au moins 8 caracteres.");
+      toast.warning("Le mot de passe doit contenir au moins 8 caracteres.");
       return;
     }
 
-    const telephone = `${formData.indicatif}${formData.telephone}`.replace(/\s+/g, "");
+    const telephone = formData.telephone ?? "";
 
     if (telephone.length > 20) {
-      window.alert("Le numero de telephone est trop long.");
+      toast.warning("Le numero de telephone est trop long.");
       return;
     }
 
     if (formData.licence && formData.licence.size > 5 * 1024 * 1024) {
-      window.alert("La licence ne doit pas depasser 5 Mo.");
+      toast.warning("La licence ne doit pas depasser 5 Mo.");
       return;
     }
 
@@ -96,13 +95,13 @@ export default function DevenirPartenairePage() {
         permissions: response.data.permissions ?? [],
       });
 
-      window.alert(response.message ?? "Inscription réussie.");
+      toast.success(response.message ?? "Inscription réussie.");
       router.push("/partenaire/dashboard");
     } catch (error: unknown) {
       if (error instanceof ApiError) {
-        window.alert(error.message);
+        toast.error(error.message);
       } else {
-        window.alert("Une erreur est survenue pendant l'inscription.");
+        toast.error("Une erreur est survenue pendant l'inscription.");
       }
     } finally {
       setSubmitting(false);
@@ -153,11 +152,11 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, nomPharmacie: e.target.value })
                 }
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
 
-            {/* Adresse complète */}
+            {/* Adresse complète */
             <div>
               <input
                 type="text"
@@ -166,37 +165,18 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, adresseComplete: e.target.value })
                 }
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
 
-            {/* Téléphone avec indicatif +229 */}
-            <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-[#137551]">
-              <div className="flex items-center gap-1.5 px-3 border-r border-gray-300 bg-white">
-                <span className="text-lg leading-none">{beninCode.flag}</span>
-                <select
-                  value={formData.indicatif}
-                  onChange={(e) =>
-                    setFormData({ ...formData, indicatif: e.target.value })
-                  }
-                  className="bg-transparent text-sm text-gray-700 focus:outline-none py-3.5 pr-1 appearance-none cursor-pointer"
-                  style={{ minWidth: "52px" }}
-                >
-                  {COUNTRY_CODES.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.flag} {c.code}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <input
-                type="tel"
+            {/* Téléphone avec indicatif */
+            <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden px-3 py-3 transition-colors focus-within:border-[#137551]">
+              <PhoneInput
+                international
+                defaultCountry="BJ"
                 placeholder="numéro de téléphone"
                 value={formData.telephone}
-                onChange={(e) =>
-                  setFormData({ ...formData, telephone: e.target.value })
-                }
-                className="flex-1 px-3 py-3.5 focus:outline-none text-gray-700 text-sm placeholder-gray-400"
+                onChange={(value) => setFormData({ ...formData, telephone: value })}
               />
             </div>
 
@@ -209,7 +189,7 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, jourOuverture: e.target.value })
                 }
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
 
@@ -222,7 +202,7 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
 
@@ -235,7 +215,7 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, heureOuvrables: e.target.value })
                 }
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
 
@@ -248,7 +228,7 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, villeExercice: e.target.value })
                 }
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
 
@@ -261,7 +241,7 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, confirmPassword: e.target.value })
                 }
-                className="w-full px-4 py-3.5 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full px-4 py-3.5 pr-12 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
               <button
                 type="button"

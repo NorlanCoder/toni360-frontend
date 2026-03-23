@@ -18,11 +18,13 @@ import {
 } from "lucide-react";
 import { getProductSuggestions } from "@/lib/api/client";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import { PiListChecks } from "react-icons/pi";
+
 
 const navItems = [
   { label: "Accueil", href: "/client/accueil", icon: Home },
   { label: "Mon compte", href: "/client/profil", icon: User },
-  { label: "Mes commandes", href: "/client/orders", icon: ListOrdered },
+  { label: "Mes commandes", href: "/client/orders", icon: PiListChecks },
   { label: "Notifications", href: "/client/notifications", icon: Bell },
   { label: "Mon Panier", href: "/client/dashboard/cart", icon: ShoppingCart },
   { label: "Centre d'aide", href: "/client/help/faq", icon: HelpCircle },
@@ -150,37 +152,96 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-white lg:flex-row">
-      {/* Sidebar */}
-      <aside className="hidden w-72 shrink-0 flex-col justify-between border-r-2 border-gray-300 bg-white px-6 py-8 lg:flex">
+    <div className="flex min-h-screen flex-col bg-white font-sans lg:flex-row">
+
+      {/* ── Drawer mobile (slide depuis la gauche) ── */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          {/* Overlay */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          {/* Panneau */}
+          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white flex flex-col justify-between shadow-xl">
+            {/* En-tête drawer */}
+            <div>
+              <div className="flex items-center justify-between px-5 pt-6 pb-8">
+                <Link href="/" aria-label="Accueil" onClick={() => setMobileMenuOpen(false)}>
+                  <Image src="/images/logo.png" alt="Toni360" width={120} height={60} />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100"
+                  aria-label="Fermer le menu"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Navigation */}
+              <nav className="flex flex-col gap-0.5">
+                {navItems.map(({ label, href, icon: Icon }) => {
+                  const active = pathname === href || pathname.startsWith(`${href}/`);
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
+                        active
+                          ? "bg-[#E6F6F0] text-toni-green-dark-2 font-bold"
+                          : "text-gray-600 font-medium hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
+                      {label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Footer drawer */}
+            <div className="px-5 pb-6 text-xs text-toni-green-dark-2 leading-relaxed">
+              <Link href="/client/help/privacy" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
+                Politiques de confidentialité,
+              </Link>
+              <Link href="/client/help/return-policy" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
+                Conditions générales de retour,
+              </Link>
+              <Link href="/client/contact" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
+                Contactez-nous
+              </Link>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* ── Sidebar desktop ── */}
+      <aside className="hidden w-64 shrink-0 flex-col justify-between  border-gray-200 bg-white lg:flex">
         <div>
-          {/* Logo */}
-          <div className="mb-12 mt-6">
+          <div className="mb-10 mt-7 px-5">
             <Link href="/" aria-label="Accueil">
-              <Image
-                src="/images/logo.png"
-                alt="Toni360"
-                width={160}
-                height={80}
-              />
+              <Image src="/images/logo.png" alt="Toni360" width={140} height={70} />
             </Link>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex flex-col gap-1">
+          <nav className="flex flex-col gap-0.5">
             {navItems.map(({ label, href, icon: Icon }) => {
               const active = pathname === href || pathname.startsWith(`${href}/`);
               return (
                 <Link
                   key={href}
                   href={href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-medium transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-2 text-xl transition-colors ${
                     active
-                      ? "bg-toni-green-light text-toni-green-dark-2 font-semibold"
-                      : "text-gray-700 hover:bg-gray-50"
+                      ? "bg-[#E6F6F0] text-toni-green-dark-2 font-bold"
+                      : "text-gray-600  hover:bg-gray-50 hover:text-gray-900"
                   }`}
                 >
-                  <Icon size={18} />
+                  <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
                   {label}
                 </Link>
               );
@@ -188,132 +249,115 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </nav>
         </div>
 
-        {/* Footer sidebar */}
-        <div className="text-xs text-toni-green-dark-2 leading-relaxed">
-          <Link href="/client/help/privacy" className="hover:underline block">
-            Politiques de confidentialité,
-          </Link>
-          <Link href="/client/help/return-policy" className="hover:underline block">
-            Conditions générales de retour,
-          </Link>
-          <Link href="/client/contact" className="hover:underline block">
-            Contactez-nous
-          </Link>
+        <div className="px-5 pb-6 text-xs text-toni-green-dark-2 leading-relaxed">
+          <Link href="/client/help/privacy" className="hover:underline block">Politiques de confidentialité,</Link>
+          <Link href="/client/help/return-policy" className="hover:underline block">Conditions générales de retour,</Link>
+          <Link href="/client/contact" className="hover:underline block">Contactez-nous</Link>
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* ── Contenu principal ── */}
       <div className="flex-1 flex flex-col">
         {/* Top bar */}
-        <header className="border-b-2 border-gray-300 px-3 pb-4 pt-4 sm:px-6 lg:px-8 lg:pt-12">
-          <div className="mb-3 flex items-center justify-between lg:hidden">
-            <Link href="/" aria-label="Accueil">
-              <Image
-                src="/images/logo.png"
-                alt="Toni360"
-                width={96}
-                height={48}
-              />
-            </Link>
+        <header className=" border-gray-200 bg-white px-4 py-3 lg:px-8 lg:pt-8 lg:pb-4">
+
+          {/* Barre mobile : hamburger | logo centré | icônes */}
+          <div className="flex items-center justify-between lg:hidden">
             <button
               type="button"
-              onClick={() => setMobileMenuOpen((prev) => !prev)}
-              className="rounded-md border border-gray-300 p-2 text-gray-700"
-              aria-label={mobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-1.5 text-gray-700"
+              aria-label="Ouvrir le menu"
             >
-              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+              <Menu size={24} />
             </button>
+
+            <Link href="/" aria-label="Accueil">
+              <Image src="/images/logo.png" alt="Toni360" width={100} height={50} priority />
+            </Link>
+
+            <div className="flex items-center gap-3">
+              <Link href="/client/notifications" aria-label="Notifications" className="text-toni-green-dark-2">
+                <Bell size={22} />
+              </Link>
+              <Link href="/client/dashboard/cart" aria-label="Panier" className="text-toni-green-dark-2">
+                <ShoppingCart size={22} />
+              </Link>
+            </div>
           </div>
 
-          {mobileMenuOpen && (
-            <nav className="mb-4 grid gap-2 rounded-xl border border-gray-200 bg-white p-3 lg:hidden">
-              {navItems.map(({ label, href, icon: Icon }) => {
-                const active = pathname === href || pathname.startsWith(`${href}/`);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                      active
-                        ? "bg-toni-green-light text-toni-green-dark-2"
-                        : "text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    <Icon size={16} />
-                    {label}
-                  </Link>
-                );
-              })}
-            </nav>
-          )}
+          {/* Barre desktop : recherche + boutons */}
+          <div className="hidden lg:flex lg:flex-row lg:items-center lg:justify-between gap-3">
+            {/* Search — clic redirige vers la page de recherche */}
+            <form
+              className="relative w-full lg:max-w-xl"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const term = search.trim();
+                router.push(`/client/recherche${term ? `?q=${encodeURIComponent(term)}` : ""}`);
+              }}
+            >
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => router.push(`/client/recherche${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ""}`)}
+                placeholder="Rechercher un médicament..."
+                className="w-full rounded-full border border-gray-300 py-2.5 pl-5 pr-12 text-sm text-gray-700 outline-none transition-colors focus:border-toni-green-dark-2 cursor-pointer"
+                readOnly
+              />
+              <button
+                type="submit"
+                className="absolute bottom-0 right-0 top-0 flex items-center justify-center rounded-r-full bg-toni-green-dark-2 px-4 text-white transition hover:bg-toni-green-dark"
+              >
+                <Search size={18} />
+              </button>
+            </form>
 
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          {/* Search */}
-          <form className="relative w-full lg:max-w-xl" onSubmit={handleSearch}>
+            <div className="flex items-center gap-3 shrink-0">
+              <Link
+                href="/client/notifications"
+                className="flex items-center gap-2 rounded-full border border-toni-green-dark-2 px-4 py-2 text-sm font-semibold text-toni-green-dark-2 transition hover:bg-[#E6F6F0]"
+              >
+                <Bell size={16} />
+                Notifications
+              </Link>
+              <Link
+                href="/client/dashboard/cart"
+                className="flex items-center gap-2 rounded-full border border-toni-green-dark-2 px-4 py-2 text-sm font-semibold text-toni-green-dark-2 transition hover:bg-[#E6F6F0]"
+              >
+                <ShoppingCart size={16} />
+                Mon Panier
+              </Link>
+            </div>
+          </div>
+
+          {/* Barre de recherche mobile (sous la top bar) — clic → page recherche */}
+          <form
+            className="mt-3 relative lg:hidden"
+            onSubmit={(e) => {
+              e.preventDefault();
+              router.push("/client/recherche");
+            }}
+          >
             <input
               type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              onFocus={() => {
-                if (suggestions.length > 0) {
-                  setShowSuggestions(true);
-                }
-              }}
-              onBlur={() => {
-                setTimeout(() => setShowSuggestions(false), 120);
-              }}
               placeholder="Rechercher un médicament..."
-              className="w-full rounded-full border border-gray-300 py-2.5 pl-4 pr-12 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:pl-5 sm:text-base"
+              onFocus={() => router.push("/client/recherche")}
+              className="w-full rounded-full border border-gray-300 py-2.5 pl-4 pr-12 text-sm text-gray-700 outline-none transition-colors focus:border-toni-green-dark-2 cursor-pointer"
+              readOnly
             />
             <button
               type="submit"
-              className="absolute bottom-0 right-0 top-0 flex items-center justify-center rounded-r-full bg-toni-green-dark-2 px-4 text-white transition hover:bg-toni-green-dark"
+              className="absolute bottom-0 right-0 top-0 flex items-center justify-center rounded-r-full bg-toni-green-dark-2 px-4 text-white"
             >
-              <Search size={18} />
+              <Search size={16} />
             </button>
-
-            {showSuggestions && (
-              <div className="absolute z-20 left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-                {suggestions.map((item, index) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onMouseDown={() => handleSuggestionClick(item)}
-                    className={`w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 ${
-                      index === activeSuggestionIndex ? "bg-gray-50" : ""
-                    }`}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            )}
           </form>
-
-          {/* Actions */}
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
-            <Link
-              href="/client/notifications"
-              className="flex items-center justify-center gap-2 rounded-full border border-toni-green-dark-2 px-3 py-2 text-xs font-semibold text-toni-green-dark-2 transition hover:bg-toni-green-light sm:px-4 sm:text-sm"
-            >
-              <Bell size={16} />
-              Notifications
-            </Link>
-            <Link
-              href="/client/dashboard/cart"
-              className="flex items-center justify-center gap-2 rounded-full border border-toni-green-dark-2 px-3 py-2 text-xs font-semibold text-toni-green-dark-2 transition hover:bg-toni-green-light sm:px-4 sm:text-sm"
-            >
-              <ShoppingCart size={16} />
-              Mon Panier
-            </Link>
-          </div>
-          </div>
         </header>
 
         {/* Page body */}
-        <main className="flex-1 px-3 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>
     </div>
   );

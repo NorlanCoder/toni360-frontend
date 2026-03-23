@@ -8,6 +8,7 @@ import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import { getAuthSession } from "@/lib/api/session";
 import { extractCollection, getPartnerCommandes, PartnerCommande } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
+import { toast } from "sonner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type TabKey = "a-preparer" | "en-attente" | "recuperees";
@@ -95,7 +96,6 @@ export default function PartenaireDashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const tabs: { key: TabKey; label: string; icon: React.ElementType; href: string }[] = [
     { key: "a-preparer", label: "A préparer", icon: Package, href: "/partenaire/commandes" },
@@ -117,7 +117,7 @@ export default function PartenaireDashboardPage() {
     const loadOrders = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
@@ -143,9 +143,8 @@ export default function PartenaireDashboardPage() {
             statut: commande.statut_label || "À préparer",
           })),
         );
-        setError(null);
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger les commandes.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger les commandes.");
       } finally {
         setIsLoading(false);
       }
@@ -247,8 +246,6 @@ export default function PartenaireDashboardPage() {
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             {isLoading ? (
               <div className="px-8 py-8 text-sm text-gray-500">Chargement des commandes...</div>
-            ) : error ? (
-              <div className="px-8 py-8 text-sm text-red-600">{error}</div>
             ) : (
             <table className="min-w-[520px] w-full table-auto text-sm lg:text-base">
               <thead>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
 import { registerPatient } from "@/lib/api/auth";
@@ -30,7 +31,7 @@ export default function InscriptionPage() {
 
     const fullName = formData.nom.trim();
     if (!fullName || !formData.email.trim() || !formData.telephone.trim() || !formData.password) {
-      window.alert("Veuillez remplir tous les champs obligatoires.");
+      toast.warning("Veuillez remplir tous les champs obligatoires.");
       return;
     }
 
@@ -57,13 +58,13 @@ export default function InscriptionPage() {
         profile: response.data.patient ?? null,
       });
 
-      window.alert(response.message ?? "Inscription réussie.");
+      toast.success(response.message ?? "Inscription réussie.");
       router.push("/client/accueil");
     } catch (error: unknown) {
       if (error instanceof ApiError) {
-        window.alert(error.message);
+        toast.error(error.message);
       } else {
-        window.alert("Une erreur est survenue pendant l'inscription.");
+        toast.error("Une erreur est survenue pendant l'inscription.");
       }
     } finally {
       setSubmitting(false);

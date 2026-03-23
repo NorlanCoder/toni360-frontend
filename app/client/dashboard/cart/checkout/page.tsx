@@ -3,6 +3,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { Camera, Upload } from "lucide-react";
+import { toast } from "sonner";
 import {
   clearPanier,
   createCommande,
@@ -41,7 +42,6 @@ function CartPageContent() {
   const isCommandeValidationMode = Boolean(commandeIdFromUrl);
 
   const [items, setItems] = useState<CartItem[]>([]);
-  const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
   const [ordonnanceFile, setOrdonnanceFile] = useState<File | null>(null);
   const [pharmacyName, setPharmacyName] = useState(pharmacyNameFromUrl);
@@ -93,11 +93,11 @@ function CartPageContent() {
       setItems(mappedItems);
       setPrescriptionCount(panier.produits_avec_ordonnance.length);
       if (mappedItems.length === 0) {
-        setMessage("Votre panier est vide.");
+        toast.warning("Votre panier est vide.");
       }
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     }
   };
@@ -130,7 +130,7 @@ function CartPageContent() {
       setPrescriptionCount(missingPrescriptionCount);
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     }
   };
@@ -203,7 +203,7 @@ function CartPageContent() {
       await loadPanier();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setPending(false);
@@ -221,7 +221,7 @@ function CartPageContent() {
       await loadPanier();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setPending(false);
@@ -239,7 +239,7 @@ function CartPageContent() {
       router.push("/client/dashboard/cart");
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setPending(false);
@@ -259,7 +259,6 @@ function CartPageContent() {
       }
 
       setPending(true);
-      setMessage("");
       try {
         if (ordonnanceFile) {
           await uploadOrdonnances(commandeIdFromUrl, ordonnanceFile);
@@ -273,13 +272,13 @@ function CartPageContent() {
         );
 
         if (!paiement.data.reference && !paiement.data.qr_code?.code) {
-          setMessage("Paiement validé mais QR code non généré. Réessayez dans quelques secondes.");
+          toast.warning("Paiement validé mais QR code non généré. Réessayez dans quelques secondes.");
         }
 
         router.push("/client/orders");
       } catch (error) {
         if (error instanceof ApiError) {
-          setMessage(error.message);
+          toast.error(error.message);
         }
       } finally {
         setPending(false);
@@ -289,16 +288,15 @@ function CartPageContent() {
     }
 
     if (!token || items.length === 0) {
-      setMessage("Votre panier est vide.");
+      toast.warning("Votre panier est vide.");
       return;
     }
 
     setPending(true);
-    setMessage("");
     try {
       const livePanierId = await resolveActivePanierId();
       if (!livePanierId) {
-        setMessage("Panier introuvable. Rechargez la page puis réessayez.");
+        toast.error("Panier introuvable. Rechargez la page puis réessayez.");
         return;
       }
 
@@ -312,7 +310,7 @@ function CartPageContent() {
       router.push(`/client/orders?commande=${encodeURIComponent(creation.data.commande.numero_commande)}`);
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setPending(false);
@@ -325,16 +323,15 @@ function CartPageContent() {
     }
 
     if (!token || items.length === 0) {
-      setMessage("Votre panier est vide.");
+      toast.warning("Votre panier est vide.");
       return;
     }
 
     setPending(true);
-    setMessage("");
     try {
       const livePanierId = await resolveActivePanierId();
       if (!livePanierId) {
-        setMessage("Panier introuvable. Rechargez la page puis réessayez.");
+        toast.error("Panier introuvable. Rechargez la page puis réessayez.");
         return;
       }
 
@@ -345,7 +342,7 @@ function CartPageContent() {
       router.push(`/client/orders?commande=${encodeURIComponent(creation.data.commande.numero_commande)}`);
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setPending(false);
@@ -359,7 +356,6 @@ function CartPageContent() {
 
   return (
     <div className="px-6 pb-8 flex-1">
-          {message && <p className="mb-4 text-sm text-red-500">{message}</p>}
           {/* Pharmacy Card */}
           <div className="rounded-xl overflow-hidden mb-5 max-w-4xl"
             style={{

@@ -8,6 +8,7 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { createPartnerUser, getPartnerRoles, PartnerRole } from "@/lib/api/partner";
+import { toast } from "sonner";
 import {
   LayoutDashboard,
   Package,
@@ -63,7 +64,6 @@ export default function PartenaireAjouterEmployePage() {
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [roles, setRoles] = useState<PartnerRole[]>([]);
 
   /* ── Form state ── */
@@ -77,7 +77,7 @@ export default function PartenaireAjouterEmployePage() {
     const loadRoles = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         return;
       }
 
@@ -93,7 +93,7 @@ export default function PartenaireAjouterEmployePage() {
           setRole(availableRoles[0].id);
         }
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger les rôles.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger les rôles.");
       }
     };
 
@@ -115,7 +115,7 @@ export default function PartenaireAjouterEmployePage() {
 
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
@@ -124,7 +124,7 @@ export default function PartenaireAjouterEmployePage() {
     const numero = telephone.replace(/\D/g, "");
 
     if (!nomPart || !prenomPart || !email || !numero || !role || motDePasse.length < 8) {
-      setError("Veuillez remplir correctement tous les champs.");
+      toast.warning("Veuillez remplir correctement tous les champs.");
       return;
     }
 
@@ -141,9 +141,8 @@ export default function PartenaireAjouterEmployePage() {
       });
 
       setShowModal(true);
-      setError(null);
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Erreur lors de la création de l'employé.");
+      toast.error(err instanceof ApiError ? err.message : "Erreur lors de la création de l'employé.");
     } finally {
       setIsSubmitting(false);
     }
@@ -259,11 +258,6 @@ export default function PartenaireAjouterEmployePage() {
 
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-2 sm:px-6 lg:px-32 py-4 sm:py-8 lg:py-16">
-          {error && (
-            <div className="mx-auto mb-4 w-full max-w-[920px] rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
           <form
             onSubmit={handleSubmit}
             className="mx-auto w-full max-w-[920px] rounded-xl bg-white p-4 sm:p-8"

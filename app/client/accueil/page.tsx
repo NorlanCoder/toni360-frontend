@@ -67,7 +67,7 @@ export default function AccueilClientPage() {
         />
         {/* Text on image */}
         <div className="absolute inset-x-0 bottom-0 p-3 sm:p-6 md:p-8 lg:p-10">
-          <p className="max-w-[20ch] text-base font-bold leading-snug text-white sm:max-w-3xl sm:text-2xl md:text-3xl">
+          <p className="text-base font-bold leading-snug text-white sm:max-w-3xl sm:text-2xl md:text-3xl">
             Trouvez facilement votre médicament.
           </p>
         </div>
