@@ -8,6 +8,7 @@ import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import { getAuthSession } from "@/lib/api/session";
 import { rejeterPartnerOrdonnance, validerPartnerOrdonnance } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
+import { toast } from "sonner";
 
 /* ════════════════════════════ PAGE ════════════════════════════ */
 export default function OrdonnancePage() {
@@ -18,7 +19,6 @@ export default function OrdonnancePage() {
   const [decision, setDecision] = useState<"valide" | "refuse" | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   /* Auto-close success modal after 2.5 s then go back */
   useEffect(() => {
@@ -33,7 +33,7 @@ export default function OrdonnancePage() {
   async function handleValider() {
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
@@ -41,10 +41,9 @@ export default function OrdonnancePage() {
     try {
       await validerPartnerOrdonnance(session.token, id);
       setDecision("valide");
-      setError(null);
       router.push(`/partenaire/commandes/${id}`);
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Validation impossible.");
+      toast.error(err instanceof ApiError ? err.message : "Validation impossible.");
     } finally {
       setIsSubmitting(false);
     }
@@ -59,7 +58,7 @@ export default function OrdonnancePage() {
 
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
@@ -69,9 +68,8 @@ export default function OrdonnancePage() {
       setShowSuccess(true);
       setNotification("");
       setDecision(null);
-      setError(null);
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Envoi impossible.");
+      toast.error(err instanceof ApiError ? err.message : "Envoi impossible.");
     } finally {
       setIsSubmitting(false);
     }
@@ -125,12 +123,6 @@ export default function OrdonnancePage() {
 
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10 bg-emerald-50">
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
           {/* Back + Title */}
           <div className="mb-8 flex items-center gap-4">
             <button

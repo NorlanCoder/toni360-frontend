@@ -20,6 +20,7 @@ import {
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { extractCollection, getPartnerUsers } from "@/lib/api/partner";
+import { toast } from "sonner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type FilterKey = "tous" | "actives" | "desactives";
@@ -103,7 +104,6 @@ export default function PartenaireEmployesPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const filters: { key: FilterKey; label: string }[] = [
     { key: "tous", label: "Tous" },
@@ -120,7 +120,7 @@ export default function PartenaireEmployesPage() {
     const loadEmployees = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
@@ -136,9 +136,8 @@ export default function PartenaireEmployesPage() {
           roleCode: (user.role?.code as EmployeeRoleCode) ?? null,
           statut: user.is_active ? "Actif" : "Désactivé",
         })));
-        setError(null);
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger les employés.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger les employés.");
       } finally {
         setIsLoading(false);
       }
@@ -159,7 +158,7 @@ export default function PartenaireEmployesPage() {
 
       {/* ───────────── SIDEBAR ───────────── */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 lg:relative lg:z-auto lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -211,7 +210,7 @@ export default function PartenaireEmployesPage() {
       </aside>
 
       {/* ───────────── MAIN AREA ──────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden lg:ml-[260px]">
         {/* ─── HEADER ─── */}
         <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
           {/* Hamburger (mobile) */}
@@ -298,8 +297,6 @@ export default function PartenaireEmployesPage() {
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             {isLoading ? (
               <div className="px-6 py-6 text-sm text-gray-500">Chargement des employés...</div>
-            ) : error ? (
-              <div className="px-6 py-6 text-sm text-red-600">{error}</div>
             ) : (
             <table className="min-w-[520px] w-full table-auto text-sm lg:text-base">
               <thead>

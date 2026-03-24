@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 import { canAccessPartnerRoute } from "@/lib/auth/authorization";
+import { toast } from "sonner";
 
 export default function PartenaireLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -28,7 +29,7 @@ export default function PartenaireLayout({ children }: { children: React.ReactNo
     }
 
     if (!canAccessPartnerRoute(session, pathname)) {
-      window.alert("Acces refuse: vous n'avez pas la permission requise.");
+      toast.error("Acces refuse: vous n'avez pas la permission requise.");
       router.replace("/partenaire/dashboard");
     }
   }, [isPublicPartenairePage, pathname, router]);

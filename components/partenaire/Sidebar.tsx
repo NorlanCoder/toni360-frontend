@@ -23,12 +23,12 @@ const navItems = [
   { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/dashboard" },
   { label: "Gestion de commande", icon: Package, href: "/partenaire/commandes" },
   { label: "Gestion de Stocks", icon: Boxes, href: "/partenaire/stocks" },
-  { label: "Clients", icon: UserRound, href: "http://localhost:3000/" },
+  { label: "Clients", icon: UserRound, href: "/client" },
   { label: "Gestion des employés", icon: Users, href: "/partenaire/employes" },
   { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
   { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
   { label: "Notifications", icon: Bell, href: "/partenaire/notifications" },
-  { label: "Assistance et support", icon: HelpCircle, href: "#" },
+  { label: "Assistance et support", icon: HelpCircle, href: "/contact" },
 ];
 
 /* Finds the most specific matching nav item for the current path */
@@ -69,7 +69,7 @@ export default function PartenaireSidebar({ isOpen, onClose }: PartenaireSidebar
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[300px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 lg:relative lg:z-auto lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[300px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -118,6 +118,9 @@ export default function PartenaireSidebar({ isOpen, onClose }: PartenaireSidebar
           </Link>
         </nav>
       </aside>
+
+      {/* Desktop spacer — keeps flex layout with fixed sidebar */}
+      <div className="hidden lg:block w-[300px] shrink-0" aria-hidden="true" />
     </>
   );
 }

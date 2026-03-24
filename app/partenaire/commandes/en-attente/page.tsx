@@ -8,6 +8,7 @@ import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import { getAuthSession } from "@/lib/api/session";
 import { extractCollection, getPartnerCommandes } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
+import { toast } from "sonner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type TabKey = "a-preparer" | "en-attente" | "recuperees";
@@ -85,7 +86,6 @@ export default function PartenaireEnAttentePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const tabs: { key: TabKey; label: string; icon: React.ElementType; href: string }[] = [
     { key: "a-preparer", label: "A préparer", icon: Package, href: "/partenaire/commandes" },
@@ -107,7 +107,7 @@ export default function PartenaireEnAttentePage() {
     const loadOrders = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
@@ -124,15 +124,20 @@ export default function PartenaireEnAttentePage() {
             statut: commande.statut_label || "En attente",
           })),
         );
-        setError(null);
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger les commandes.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger les commandes.");
       } finally {
         setIsLoading(false);
       }
     };
 
     void loadOrders();
+
+    const intervalId = setInterval(() => {
+      void loadOrders();
+    }, 30000);
+
+    return () => clearInterval(intervalId);
   }, [moneyFormat]);
 
   return (
@@ -173,14 +178,14 @@ export default function PartenaireEnAttentePage() {
               <span className="hidden sm:inline">Notifications</span>
               <Bell className="h-5 w-5" />
             </Link>
-            <button
-              type="button"
+            <Link
+              href="/partenaire/profil"
               aria-label="Accéder à mon compte"
               className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
               <span className="hidden sm:inline">Mon Compte</span>
               <User className="h-5 w-5" />
-            </button>
+            </Link>
           </div>
         </header>
 
@@ -222,8 +227,6 @@ export default function PartenaireEnAttentePage() {
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             {isLoading ? (
               <div className="px-8 py-8 text-sm text-gray-500">Chargement des commandes...</div>
-            ) : error ? (
-              <div className="px-8 py-8 text-sm text-red-600">{error}</div>
             ) : (
             <table className="min-w-[520px] w-full table-auto text-sm lg:text-base">
               <thead>

@@ -9,11 +9,13 @@ import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import { getAuthSession } from "@/lib/api/session";
 import {
   getPartnerCommande,
+  livrerPartnerCommande,
   marquerPartnerCommandePrete,
   preparerPartnerCommande,
   PartnerCommande,
 } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
+import { toast } from "sonner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type OrderStatus = "a-preparer" | "prete" | "recuperee";
@@ -39,6 +41,8 @@ interface OrderDetail {
   statut: OrderStatus;
 }
 
+const READY_ALLOWED_STATUSES = new Set(["EN_ATTENTE_PAIEMENT", "PAYEE", "EN_PREPARATION"]);
+
 
 /* ──────────────────── Format helpers ────────────────────────── */
 function formatPrice(n: number) {
@@ -59,7 +63,6 @@ export default function CommandeDetailPage() {
   const [backendStatus, setBackendStatus] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const fromSection = searchParams.get("from");
   const [statut, setStatut] = useState<OrderStatus>(fromSection === "recuperees" ? "recuperee" : "a-preparer");
@@ -107,7 +110,7 @@ export default function CommandeDetailPage() {
     const loadOrder = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token || !id) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
@@ -118,9 +121,8 @@ export default function CommandeDetailPage() {
         setOrder(mapToOrderDetail(commande));
         setBackendStatus(commande.statut);
         setStatut(fromSection === "recuperees" ? "recuperee" : toViewStatus(commande.statut));
-        setError(null);
-      } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger la commande.");
+              } catch (err: unknown) {
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger la commande.");
       } finally {
         setIsLoading(false);
       }
@@ -132,22 +134,46 @@ export default function CommandeDetailPage() {
   const handleReady = async () => {
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
+      return;
+    }
+
+    if (!READY_ALLOWED_STATUSES.has(backendStatus)) {
+      toast.error("Cette commande ne peut pas encore être marquée prête.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      if (backendStatus === "PAYEE") {
-        await preparerPartnerCommande(session.token, id);
+      if (backendStatus !== "EN_PREPARATION") {
+        const prepResponse = await preparerPartnerCommande(session.token, id);
+        setBackendStatus(prepResponse.data.commande.statut);
       }
 
-      await marquerPartnerCommandePrete(session.token, id);
-      setBackendStatus("PRETE");
+      const readyResponse = await marquerPartnerCommandePrete(session.token, id);
+      setBackendStatus(readyResponse.data.commande.statut);
       setStatut("prete");
-      setError(null);
-    } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Impossible de marquer la commande prête.");
+          } catch (err: unknown) {
+      toast.error(err instanceof ApiError ? err.message : "Impossible de marquer la commande prête.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRecuperer = async () => {
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token || !id) {
+      toast.error("Session partenaire invalide.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const recupResponse = await livrerPartnerCommande(session.token, id);
+      setBackendStatus(recupResponse.data.commande.statut);
+      setStatut("recuperee");
+          } catch (err: unknown) {
+      toast.error(err instanceof ApiError ? err.message : "Impossible de marquer la commande récupérée.");
     } finally {
       setIsSubmitting(false);
     }
@@ -158,8 +184,10 @@ export default function CommandeDetailPage() {
   }
 
   if (!order) {
-    return <div className="p-6 text-sm text-red-600">{error ?? "Commande introuvable."}</div>;
+    return <div className="p-6 text-sm text-red-600">Commande introuvable.</div>;
   }
+
+  const canMarkReady = READY_ALLOWED_STATUSES.has(backendStatus);
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
@@ -209,12 +237,6 @@ export default function CommandeDetailPage() {
 
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10 bg-emerald-50">
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
           {/* Back + Title */}
           <div className="mb-6 flex items-center gap-4">
             <button
@@ -333,13 +355,23 @@ export default function CommandeDetailPage() {
                 Commande récupérée
               </button>
             ) : statut === "prete" ? (
-              <button
-                type="button"
-                disabled
-                className="rounded-full bg-emerald-50 border-2 border-emerald-400 px-12 py-3 text-base font-semibold text-emerald-700 cursor-default"
-              >
-                En attente d&apos;être récupérée
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled
+                  className="rounded-full bg-emerald-50 border-2 border-emerald-400 px-12 py-3 text-base font-semibold text-emerald-700 cursor-default"
+                >
+                  En attente d&apos;être récupérée
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRecuperer}
+                  disabled={isSubmitting}
+                  className="rounded-full border-2 border-emerald-600 bg-emerald-600 px-12 py-3 text-base font-semibold text-white hover:bg-emerald-700 hover:border-emerald-700 transition-colors"
+                >
+                  {isSubmitting ? "Traitement..." : "Récupérer"}
+                </button>
+              </>
             ) : (
               <>
                 <button
@@ -353,8 +385,12 @@ export default function CommandeDetailPage() {
                 <button
                   type="button"
                   onClick={handleReady}
-                  disabled={isSubmitting}
-                  className="rounded-full border-2 border-emerald-600 bg-emerald-600 px-12 py-3 text-base font-semibold text-white hover:bg-emerald-700 hover:border-emerald-700 transition-colors"
+                  disabled={isSubmitting || !canMarkReady}
+                  className={`rounded-full border-2 px-12 py-3 text-base font-semibold transition-colors ${
+                    canMarkReady
+                      ? "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:border-emerald-700"
+                      : "border-gray-300 bg-gray-200 text-gray-500 cursor-not-allowed"
+                  }`}
                 >
                   {isSubmitting ? "Traitement..." : "Prête"}
                 </button>

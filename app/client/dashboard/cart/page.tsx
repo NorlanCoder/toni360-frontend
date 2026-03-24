@@ -1,15 +1,14 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   FileText,
   Minus,
   Plus,
-  MapPin,
   Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   addPanierItem,
   clearPanier,
@@ -31,23 +30,11 @@ type CartItem = {
   requiresPrescription?: boolean;
 };
 
-type NearbyPharmacy = {
-  id: string;
-  name: string;
-  address: string;
-  distance: string;
-  produits: Array<{
-    id: string;
-    nom: string;
-    quantiteDemandee: number;
-    quantiteDisponible: number;
-  }>;
-};
-
 type SearchProductResult = {
   key: string;
   rechercheId: string;
   produitId: string;
+  pharmacieId: string;
   nom: string;
   type: string;
   pharmacieNom: string;
@@ -74,15 +61,11 @@ function ClientCartPageContent() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [busyByItem, setBusyByItem] = useState<Record<string, boolean>>({});
   const [globalBusy, setGlobalBusy] = useState(false);
-  const [message, setMessage] = useState<string>("");
-  const [showNearbyPharmacies, setShowNearbyPharmacies] = useState(false);
-  const [nearbyPharmacies, setNearbyPharmacies] = useState<NearbyPharmacy[]>([]);
   const [searchProducts, setSearchProducts] = useState<SearchProductResult[]>([]);
   const [busySearchProductKey, setBusySearchProductKey] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [hasLocalized, setHasLocalized] = useState(false);
-  const [searchRadiusKm, setSearchRadiusKm] = useState<number | null>(null);
-  const [localizationSummary, setLocalizationSummary] = useState<string>("");
+  const autoSearchAttemptedRef = useRef(false);
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -115,7 +98,7 @@ function ClientCartPageContent() {
       return mappedItems;
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
       return [];
     }
@@ -134,7 +117,7 @@ function ClientCartPageContent() {
       await loadPanier();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setBusyByItem((prev) => ({ ...prev, [id]: false }));
@@ -152,7 +135,7 @@ function ClientCartPageContent() {
       await loadPanier();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setBusyByItem((prev) => ({ ...prev, [id]: false }));
@@ -170,7 +153,7 @@ function ClientCartPageContent() {
       await loadPanier();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setGlobalBusy(false);
@@ -184,15 +167,17 @@ function ClientCartPageContent() {
 
   useEffect(() => {
     setHasLocalized(false);
-    setShowNearbyPharmacies(false);
-    setNearbyPharmacies([]);
     setSearchProducts([]);
-    setSearchRadiusKm(null);
-    setLocalizationSummary("");
+    autoSearchAttemptedRef.current = false;
   }, [searchTerm]);
 
   const runProductSearch = useCallback(async () => {
     if (!token) {
+      return;
+    }
+
+    if (isSearchMode && searchTerm.length < 2) {
+      toast.warning("Saisissez au moins 2 caracteres pour lancer la recherche.");
       return;
     }
 
@@ -201,12 +186,11 @@ function ClientCartPageContent() {
       : items.map((item) => ({ terme: item.name, quantite: item.qty }));
 
     if (produitsToSearch.length === 0) {
-      setMessage("Ajoutez d'abord un médicament au panier avant de localiser.");
+      toast.warning("Ajoutez d'abord un médicament au panier avant de localiser.");
       return;
     }
 
     setIsLocating(true);
-    setMessage("");
     try {
       const coordinates = await getBrowserCoordinates();
       const response = await searchProduits(
@@ -214,35 +198,22 @@ function ClientCartPageContent() {
         produitsToSearch,
         coordinates,
       );
-      setLocalizationSummary(response.message ?? "");
 
-      const rawRadius = (response.data as { rayon_trouve_km?: number; rayon_recherche_km?: number }).rayon_trouve_km
-        ?? (response.data as { rayon_trouve_km?: number; rayon_recherche_km?: number }).rayon_recherche_km;
-      setSearchRadiusKm(typeof rawRadius === "number" ? rawRadius : null);
-
-      const mapped = response.data.pharmacies.map((item) => ({
-        id: item.pharmacie.id,
-        name: item.pharmacie.nom,
-        address: [item.pharmacie.ville, item.pharmacie.quartier, item.pharmacie.adresse]
-          .filter(Boolean)
-          .join(", "),
-        distance:
-          typeof item.pharmacie.distance_km === "number"
-            ? `${item.pharmacie.distance_km.toString().replace(".", ",")} km`
-            : "-",
-        produits: item.produits.map((produit) => ({
-          id: produit.id,
-          nom: produit.nom,
-          quantiteDemandee: Number(produit.quantite_demandee ?? 0),
-          quantiteDisponible: Number(produit.quantite_disponible ?? 0),
-        })),
-      }));
+      if (!isSearchMode) {
+        if (response.data.pharmacies.length === 0) {
+          toast.warning("Aucune pharmacie disponible à proximité pour votre panier.");
+          return;
+        }
+        router.push("/client/dashboard/cart/checkout");
+        return;
+      }
 
       const products = response.data.pharmacies.flatMap((item) =>
         item.produits.map((produit) => ({
           key: `${item.pharmacie.id}-${produit.id}`,
           rechercheId: response.data.recherche_id,
           produitId: produit.id,
+          pharmacieId: item.pharmacie.id,
           nom: produit.nom,
           type: [produit.forme, produit.dosage].filter(Boolean).join(" ") || "Produit",
           pharmacieNom: item.pharmacie.nom,
@@ -252,18 +223,17 @@ function ClientCartPageContent() {
         })),
       );
 
-      setNearbyPharmacies(mapped);
       setSearchProducts(products);
+
       setHasLocalized(true);
-      setShowNearbyPharmacies(true);
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setIsLocating(false);
     }
-  }, [token, isSearchMode, searchTerm, items]);
+  }, [token, isSearchMode, searchTerm, items, router]);
 
   const handleLocaliser = async () => {
     await runProductSearch();
@@ -273,6 +243,17 @@ function ClientCartPageContent() {
     if (!shouldAutoSearch || !searchTerm || hasLocalized || isLocating) {
       return;
     }
+
+    if (searchTerm.length < 2) {
+      toast.warning("Saisissez au moins 2 caracteres pour lancer la recherche.");
+      return;
+    }
+
+    if (autoSearchAttemptedRef.current) {
+      return;
+    }
+
+    autoSearchAttemptedRef.current = true;
 
     void runProductSearch();
   }, [shouldAutoSearch, searchTerm, hasLocalized, isLocating, runProductSearch]);
@@ -284,16 +265,51 @@ function ClientCartPageContent() {
 
     const previousQty = items.find((entry) => entry.produitId === result.produitId)?.qty ?? 0;
     setBusySearchProductKey(result.key);
-    setMessage("");
     try {
-      await addPanierItem(token, result.produitId, 1, result.rechercheId);
+      await addPanierItem(token, result.produitId, 1, result.rechercheId, result.pharmacieId);
       const refreshed = await loadPanier();
       const currentQty =
         refreshed.find((entry) => entry.produitId === result.produitId)?.qty ?? (previousQty + 1);
-      setMessage(`Produit ajouté (x${currentQty}).`);
+      toast.success(`Produit ajouté (x${currentQty}).`);
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        const details = error.details as {
+          data?: {
+            action_requise?: string;
+            pharmacie_produit?: string;
+            pharmacies_autorisees?: string[];
+          };
+        };
+
+        if (details?.data?.action_requise === "VIDER_PANIER") {
+          try {
+            await clearPanier(token);
+            await addPanierItem(token, result.produitId, 1, result.rechercheId, result.pharmacieId);
+            const refreshed = await loadPanier();
+            const currentQty =
+              refreshed.find((entry) => entry.produitId === result.produitId)?.qty ?? (previousQty + 1);
+            toast.success(`Panier réinitialisé pour la nouvelle recherche. Produit ajouté (x${currentQty}).`);
+            return;
+          } catch (retryError) {
+            if (retryError instanceof ApiError) {
+              toast.error(retryError.message);
+            } else {
+              toast.error("Impossible de réinitialiser le panier automatiquement.");
+            }
+            return;
+          }
+        }
+
+        const pharmacieProduit = details?.data?.pharmacie_produit;
+        const pharmaciesAutorisees = details?.data?.pharmacies_autorisees;
+
+        if (pharmacieProduit && Array.isArray(pharmaciesAutorisees) && pharmaciesAutorisees.length > 0) {
+          toast.error(
+            `${error.message} Produit: ${pharmacieProduit}. Autorisees: ${pharmaciesAutorisees.join(", ")}.`,
+          );
+        } else {
+          toast.error(error.message);
+        }
       }
     } finally {
       setBusySearchProductKey(null);
@@ -301,36 +317,34 @@ function ClientCartPageContent() {
   };
 
   return (
-    <>
+    <section className="mx-auto w-full max-w-6xl px-3 pb-6 sm:px-6 sm:pb-8">
+
+      {/* ── Vue Panier ── */}
+      <>
       {/* Supprimer tout */}
       <div className="mb-6">
         <button
           onClick={removeAll}
           disabled={globalBusy}
-          className="text-toni-green-dark-2 text-base font-medium hover:underline"
+          className="text-xl font-medium text-toni-green-dark-2 underline sm:text-base"
         >
           Supprimer tout
         </button>
       </div>
 
-      {message && <p className="mb-4 text-sm text-red-500">{message}</p>}
-
       {/* Products grid */}
-      <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-        style={{ maxWidth: "920px" }}
-      >
+      <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
         {items.map((item) => (
           <div
             key={item.id}
-            className="relative border border-gray-200 rounded-2xl p-6 bg-white"
+            className="relative rounded-2xl border border-gray-200 bg-white p-4 sm:p-6"
           >
             {item.requiresPrescription && (
               <FileText size={18} className="absolute right-4 top-4 text-red-500" />
             )}
-            <div className="mb-6">
-              <h3 className="text-base font-bold text-gray-900">{item.name}</h3>
-              <p className="text-sm text-gray-400">{item.type}</p>
+            <div className="mb-5 sm:mb-6">
+              <h3 className="text-base md:text-xl font-semibold text-gray-900">{item.name}</h3>
+              <p className="text-sm md:text-base text-black">{item.type}</p>
             </div>
 
             <div className="flex items-center justify-between">
@@ -377,79 +391,35 @@ function ClientCartPageContent() {
       </p>
 
       {/* Localiser */}
-      <div className="mt-6" style={{ maxWidth: "920px" }}>
+      <div className="mt-6 w-full">
         {!isSearchMode && (
           <button
             onClick={handleLocaliser}
             disabled={isLocating}
-            className="w-2/5 mx-auto py-3 bg-toni-green-dark-2 text-white rounded-full text-lg font-bold hover:bg-toni-green-dark transition"
+            className="block w-full rounded-full bg-toni-green-dark-2 py-3 text-base font-bold text-white transition hover:bg-toni-green-dark disabled:opacity-70"
           >
-            Localiser
+            {isLocating ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                Localisation en cours…
+              </span>
+            ) : "Localiser"}
           </button>
         )}
 
-        {!isSearchMode && hasLocalized && showNearbyPharmacies && (
-          <div className="mt-6 bg-white border border-gray-200 rounded-2xl p-6">
-            <h3 className="text-base font-bold text-gray-900 mb-4">
-              Pharmacies à moins de {searchRadiusKm !== null ? `${searchRadiusKm.toString().replace(".", ",")} km` : "20 km"}
-            </h3>
-            {localizationSummary && (
-              <p className="mb-4 text-sm text-gray-600">{localizationSummary}</p>
-            )}
-            <div className="space-y-4">
-              {nearbyPharmacies.map((pharmacy) => (
-                <div
-                  key={pharmacy.id}
-                  className="group flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3 transition-colors hover:bg-[#008F4F]"
-                >
-                  <div className="min-w-0">
-                    <p className="font-semibold text-gray-900">{pharmacy.name}</p>
-                    <p className="flex items-center gap-2 text-sm text-gray-500 group-hover:text-white">
-                      <MapPin size={14} className="text-gray-500 group-hover:text-white" />
-                      {pharmacy.address}
-                    </p>
-                    <div className="mt-2 space-y-1">
-                      {pharmacy.produits.map((produit) => (
-                        <p key={`${pharmacy.id}-${produit.id}`} className="text-xs text-gray-500 group-hover:text-white">
-                          {produit.nom} · Qté demandée: {produit.quantiteDemandee} · Stock: {produit.quantiteDisponible}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-toni-green-dark-2 group-hover:text-white">
-                      {pharmacy.distance}
-                    </span>
-                    <Link
-                      href={`/client/dashboard/cart/checkout?pharmacy=${encodeURIComponent(pharmacy.name)}`}
-                      className="px-4 py-2 rounded-full bg-white text-[#008F4F] text-sm font-semibold border border-white hover:bg-gray-50 transition"
-                    >
-                      Commander
-                    </Link>
-                  </div>
-                </div>
-              ))}
-
-              {nearbyPharmacies.length === 0 && (
-                <p className="text-sm text-gray-500">Aucune pharmacie trouvée pour cette recherche.</p>
-              )}
-            </div>
-          </div>
-        )}
-
         {hasLocalized && isSearchMode && (
-          <div className="mt-6 bg-white border border-gray-200 rounded-2xl p-6">
+          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-4 sm:p-6">
             <h3 className="text-base font-bold text-gray-900 mb-4">
-              Médicaments trouvés pour "{searchTerm}"
+              Médicaments trouvés pour &quot;{searchTerm}&quot;
             </h3>
             {searchProducts.length > 0 ? (
               <div className="space-y-3">
                 {searchProducts.map((produit) => (
                   <div
                     key={produit.key}
-                    className="flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3"
+                    className="flex flex-col gap-3 rounded-xl border border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-semibold text-gray-900 flex items-center gap-2">
                         {produit.nom}
                         {produit.ordonnance && <FileText size={14} className="text-red-500" />}
@@ -459,14 +429,14 @@ function ClientCartPageContent() {
                         {produit.pharmacieNom} · Stock: {produit.stock}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-toni-green-dark-2">
+                    <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
+                      <span className="text-sm font-semibold text-toni-green-dark-2 sm:text-base">
                         {Number(produit.prix ?? 0).toLocaleString("fr-FR")} FCFA
                       </span>
                       <button
                         onClick={() => handleAddSearchProductToCart(produit)}
                         disabled={busySearchProductKey === produit.key}
-                        className="px-4 py-2 rounded-full bg-toni-green-dark-2 text-white text-sm font-semibold hover:bg-toni-green-dark transition"
+                        className="rounded-full bg-toni-green-dark-2 px-4 py-2 text-sm font-semibold text-white transition hover:bg-toni-green-dark"
                       >
                         Ajouter
                       </button>
@@ -480,6 +450,7 @@ function ClientCartPageContent() {
           </div>
         )}
       </div>
-    </>
+      </>
+    </section>
   );
 }

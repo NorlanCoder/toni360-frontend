@@ -145,12 +145,19 @@ export interface CommandeDetailResponse {
     commande: {
       id: string;
       numero_commande?: string;
+      statut?: string;
+      statut_label?: string;
       produits: Array<{
         id: string;
         quantite?: number;
         prix_unitaire?: number;
         prix_total?: number;
         ordonnance_requise: boolean;
+        ordonnance?: {
+          id: string;
+          statut?: string;
+          statut_label?: string;
+        } | null;
         produit?: {
           id: string;
           nom: string;
@@ -158,7 +165,42 @@ export interface CommandeDetailResponse {
       }>;
       pharmacie?: {
         nom?: string;
+        adresse?: string;
+        telephone?: string;
       } | null;
+    };
+  };
+}
+
+export interface InitPaiementCommandeResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    paiement_id: string;
+    reference: string;
+    montant: number;
+    mode_paiement: string;
+    qr_code?: {
+      code: string;
+      expire_at?: string;
+    };
+    instructions?: string[];
+  };
+}
+
+export interface ConfirmPaiementCommandeResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    commande: {
+      id: string;
+      statut?: string;
+      statut_label?: string;
+    };
+    qr_code?: {
+      code: string;
+      expire_at?: string;
+      instructions?: string;
     };
   };
 }
@@ -185,6 +227,7 @@ export interface PatientOrderQrCodeResponse {
       id: string;
       code: string;
       image_url?: string | null;
+      image_data_url?: string | null;
       statut: string;
       est_valide: boolean;
       est_expire: boolean;
@@ -308,11 +351,13 @@ export async function addPanierItem(
   produitId: string,
   quantite: number,
   rechercheId?: string,
+  pharmacieId?: string,
 ): Promise<PatientPanierResponse> {
   const json = buildJsonRequest({
     produit_id: produitId,
     quantite,
     ...(rechercheId ? { recherche_id: rechercheId } : {}),
+    ...(pharmacieId ? { pharmacie_id: pharmacieId } : {}),
   });
 
   return apiRequest<PatientPanierResponse>("/patient/panier/produits", {
@@ -394,6 +439,40 @@ export async function suivreCommande(token: string, commandeId: string): Promise
   return apiRequest<SuiviCommandeResponse>(`/patient/commandes/${commandeId}/suivre`, {
     method: "GET",
     token,
+  });
+}
+
+export async function initierCommandePaiement(
+  token: string,
+  commandeId: string,
+  modePaiement: "MTN" | "MOOV" | "CELTIIS",
+  numeroTelephone: string,
+): Promise<InitPaiementCommandeResponse> {
+  const json = buildJsonRequest({
+    mode_paiement: modePaiement,
+    numero_telephone: numeroTelephone,
+  });
+
+  return apiRequest<InitPaiementCommandeResponse>(`/patient/commandes/${commandeId}/paiement`, {
+    method: "POST",
+    token,
+    body: json.body,
+    headers: json.headers,
+  });
+}
+
+export async function confirmerCommandePaiement(
+  token: string,
+  commandeId: string,
+  reference: string,
+): Promise<ConfirmPaiementCommandeResponse> {
+  const json = buildJsonRequest({ reference });
+
+  return apiRequest<ConfirmPaiementCommandeResponse>(`/patient/commandes/${commandeId}/paiement/confirmer`, {
+    method: "POST",
+    token,
+    body: json.body,
+    headers: json.headers,
   });
 }
 

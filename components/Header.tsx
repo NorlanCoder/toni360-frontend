@@ -4,6 +4,7 @@
  */
 "use client";
 
+
 import Link from "next/link";
 import { useState } from "react";
 
@@ -18,7 +19,7 @@ export default function Header() {
       <div className="max-w-[98vw] xl:max-w-[1600px] mx-auto flex items-center justify-between">
         {/* Logo Toni360 à gauche */}
         <div className="flex items-center">
-          <span className="text-2xl font-bold text-toni-green">Toni360</span>
+          <img src="/images/logo.png" alt="Logo Toni360" className="h-12 w-auto" />
         </div>
 
         {/* Boutons d'authentification à droite - cachés sur mobile */}

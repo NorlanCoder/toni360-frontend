@@ -9,6 +9,7 @@ import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { deactivatePartnerProduit, getPartnerProduit, updatePartnerProduit, updatePartnerProduitSeuil } from "@/lib/api/partner";
+import { toast } from "sonner";
 
 
 /* ──────────────── Delete confirmation modal ─────────────────── */
@@ -86,7 +87,6 @@ export default function PartenaireMedicamentDetailPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   /* ── Form state (pre-filled with mock data) ── */
   const [nom, setNom] = useState("");
@@ -100,7 +100,7 @@ export default function PartenaireMedicamentDetailPage() {
     const loadProduit = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token || !id) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
@@ -115,7 +115,7 @@ export default function PartenaireMedicamentDetailPage() {
         setStockActuel(String(produit.stock?.quantite ?? 0));
         setSeuil(String(produit.stock?.seuil_alerte ?? 0));
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger le médicament.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger le médicament.");
       } finally {
         setIsLoading(false);
       }
@@ -129,7 +129,7 @@ export default function PartenaireMedicamentDetailPage() {
 
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
@@ -142,9 +142,9 @@ export default function PartenaireMedicamentDetailPage() {
         prix_vente: Number(prix),
       });
       await updatePartnerProduitSeuil(session.token, id, Number(seuil));
-      setError(null);
+      toast.success("Médicament mis à jour.");
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Sauvegarde impossible.");
+      toast.error(err instanceof ApiError ? err.message : "Sauvegarde impossible.");
     } finally {
       setIsSubmitting(false);
     }
@@ -153,7 +153,7 @@ export default function PartenaireMedicamentDetailPage() {
   const handleDelete = async () => {
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
@@ -163,7 +163,7 @@ export default function PartenaireMedicamentDetailPage() {
       setShowDeleteModal(false);
       router.push("/partenaire/medicaments");
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Suppression impossible.");
+      toast.error(err instanceof ApiError ? err.message : "Suppression impossible.");
     } finally {
       setIsSubmitting(false);
     }
@@ -224,11 +224,6 @@ export default function PartenaireMedicamentDetailPage() {
 
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto p-2 px-4 sm:px-12 lg:px-32 py-16 lg:py-24">
-          {error && (
-            <div className="mx-auto mb-4 w-full max-w-[920px] rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
           <form
             onSubmit={handleSave}
             className="mx-auto w-full max-w-[920px] rounded-xl bg-white p-6 sm:p-8"

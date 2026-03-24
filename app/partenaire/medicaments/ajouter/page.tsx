@@ -10,6 +10,7 @@ import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { createPartnerProduit } from "@/lib/api/partner";
+import { toast } from "sonner";
 
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
@@ -18,7 +19,6 @@ export default function PartenaireAjouterMedicamentPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   /* ── Form state ── */
   const [nom, setNom] = useState("Paracétamol 500mg");
@@ -44,7 +44,7 @@ export default function PartenaireAjouterMedicamentPage() {
 
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
@@ -53,7 +53,7 @@ export default function PartenaireAjouterMedicamentPage() {
     const seuilAlerte = Number(seuil);
 
     if (!nom || !forme || Number.isNaN(prixVente) || Number.isNaN(quantite) || Number.isNaN(seuilAlerte)) {
-      setError("Veuillez remplir correctement le formulaire.");
+      toast.warning("Veuillez remplir correctement le formulaire.");
       return;
     }
 
@@ -71,9 +71,8 @@ export default function PartenaireAjouterMedicamentPage() {
         seuil_alerte: seuilAlerte,
       });
       setShowModal(true);
-      setError(null);
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Erreur lors de l'ajout du médicament.");
+      toast.error(err instanceof ApiError ? err.message : "Erreur lors de l'ajout du médicament.");
     } finally {
       setIsSubmitting(false);
     }
@@ -130,11 +129,6 @@ export default function PartenaireAjouterMedicamentPage() {
 
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-12 lg:px-32 py-10 lg:py-16">
-          {error && (
-            <div className="mx-auto mb-4 w-full max-w-[920px] rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
           <form
             onSubmit={handleSubmit}
             className="mx-auto w-full max-w-[920px] rounded-xl bg-white p-6 sm:p-8"

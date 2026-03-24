@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Lock } from "lucide-react";
+import { toast } from "sonner";
 import { getPatientProfile } from "@/lib/api/auth";
 import { updatePatientProfile } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
@@ -9,7 +10,6 @@ import { clearAuthSession, getAuthSession, saveAuthSession } from "@/lib/api/ses
 
 export default function ProfilPage() {
   const [activeTab, setActiveTab] = useState<"info" | "delete">("info");
-  const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     nomComplet: "",
@@ -42,7 +42,7 @@ export default function ProfilPage() {
         }));
       } catch (error) {
         if (error instanceof ApiError) {
-          setMessage(error.message);
+          toast.error(error.message);
         }
       }
     };
@@ -63,7 +63,6 @@ export default function ProfilPage() {
     const nom = parts.slice(1).join(" ") || prenom;
 
     setIsSaving(true);
-    setMessage("");
     try {
       const response = await updatePatientProfile(token, {
         nom,
@@ -77,10 +76,10 @@ export default function ProfilPage() {
         profile: response.data.patient,
       });
 
-      setMessage("Profil mis à jour avec succès.");
+      toast.success("Profil mis à jour avec succès.");
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setIsSaving(false);
@@ -90,22 +89,20 @@ export default function ProfilPage() {
   const handleDeleteAccount = (e: React.FormEvent) => {
     e.preventDefault();
     if (!deletePassword.trim()) {
-      setMessage("Entrez votre mot de passe pour continuer.");
+      toast.warning("Entrez votre mot de passe pour continuer.");
       return;
     }
 
-    setMessage("La suppression de compte sera activée dans une phase dédiée.");
+    toast.info("La suppression de compte sera activée dans une phase dédiée.");
   };
 
   return (
     <div className="max-w-4xl">
-      {message && <p className="mb-4 text-sm text-gray-600">{message}</p>}
-
       {/* Tabs */}
-      <div className="flex gap-20 border-b border-gray-300 mb-8">
+      <div className="flex gap-6 md:gap-20 border-b border-gray-300 mb-8 overflow-x-auto">
               <button
                 onClick={() => setActiveTab("info")}
-                className={`pb-4 font-semibold text-lg transition ${
+                className={`pb-4 font-semibold text-sm md:text-lg whitespace-nowrap transition ${
                   activeTab === "info"
                     ? "border-b-4 border-toni-green-dark-2 text-gray-900"
                     : "text-gray-500"
@@ -115,7 +112,7 @@ export default function ProfilPage() {
               </button>
               <button
                 onClick={() => setActiveTab("delete")}
-                className={`pb-4 font-semibold text-lg transition ${
+                className={`pb-4 font-semibold text-sm md:text-lg whitespace-nowrap transition ${
                   activeTab === "delete"
                     ? "border-b-4 border-toni-green-dark-2 text-gray-900"
                     : "text-gray-500"
@@ -131,47 +128,47 @@ export default function ProfilPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Nom complet */}
                   <div>
-                    <label className="block text-base text-gray-500 mb-2">Nom complet</label>
+                    <label className="block font-bold text-base text-gray-500 mb-2">Nom complet</label>
                     <input
                       type="text"
                       value={formData.nomComplet}
                       onChange={(e) => setFormData({ ...formData, nomComplet: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                      className="w-full px-4 py-3 border-2 font-bold  border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
                     />
                   </div>
 
                   {/* Email */}
                   <div>
-                    <label className="block text-base text-gray-500 mb-2">Email</label>
+                    <label className="block font-bold  text-base text-gray-500 mb-2">Email</label>
                     <input
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                      className="w-full px-4 py-3 border-2 font-bold  border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
                     />
                   </div>
 
                   {/* Numéro de téléphone */}
                   <div>
-                    <label className="block text-base text-gray-500 mb-2">Numéro de téléphone</label>
+                    <label className="block font-bold  text-base text-gray-500 mb-2">Numéro de téléphone</label>
                     <input
                       type="tel"
                       value={formData.telephone}
                       onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                      className="w-full px-4 py-3 border-2 font-bold  border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
                     />
                   </div>
 
                   {/* Ville */}
-                  <div>
-                    <label className="block text-base text-gray-500 mb-2">Ville</label>
+                  {/* <div>
+                    <label className="block font-bold   text-base text-gray-500 mb-2">Ville</label>
                     <input
                       type="text"
                       value={formData.ville}
                       onChange={(e) => setFormData({ ...formData, ville: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                      className="w-full px-4 py-3 border-2 font-bold  border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
                     />
-                  </div>
+                  </div> */}
                 </div>
 
           {/* Submit Button */}
@@ -179,7 +176,7 @@ export default function ProfilPage() {
             <button
               type="submit"
               disabled={isSaving}
-              className="px-12 py-3 bg-toni-green-dark-2 text-white font-bold text-lg rounded-full hover:bg-toni-green-dark transition"
+              className="px-6 md:px-12 py-2.5 md:py-3 bg-toni-green-dark-2 text-white font-bold text-sm md:text-lg rounded-full hover:bg-toni-green-dark transition"
             >
               Enregistrer
             </button>
@@ -202,22 +199,22 @@ export default function ProfilPage() {
                       placeholder="Entrez votre mot de passe"
                       value={deletePassword}
                       onChange={(e) => setDeletePassword(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 border-2 border-gray-400 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                      className="w-full pl-12 pr-4 py-4 border-2 border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
                     />
                   </div>
 
                   {/* Buttons */}
-                  <div className="flex justify-center gap-4">
+                  <div className="flex flex-wrap justify-center gap-3 md:gap-4">
                     <button
                       type="button"
                       onClick={() => setActiveTab("info")}
-                      className="px-12 py-3 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold text-lg rounded-full hover:bg-toni-green-dark-2 hover:text-white transition"
+                      className="px-6 md:px-12 py-2.5 md:py-3 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold text-sm md:text-lg rounded-full hover:bg-toni-green-dark-2 hover:text-white transition"
                     >
                       Annuler
                     </button>
                     <button
                       type="submit"
-                      className="px-12 py-3 bg-red-600 text-white font-bold text-lg rounded-full hover:bg-red-700 transition"
+                      className="px-6 md:px-12 py-2.5 md:py-3 bg-red-600 text-white font-bold text-sm md:text-lg rounded-full hover:bg-red-700 transition"
                     >
                       Supprimer
                     </button>

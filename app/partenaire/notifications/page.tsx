@@ -15,19 +15,19 @@ import {
   markPartnerNotificationUnread,
   PartnerNotificationItem,
 } from "@/lib/api/partner";
+import { toast } from "sonner";
 
 export default function PartenaireNotificationsPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState<PartnerNotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadNotifications = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
@@ -35,9 +35,8 @@ export default function PartenaireNotificationsPage() {
       try {
         const response = await getPartnerNotifications(session.token, 100);
         setNotifications(extractCollection(response.data.notifications));
-        setError(null);
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger les notifications.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger les notifications.");
       } finally {
         setIsLoading(false);
       }
@@ -49,7 +48,7 @@ export default function PartenaireNotificationsPage() {
   const handleToggleRead = async (notification: PartnerNotificationItem) => {
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
@@ -66,14 +65,14 @@ export default function PartenaireNotificationsPage() {
         ),
       );
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Action impossible.");
+      toast.error(err instanceof ApiError ? err.message : "Action impossible.");
     }
   };
 
   const handleDelete = async (notificationId: string) => {
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
@@ -81,7 +80,7 @@ export default function PartenaireNotificationsPage() {
       await deletePartnerNotification(session.token, notificationId);
       setNotifications((prev) => prev.filter((item) => item.id !== notificationId));
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Suppression impossible.");
+      toast.error(err instanceof ApiError ? err.message : "Suppression impossible.");
     }
   };
 
@@ -132,12 +131,6 @@ export default function PartenaireNotificationsPage() {
 
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
           <h1 className="mb-6 text-2xl font-bold text-gray-900">Notifications partenaire</h1>
-
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
 
           {isLoading ? (
             <div className="rounded-xl border border-gray-200 px-4 py-4 text-sm text-gray-500">Chargement des notifications...</div>

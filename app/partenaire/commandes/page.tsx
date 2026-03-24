@@ -8,6 +8,7 @@ import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import { getAuthSession } from "@/lib/api/session";
 import { extractCollection, getPartnerCommandes, PartnerCommande } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
+import { toast } from "sonner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type TabKey = "a-preparer" | "en-attente" | "recuperees";
@@ -18,6 +19,16 @@ interface Order {
   date: string;
   statut: string;
 }
+
+const A_PREPARER_STATUTS = new Set([
+  "EN_ATTENTE_ORDONNANCE",
+  "ORDONNANCE_EN_VERIFICATION",
+  "ORDONNANCE_VALIDEE",
+  "ORDONNANCE_REJETEE",
+  "EN_ATTENTE_PAIEMENT",
+  "PAYEE",
+  "EN_PREPARATION",
+]);
 
 
 /* ──────────────────────── Helpers ────────────────────────────── */
@@ -85,7 +96,6 @@ export default function PartenaireDashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const tabs: { key: TabKey; label: string; icon: React.ElementType; href: string }[] = [
     { key: "a-preparer", label: "A préparer", icon: Package, href: "/partenaire/commandes" },
@@ -107,21 +117,15 @@ export default function PartenaireDashboardPage() {
     const loadOrders = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
 
       try {
-        const [payeesResponse, preparationResponse] = await Promise.all([
-          getPartnerCommandes(session.token, { statut: "PAYEE", per_page: 100 }),
-          getPartnerCommandes(session.token, { statut: "EN_PREPARATION", per_page: 100 }),
-        ]);
-
-        const combined: PartnerCommande[] = [
-          ...extractCollection(payeesResponse.data),
-          ...extractCollection(preparationResponse.data),
-        ];
+        const response = await getPartnerCommandes(session.token, { per_page: 200 });
+        const allCommandes = extractCollection(response.data);
+        const combined: PartnerCommande[] = allCommandes.filter((commande) => A_PREPARER_STATUTS.has(commande.statut));
 
         combined.sort((a, b) => {
           const da = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -139,15 +143,20 @@ export default function PartenaireDashboardPage() {
             statut: commande.statut_label || "À préparer",
           })),
         );
-        setError(null);
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger les commandes.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger les commandes.");
       } finally {
         setIsLoading(false);
       }
     };
 
     void loadOrders();
+
+    const intervalId = setInterval(() => {
+      void loadOrders();
+    }, 30000);
+
+    return () => clearInterval(intervalId);
   }, [formatDate]);
 
   return (
@@ -188,14 +197,14 @@ export default function PartenaireDashboardPage() {
               <span className="hidden sm:inline">Notifications</span>
               <Bell className="h-5 w-5" />
             </Link>
-            <button
-              type="button"
+            <Link
+              href="/partenaire/profil"
               aria-label="Accéder à mon compte"
               className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
             >
               <span className="hidden sm:inline">Mon Compte</span>
               <User className="h-5 w-5" />
-            </button>
+            </Link>
           </div>
         </header>
 
@@ -237,8 +246,6 @@ export default function PartenaireDashboardPage() {
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             {isLoading ? (
               <div className="px-8 py-8 text-sm text-gray-500">Chargement des commandes...</div>
-            ) : error ? (
-              <div className="px-8 py-8 text-sm text-red-600">{error}</div>
             ) : (
             <table className="min-w-[520px] w-full table-auto text-sm lg:text-base">
               <thead>
@@ -258,7 +265,7 @@ export default function PartenaireDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order, idx) => (
+                {orders.map((order) => (
                   <tr
                     key={order.id}
                     className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60 hover:border-l-4 hover:border-l-emerald-500 transition-all cursor-pointer"

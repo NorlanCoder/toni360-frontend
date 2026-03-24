@@ -23,6 +23,7 @@ import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 import { filterPartnerNavigationByPermissions } from "@/lib/auth/authorization";
 import { getPartnerNotificationCount, getPartnerPharmacieProfile, updatePartnerPharmacieProfile } from "@/lib/api/partner";
+import { toast } from "sonner";
 
 const navItems = [
   { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/dashboard" },
@@ -49,8 +50,6 @@ export default function PartenaireProfil() {
   const [horaires, setHoraires] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -94,7 +93,7 @@ export default function PartenaireProfil() {
           router.replace("/partenaire/connexion");
           return;
         }
-        setError(err instanceof ApiError ? err.message : "Impossible de charger le profil.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger le profil.");
       } finally {
         setIsLoading(false);
       }
@@ -106,12 +105,11 @@ export default function PartenaireProfil() {
   const handleSave = async () => {
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
     setIsSaving(true);
-    setSuccess(null);
     try {
       await updatePartnerPharmacieProfile(session.token, {
         nom,
@@ -120,10 +118,9 @@ export default function PartenaireProfil() {
         email,
         numero_agrement: licence,
       });
-      setSuccess("Modifications enregistrées.");
-      setError(null);
+      toast.success("Modifications enregistrées.");
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Erreur de mise à jour.");
+      toast.error(err instanceof ApiError ? err.message : "Erreur de mise à jour.");
     } finally {
       setIsSaving(false);
     }
@@ -143,7 +140,7 @@ export default function PartenaireProfil() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 lg:relative lg:z-auto lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -186,7 +183,7 @@ export default function PartenaireProfil() {
         </nav>
       </aside>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden lg:ml-[260px]">
         <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
           <button
             type="button"
@@ -222,16 +219,6 @@ export default function PartenaireProfil() {
         </header>
 
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-10 py-6 lg:py-8">
-          {error && (
-            <div className="mb-4 w-full max-w-[1000px] rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="mb-4 w-full max-w-[1000px] rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              {success}
-            </div>
-          )}
 
           <div className="mb-8 flex items-center gap-8">
             <Link

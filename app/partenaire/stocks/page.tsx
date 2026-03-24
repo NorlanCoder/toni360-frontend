@@ -7,18 +7,18 @@ import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { extractCollection, getPartnerStocks, PartnerStockItem } from "@/lib/api/partner";
+import { toast } from "sonner";
 
 export default function PartenaireStocksPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stocks, setStocks] = useState<PartnerStockItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadStocks = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
@@ -26,9 +26,8 @@ export default function PartenaireStocksPage() {
       try {
         const response = await getPartnerStocks(session.token, { per_page: 100 });
         setStocks(extractCollection(response.data));
-        setError(null);
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger les stocks.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger les stocks.");
       } finally {
         setIsLoading(false);
       }
@@ -86,8 +85,6 @@ export default function PartenaireStocksPage() {
 
           {isLoading ? (
             <div className="rounded-xl border border-gray-200 px-4 py-4 text-sm text-gray-500">Chargement des stocks...</div>
-          ) : error ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">{error}</div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
               <table className="min-w-[520px] w-full table-auto text-sm lg:text-base">
