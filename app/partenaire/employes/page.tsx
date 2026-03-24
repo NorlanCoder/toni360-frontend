@@ -3,24 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  LayoutDashboard,
-  Package,
-  Boxes,
-  Users,
-  Pill,
-  History,
-  HelpCircle,
-  LogOut,
-  Bell,
-  User,
-  Search,
-  Menu,
-} from "lucide-react";
+import { Bell, User, Search, Menu } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { extractCollection, getPartnerUsers } from "@/lib/api/partner";
 import { toast } from "sonner";
+import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type FilterKey = "tous" | "actives" | "desactives";
@@ -34,17 +22,6 @@ interface Employee {
   roleCode: EmployeeRoleCode;
   statut: "Actif" | "Désactivé" | "Inactif";
 }
-
-/* ──────────────────── Sidebar nav items ─────────────────────── */
-const navItems = [
-  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/dashboard" },
-  { label: "Gestion de commande", icon: Package, href: "/partenaire/commandes" },
-  { label: "Gestion de Stocks", icon: Boxes, href: "/partenaire/stocks" },
-  { label: "Gestion des employés", icon: Users, href: "/partenaire/employes", active: true },
-  { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
-  { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
-  { label: "Assistance et support", icon: HelpCircle, href: "#" },
-];
 
 /* ──────────────────────── Helpers ────────────────────────────── */
 const statusStyles: Record<Employee["statut"], string> = {
@@ -101,7 +78,7 @@ function mapNomComplet(nomComplet: string | undefined, nom: string | undefined, 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireEmployesPage() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("tous");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { setOpen } = useSidebarContext();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -147,70 +124,7 @@ export default function PartenaireEmployesPage() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      {/* ───────────── MOBILE OVERLAY ───────────── */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ───────────── SIDEBAR ───────────── */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
-      >
-        {/* Logo */}
-        <div className="flex h-20 items-center px-5">
-          <Link href="/partenaire/dashboard" className="flex items-center gap-2">
-            <Image
-              src="/images/logo.png"
-              alt="Toni 360°"
-              width={180}
-              height={56}
-              priority
-            />
-          </Link>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex flex-1 flex-col gap-1 px-3 pt-4" aria-label="Navigation partenaire">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-4 py-4 text-base font-medium transition-colors ${
-                  item.active
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <Icon className="h-6 w-6 shrink-0" />
-                {item.label}
-              </Link>
-            );
-          })}
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Déconnexion */}
-          <Link
-            href="/partenaire/deconnexion"
-            className="mb-6 flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
-          >
-            <LogOut className="h-5 w-5 shrink-0" />
-            Déconnexion
-          </Link>
-        </nav>
-      </aside>
-
-      {/* ───────────── MAIN AREA ──────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden lg:ml-[260px]">
+    <div className="flex flex-1 flex-col overflow-hidden">
         {/* ─── HEADER ─── */}
         <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
           {/* Hamburger (mobile) */}
@@ -218,7 +132,7 @@ export default function PartenaireEmployesPage() {
             type="button"
             aria-label="Ouvrir le menu"
             className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => setOpen(true)}
           >
             <Menu className="h-6 w-6" />
           </button>
@@ -377,7 +291,6 @@ export default function PartenaireEmployesPage() {
             )}
           </div>
         </main>
-      </div>
     </div>
   );
 }

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Bell, Menu, Search, User } from "lucide-react";
-import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import {
@@ -16,10 +15,11 @@ import {
   PartnerNotificationItem,
 } from "@/lib/api/partner";
 import { toast } from "sonner";
+import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 
 export default function PartenaireNotificationsPage() {
+  const { setOpen } = useSidebarContext();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState<PartnerNotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -85,16 +85,13 @@ export default function PartenaireNotificationsPage() {
   };
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      <PartenaireSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <div className="flex flex-1 flex-col overflow-hidden">
+    <>
         <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
           <button
             type="button"
             aria-label="Ouvrir le menu"
             className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => setOpen(true)}
           >
             <Menu className="h-6 w-6" />
           </button>
@@ -178,7 +175,7 @@ export default function PartenaireNotificationsPage() {
             </div>
           )}
         </main>
-      </div>
-    </div>
+    </>
+  
   );
 }

@@ -2,32 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import {
-  LayoutGrid,
-  Users,
-  PlusSquare,
-  FileText,
-  HelpCircle,
-  LogOut,
-  Bell,
-  User,
-  Lock,
-  Link2,
-} from "lucide-react";
+import { Bell, User, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-const menuItems = [
-  { icon: LayoutGrid, label: "Tableau de bord", href: "/partenaire/dashboard", active: false },
-  { icon: Users, label: "Gestion des employés", href: "/partenaire/employes", active: false },
-  { icon: PlusSquare, label: "Gestion des médicaments", href: "/partenaire/medicaments", active: false },
-  { icon: FileText, label: "Historique des actions", href: "/partenaire/employes/historique", active: false },
-  { icon: HelpCircle, label: "Assistance et support", href: "#", active: false },
-  { icon: LogOut, label: "Déconnexion", href: "/partenaire/deconnexion", active: false },
-];
+import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 
 export default function SupprimerComptePage() {
   const router = useRouter();
+  useSidebarContext();
   const [password, setPassword] = useState<string>("");
 
   const handleCancel = (): void => {
@@ -42,60 +24,7 @@ export default function SupprimerComptePage() {
   };
 
   return (
-    <div
-      className="flex h-screen overflow-hidden bg-white"
-      style={{ fontFamily: "'Inter', sans-serif" }}
-    >
-      {/* Sidebar */}
-      <aside className="hidden lg:flex w-[280px] min-w-[280px] bg-[#f7f8fa] flex-col">
-        {/* Logo */}
-        <div className="flex items-center gap-2 px-6 pt-5 pb-4">
-          <Image
-            src="/images/logo.png"
-            alt="Toni 360"
-            width={200}
-            height={66}
-            className="h-[60px] w-auto"
-          />
-        </div>
-
-        {/* Link icon */}
-        <div className="px-5 pt-2 pb-3">
-          <Link2
-            className="w-[18px] h-[18px] text-[#9ca3af]"
-            strokeWidth={2}
-          />
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex flex-col gap-[2px] px-3">
-          {menuItems.map((item, idx) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={idx}
-                href={item.href}
-                className={`flex items-center gap-4 w-full px-4 py-[18px] rounded-xl text-[18px] font-semibold text-left transition-colors ${
-                  item.active
-                    ? "bg-[#e0f8ef] text-[#10b981]"
-                    : "text-[#4b5563] hover:bg-gray-100"
-                }`}
-              >
-                <Icon
-                  className={`w-[28px] h-[28px] flex-shrink-0 ${
-                    item.active ? "text-[#10b981]" : "text-[#6b7280]"
-                  }`}
-                  strokeWidth={2.2}
-                />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </aside>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-auto bg-white">
+    <div style={{ fontFamily: "'Inter', sans-serif" }}>
         {/* Header */}
         <header className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-0 px-4 md:px-6 pt-4 pb-3">
           {/* Search bar */}
@@ -193,7 +122,6 @@ export default function SupprimerComptePage() {
             </div>
           </div>
         </main>
-      </div>
     </div>
   );
 }

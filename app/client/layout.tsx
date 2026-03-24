@@ -257,9 +257,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       </aside>
 
       {/* ── Contenu principal ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden ">
         {/* Top bar */}
-        <header className=" border-gray-200 bg-white px-4 py-3 lg:px-8 lg:pt-8 lg:pb-4">
+        <header className=" border-gray-200 bg-white px-4 py-3 lg:px-8 lg:pt-8 lg:pb-4 bg-[#F8FFFC] ">
 
           {/* Barre mobile : hamburger | logo centré | icônes */}
           <div className="flex items-center justify-between lg:hidden">
@@ -357,7 +357,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </header>
 
         {/* Page body */}
-        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 lg:py-8 bg-[#F8FFFC] ">{children}</main>
       </div>
     </div>
   );

@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 import { canAccessPartnerRoute } from "@/lib/auth/authorization";
 import { toast } from "sonner";
+import { SidebarProvider } from "./_sidebar-context";
+import PartenaireSidebar from "@/components/partenaire/Sidebar";
 
 export default function PartenaireLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -34,5 +36,18 @@ export default function PartenaireLayout({ children }: { children: React.ReactNo
     }
   }, [isPublicPartenairePage, pathname, router]);
 
-  return <>{children}</>;
+  if (isPublicPartenairePage) {
+    return <>{children}</>;
+  }
+
+  return (
+    <SidebarProvider>
+      <div className="flex h-screen bg-white overflow-hidden">
+        <PartenaireSidebar />
+        <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+          {children}
+        </div>
+      </div>
+    </SidebarProvider>
+  );
 }

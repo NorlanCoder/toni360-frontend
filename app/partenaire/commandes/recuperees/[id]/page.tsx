@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Bell, User, Search, Menu } from "lucide-react";
-import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 
 
 /* ──────────────────── Mock data ─────────────────────────────── */
@@ -28,14 +28,10 @@ const montantTotal = "50 000 XOF";
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireCommandeRecupereeDetailPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { setOpen } = useSidebarContext();
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      <PartenaireSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      {/* ───────────── MAIN AREA ──────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+    <>
         {/* ─── HEADER ─── */}
         <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
           {/* Hamburger (mobile) */}
@@ -43,7 +39,7 @@ export default function PartenaireCommandeRecupereeDetailPage() {
             type="button"
             aria-label="Ouvrir le menu"
             className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => setOpen(true)}
           >
             <Menu className="h-6 w-6" />
           </button>
@@ -178,8 +174,8 @@ export default function PartenaireCommandeRecupereeDetailPage() {
             <span className="text-xl font-bold text-gray-900">{montantTotal}</span>
           </div>
         </main>
-      </div>
-    </div>
+    </>
+  
   );
 }
 

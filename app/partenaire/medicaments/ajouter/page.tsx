@@ -6,17 +6,17 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import { Bell, User, Search, Menu } from "lucide-react";
-import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { createPartnerProduit } from "@/lib/api/partner";
 import { toast } from "sonner";
+import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireAjouterMedicamentPage() {
+  const { setOpen } = useSidebarContext();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -79,11 +79,8 @@ export default function PartenaireAjouterMedicamentPage() {
   };
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      <PartenaireSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
+    <>
       {/* ───────────── MAIN AREA ──────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
         {/* ─── HEADER ─── */}
         <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
           {/* Hamburger (mobile) */}
@@ -91,7 +88,7 @@ export default function PartenaireAjouterMedicamentPage() {
             type="button"
             aria-label="Ouvrir le menu"
             className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => setOpen(true)}
           >
             <Menu className="h-6 w-6" />
           </button>
@@ -249,7 +246,6 @@ export default function PartenaireAjouterMedicamentPage() {
             </button>
           </form>
         </main>
-      </div>
 
       {/* ───────────── CONFIRMATION MODAL ───────────── */}
       <ConfirmationModal
@@ -258,7 +254,7 @@ export default function PartenaireAjouterMedicamentPage() {
         iconPath="/images/checkmark.svg"
         onClose={() => setShowModal(false)}
       />
-    </div>
+    </>
   );
 
   
