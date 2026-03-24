@@ -343,8 +343,8 @@ function ClientCartPageContent() {
               <FileText size={18} className="absolute right-4 top-4 text-red-500" />
             )}
             <div className="mb-5 sm:mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">{item.name}</h3>
-              <p className="text-base text-black">{item.type}</p>
+              <h3 className="text-base md:text-xl font-semibold text-gray-900">{item.name}</h3>
+              <p className="text-sm md:text-base text-black">{item.type}</p>
             </div>
 
             <div className="flex items-center justify-between">

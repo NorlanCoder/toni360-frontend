@@ -32,7 +32,7 @@ export default function InscriptionPage() {
     }
 
     const fullName = formData.nom.trim();
-    if (!fullName || !formData.email.trim() || !formData.telephone.trim() || !formData.password) {
+    if (!fullName || !formData.email.trim() || !formData.telephone?.trim() || !formData.password) {
       toast.warning("Veuillez remplir tous les champs obligatoires.");
       return;
     }

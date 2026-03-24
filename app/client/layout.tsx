@@ -27,7 +27,7 @@ const navItems = [
   { label: "Mes commandes", href: "/client/orders", icon: PiListChecks },
   { label: "Notifications", href: "/client/notifications", icon: Bell },
   { label: "Mon Panier", href: "/client/dashboard/cart", icon: ShoppingCart },
-  { label: "Centre d'aide", href: "/client/help/faq", icon: HelpCircle },
+  { label: "Centre d'aide", href: "/faq", icon: HelpCircle },
   { label: "Déconnexion", href: "/client/deconnexion", icon: LogOut },
 ];
 
