@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, User, Search, Package, Clock, CheckCircle, ChevronDown, Menu } from "lucide-react";
-import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import { getAuthSession } from "@/lib/api/session";
 import { extractCollection, getPartnerCommandes } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
 import { toast } from "sonner";
+import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type TabKey = "a-preparer" | "en-attente" | "recuperees";
@@ -81,9 +81,9 @@ function DateSelect({ label, className = "" }: { label: string; className?: stri
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireEnAttentePage() {
+  const { setOpen } = useSidebarContext();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>("en-attente");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -141,11 +141,8 @@ export default function PartenaireEnAttentePage() {
   }, [moneyFormat]);
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      <PartenaireSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
+    <>
       {/* ───────────── MAIN AREA ──────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
         {/* ─── HEADER ─── */}
         <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
           {/* Hamburger (mobile) */}
@@ -153,7 +150,7 @@ export default function PartenaireEnAttentePage() {
             type="button"
             aria-label="Ouvrir le menu"
             className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => setOpen(true)}
           >
             <Menu className="h-6 w-6" />
           </button>
@@ -273,8 +270,7 @@ export default function PartenaireEnAttentePage() {
             )}
           </div>
         </main>
-      </div>
-    </div>
+    </>
   );
 }
 
