@@ -18,15 +18,15 @@ export default function NotificationCard({
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-lg p-6 flex items-start gap-4 shadow-sm border border-gray-200 ${
-        isRead ? "opacity-80" : ""
+      className={`rounded-full p-2 flex items-center gap-4   ${
+        isRead ? "bg-white " : " bg-[#E6F6F0] "
       }`}
     >
       {/* Logo */}
       <div className="flex-shrink-0">
         <div className="w-12 h-12 rounded-full border-2 border-toni-green-dark-2 flex items-center justify-center bg-white">
           <img
-            src="/images/logo.png"
+            src="/images/icon.png"
             alt="Toni360"
             className="w-8 h-8 object-contain"
           />
@@ -34,9 +34,9 @@ export default function NotificationCard({
       </div>
 
       {/* Content */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <h3 className="font-bold text-gray-900 text-base mb-1">{title}</h3>
-        <p className="text-gray-600 text-sm">{description}</p>
+        <p className="text-gray-600 text-sm truncate">{description}</p>
       </div>
 
       {/* Delete Button */}

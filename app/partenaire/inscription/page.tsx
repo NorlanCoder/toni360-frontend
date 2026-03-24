@@ -41,7 +41,7 @@ export default function DevenirPartenairePage() {
     if (
       !formData.nomPharmacie.trim() ||
       !formData.adresseComplete.trim() ||
-      !formData.telephone.trim() ||
+      !formData.telephone?.trim() ||
       !formData.email.trim() ||
       !formData.heureOuvrables.trim() ||
       !formData.confirmPassword.trim()
@@ -156,7 +156,7 @@ export default function DevenirPartenairePage() {
               />
             </div>
 
-            {/* Adresse complète */
+            {/* Adresse complète */}
             <div>
               <input
                 type="text"
@@ -169,7 +169,7 @@ export default function DevenirPartenairePage() {
               />
             </div>
 
-            {/* Téléphone avec indicatif */
+            {/* Téléphone avec indicatif */}
             <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden px-3 py-3 transition-colors focus-within:border-[#137551]">
               <PhoneInput
                 international

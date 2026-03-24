@@ -304,13 +304,13 @@ function RecherchePageContent() {
                   )}
 
                   <div className="mb-5 sm:mb-6">
-                    <h3 className="text-xl font-semibold text-gray-900">
+                    <h3 className="text-base md:text-xl font-semibold text-gray-900">
                       {item.nom}
                       {item.dosage && (
                         <span className="ml-1 font-normal"> {item.dosage}</span>
                       )}
                     </h3>
-                    <p className="text-base text-black">{item.forme ?? "Produit"}</p>
+                    <p className="text-sm md:text-base text-black">{item.forme ?? "Produit"}</p>
                     <p className="mt-1 flex items-center gap-1 text-xs text-gray-400">
                       <MapPin size={11} />
                       {item.pharmacieNom}
@@ -355,7 +355,7 @@ function RecherchePageContent() {
                     type="button"
                     onClick={() => handleAddToCart(item)}
                     disabled={addingTo[item.key]}
-                    className="block w-full rounded-full bg-toni-green py-3 text-base font-bold text-white transition hover:bg-toni-green-dark disabled:opacity-60"
+                    className="block w-full rounded-full bg-toni-green py-2.5 md:py-3 text-sm md:text-base font-bold text-white transition hover:bg-toni-green-dark disabled:opacity-60"
                   >
                     {addingTo[item.key] ? (
                       <span className="flex items-center justify-center gap-2">

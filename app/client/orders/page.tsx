@@ -349,194 +349,193 @@ export default function ClientOrdersPage() {
       <div className="mx-auto w-full max-w-5xl rounded-3xl px-3 py-4 sm:px-4 sm:py-6">
         <h1 className="mb-6 text-2xl font-bold text-gray-900 sm:text-3xl">Mes commandes</h1>
 
-      {/* Summary + Orders section */}
-      <div className="rounded-3xl p-0 sm:p-2">
-        {/* Summary cards */}
-        <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:mb-10 lg:grid-cols-4 lg:gap-4">
-          <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-[#008F4F] hover:bg-[#d8f5ea] hover:shadow-sm sm:px-5 sm:py-4">
-          <div className="w-11 h-11 rounded-full bg-[#e8faf3] flex items-center justify-center">
-            <CheckCircle2 className="text-[#008F4F]" size={18} />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Commandes terminées</p>
-            <p className="text-xl font-bold text-gray-900">{stats.terminees}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-[#008F4F] hover:bg-[#d8f5ea] hover:shadow-sm sm:px-5 sm:py-4">
-          <div className="w-11 h-11 rounded-full bg-[#fff3e8] flex items-center justify-center">
-            <Clock className="text-[#f97316]" size={18} />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Commandes en attentes</p>
-            <p className="text-xl font-bold text-gray-900">{stats.enAttente}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 transition hover:border-[#008F4F] hover:bg-[#d8f5ea] hover:shadow-sm sm:px-5 sm:py-4">
-          <div className="w-11 h-11 rounded-full bg-[#e8faf3] flex items-center justify-center">
-            <MapPin className="text-[#008F4F]" size={18} />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Commandes récupérées</p>
-            <p className="text-xl font-bold text-gray-900">{stats.recuperees}</p>
-          </div>
-        </div>
-        <button
-          onClick={() => router.push("/client/dashboard/cart")}
-          className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 font-semibold text-[#008F4F] transition hover:bg-[#d8f5ea]"
-        >
-          <Plus size={18} />
-          Ajouter
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="mb-8 flex flex-col gap-3 text-sm text-gray-600 sm:mb-10 sm:gap-4 sm:text-base">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <span>Du</span>
-          <div className="flex flex-wrap items-center gap-2">
-            <select value={fromDay} onChange={(e) => setFromDay(e.target.value)} className="w-16 rounded-full border border-gray-200 bg-white px-3 py-2 pr-6 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2">
-              <option>JJ</option>
-              {Array.from({ length: 31 }, (_, i) => (
-                <option key={`du-j-${i + 1}`} value={i + 1}>
-                  {String(i + 1).padStart(2, "0")}
-                </option>
-              ))}
-            </select>
-            <select value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} className="w-16 rounded-full border border-gray-200 bg-white px-3 py-2 pr-6 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2">
-              <option>MM</option>
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={`du-m-${i + 1}`} value={i + 1}>
-                  {String(i + 1).padStart(2, "0")}
-                </option>
-              ))}
-            </select>
-            <select value={fromYear} onChange={(e) => setFromYear(e.target.value)} className="w-24 rounded-full border border-gray-200 bg-white px-3 py-2 pr-6 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2">
-              <option>AAAA</option>
-              {[2024, 2025, 2026].map((year) => (
-                <option key={`du-y-${year}`} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <span>Au</span>
-          <div className="flex flex-wrap items-center gap-2">
-            <select value={toDay} onChange={(e) => setToDay(e.target.value)} className="w-16 rounded-full border border-gray-200 bg-white px-3 py-2 pr-6 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2">
-              <option>JJ</option>
-              {Array.from({ length: 31 }, (_, i) => (
-                <option key={`au-j-${i + 1}`} value={i + 1}>
-                  {String(i + 1).padStart(2, "0")}
-                </option>
-              ))}
-            </select>
-            <select value={toMonth} onChange={(e) => setToMonth(e.target.value)} className="w-16 rounded-full border border-gray-200 bg-white px-3 py-2 pr-6 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2">
-              <option>MM</option>
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={`au-m-${i + 1}`} value={i + 1}>
-                  {String(i + 1).padStart(2, "0")}
-                </option>
-              ))}
-            </select>
-            <select value={toYear} onChange={(e) => setToYear(e.target.value)} className="w-24 rounded-full border border-gray-200 bg-white px-3 py-2 pr-6 text-center text-sm focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2">
-              <option>AAAA</option>
-              {[2024, 2025, 2026].map((year) => (
-                <option key={`au-y-${year}`} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="mb-6 flex gap-4 overflow-x-auto pb-2 text-sm font-semibold text-gray-600 sm:mb-8 sm:gap-8 sm:text-lg">
-        {[
-          { label: "Terminées", value: "Terminees" as const, icon: CheckCircle2 },
-          { label: "En attente", value: "En attente" as const, icon: Clock },
-          { label: "Récupérées", value: "Recuperees" as const, icon: MapPin },
-        ].map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setActiveTab(tab.value)}
-            className={`shrink-0 border-b-2 pb-2 transition-colors flex items-center gap-2 ${
-              activeTab === tab.value
-                ? "border-[#008F4F] text-[#008F4F]"
-                : "border-transparent hover:text-gray-900"
-            }`}
-          >
-            <tab.icon size={16} />
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Orders list */}
-      <div className="bg-[#e8faf3] border-2 border-gray-300 rounded-2xl overflow-hidden">
-        <div className="max-h-105 overflow-y-auto">
-          {filteredOrders.map((order, index) => (
-            <div
-              key={`${order.id}-${index}`}
-              className="flex flex-col gap-3 border-b-2 border-gray-300 px-4 py-4 last:border-b-0 sm:px-6 md:flex-row md:items-center md:justify-between"
-            >
-              <div className="min-w-0">
-                <p className="text-base font-bold text-gray-900">
-                  Commande NO {order.numero}
-                </p>
-                <p className="mt-1 text-sm text-gray-500">
-                  Étape actuelle: {timelineByOrder[order.id] ?? order.status} ({order.pharmacy})
-                </p>
-                <div className="mt-2 text-sm text-gray-400">
-                  {order.date} &nbsp; {order.time}
-                </div>
+        {/* Summary + Orders section */}
+        <div className="rounded-3xl p-0 sm:p-2">
+          {/* Summary cards */}
+          <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:mb-10 lg:grid-cols-3 lg:gap-4">
+            <div className="flex items-center gap-3 rounded-xl border border-[#66666680] bg-white px-4 py-3 transition -sm sm:px-5 sm:py-4">
+              <div className="w-14 h-14 rounded-full bg-[#004B2F] flex items-center justify-center">
+                <CheckCircle2 className="text-white"  />
               </div>
-
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:justify-end">
-                {activeTab === "En attente" ? (
-                  <span className="rounded-full bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-600 sm:px-4 sm:text-sm">
-                    En attente
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-[#dff1ea] px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] sm:px-4 sm:text-sm">
-                    {activeTab === "Recuperees" ? "Récupérée" : "Terminée"}
-                  </span>
-                )}
-                <button
-                  onClick={() => handleCancel(order.id)}
-                  className="text-red-500 hover:text-red-600 transition"
-                >
-                  <Trash2 size={18} />
-                </button>
-                {activeTab === "En attente" && (
-                  <button
-                    onClick={() => void handleValidatePendingOrder(order)}
-                    disabled={validatingOrderId === order.id}
-                    className="rounded-full bg-[#dff1ea] px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] sm:px-4 sm:text-sm"
-                  >
-                    {validatingOrderId === order.id ? "Validation..." : "Valider"}
-                  </button>
-                )}
-                {QR_VISIBLE_PATIENT_STATUSES.has(order.statusKey) && (
-                  <button
-                    onClick={() => handleShowQr(order)}
-                    disabled={loadingQrOrderId === order.id}
-                    className="rounded-full border border-[#1f8a5b] bg-white px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] disabled:opacity-60 sm:px-4 sm:text-sm"
-                  >
-                    {loadingQrOrderId === order.id ? "Chargement..." : "Voir QR"}
-                  </button>
-                )}
+              <div>
+                <p className="text-sm md:text-base text-[#383838] ">Commandes terminées</p>
+                <h1 className="text-xl md:text-[32px] font-semibold text-[#383838]">{stats.terminees}</h1>
               </div>
             </div>
-          ))}
+            <div className="flex items-center gap-3 rounded-xl border border-[#66666680] bg-white px-4 py-3 transition  sm:px-5 sm:py-4">
+              <div className="w-14 h-14 rounded-full bg-[#FF3D00] flex items-center justify-center">
+                <Clock className="text-white"  />
+              </div>
+              <div>
+                <p className="text-sm md:text-base text-[#383838]">Commandes en attentes</p>
+                <h1 className="text-xl md:text-[32px] font-bold text-[#383838]">{stats.enAttente}</h1>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-[#66666680] bg-white px-4 py-3 transition  sm:px-5 sm:py-4">
+              <div className="w-14 h-14 rounded-full bg-[#00955F] flex items-center justify-center">
+                <MapPin className="text-white"  />
+              </div>
+              <div>
+                <p className="text-sm md:text-base text-[#383838]">Commandes récupérées</p>
+                <h1 className="text-xl md:text-[32px] font-bold text-[#383838]">{stats.recuperees}</h1>
+              </div>
+            </div>
+            {/* <button
+              onClick={() => router.push("/client/dashboard/cart")}
+              className="flex items-center justify-center gap-2 rounded-xl border border-[#66666680] bg-white px-4 py-3 font-semibold text-[#008F4F] transition hover:bg-[#d8f5ea]"
+            >
+              <Plus size={18} />
+              Ajouter
+            </button> */}
+          </div>
 
-          {filteredOrders.length === 0 && (
-            <div className="px-6 py-8 text-sm text-gray-500">Aucune commande pour ce filtre.</div>
-          )}
+          {/* Filters */}
+          <div className="mb-8 flex justify-between gap-3 text-sm text-gray-600 sm:mb-10 sm:gap-4 sm:text-base">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <span className="text-sm md:text-xl">Du</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <select value={fromDay} onChange={(e) => setFromDay(e.target.value)} className=" rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
+                  <option>JJ</option>
+                  {Array.from({ length: 31 }, (_, i) => (
+                    <option key={`du-j-${i + 1}`} value={i + 1}>
+                      {String(i + 1).padStart(2, "0")}
+                    </option>
+                  ))}
+                </select>
+                <select value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} className=" rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
+                  <option>MM</option>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={`du-m-${i + 1}`} value={i + 1}>
+                      {String(i + 1).padStart(2, "0")}
+                    </option>
+                  ))}
+                </select>
+                <select value={fromYear} onChange={(e) => setFromYear(e.target.value)} className=" rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
+                  <option>AAAA</option>
+                  {[2024, 2025, 2026].map((year) => (
+                    <option key={`du-y-${year}`} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <span>Au</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <select value={toDay} onChange={(e) => setToDay(e.target.value)} className="rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
+                  <option>JJ</option>
+                  {Array.from({ length: 31 }, (_, i) => (
+                    <option key={`au-j-${i + 1}`} value={i + 1}>
+                      {String(i + 1).padStart(2, "0")}
+                    </option>
+                  ))}
+                </select>
+                <select value={toMonth} onChange={(e) => setToMonth(e.target.value)} className="rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
+                  <option>MM</option>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={`au-m-${i + 1}`} value={i + 1}>
+                      {String(i + 1).padStart(2, "0")}
+                    </option>
+                  ))}
+                </select>
+                <select value={toYear} onChange={(e) => setToYear(e.target.value)} className="rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
+                  <option>AAAA</option>
+                  {[2024, 2025, 2026].map((year) => (
+                    <option key={`au-y-${year}`} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="mb-6 flex gap-4 overflow-x-auto pb-2 w-full font-semibold text-gray-600  sm:text-lg">
+            {[
+              { label: "Terminées", value: "Terminees" as const, icon: CheckCircle2 },
+              { label: "En attente", value: "En attente" as const, icon: Clock },
+              { label: "Récupérées", value: "Recuperees" as const, icon: MapPin },
+            ].map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={`shrink-0 border-b-2 pb-2 md:text-xl text-lg transition-colors flex items-center gap-2 ${activeTab === tab.value
+                    ? "border-[#008F4F] text-[#008F4F]"
+                    : "border-transparent hover:text-gray-900"
+                  }`}
+              >
+                <tab.icon size={16} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Orders list */}
+          <div className="   overflow-hidden">
+            <div className="">
+              {filteredOrders.map((order, index) => (
+                <div
+                  key={`${order.id}-${index}`}
+                  className="flex flex-col gap-3 border-b-2 border-[#666666] px-4 py-4 last:border-b-0 sm:px-6 md:flex-row md:items-center md:justify-between"
+                >
+                  <div className="min-w-0">
+                    <p className="text-base md:text-xl font-bold text-gray-900">
+                      Commande NO {order.numero}
+                    </p>
+                    <p className="mt-1 text-base text-gray-500">
+                      Étape actuelle: {timelineByOrder[order.id] ?? order.status} ({order.pharmacy})
+                    </p>
+                    <div className="mt-2 text-base text-[#282828] italic ">
+                      {order.date} &nbsp; {order.time}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:justify-end">
+                    {activeTab === "En attente" ? (
+                      <span className="rounded-full bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-600 sm:px-4 sm:text-sm">
+                        En attente
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-[#dff1ea] px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] sm:px-4 sm:text-sm">
+                        {activeTab === "Recuperees" ? "Récupérée" : "Terminée"}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => handleCancel(order.id)}
+                      className="text-red-500 hover:text-red-600 transition"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                    {activeTab === "En attente" && (
+                      <button
+                        onClick={() => void handleValidatePendingOrder(order)}
+                        disabled={validatingOrderId === order.id}
+                        className="rounded-full bg-[#dff1ea] px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] sm:px-4 sm:text-sm"
+                      >
+                        {validatingOrderId === order.id ? "Validation..." : "Valider"}
+                      </button>
+                    )}
+                    {QR_VISIBLE_PATIENT_STATUSES.has(order.statusKey) && (
+                      <button
+                        onClick={() => handleShowQr(order)}
+                        disabled={loadingQrOrderId === order.id}
+                        className="rounded-full border border-[#1f8a5b] bg-white px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] disabled:opacity-60 sm:px-4 sm:text-sm"
+                      >
+                        {loadingQrOrderId === order.id ? "Chargement..." : "Voir QR"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {filteredOrders.length === 0 && (
+                <div className="px-6 py-8 text-sm text-gray-500">Aucune commande pour ce filtre.</div>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
       </div>
     </div>
   );

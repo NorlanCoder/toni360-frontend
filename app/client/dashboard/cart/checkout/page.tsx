@@ -529,8 +529,8 @@ function CartPageContent() {
 
         {/* Montant total */}
         <div className="flex items-center justify-between bg-[#D7EFDA] px-6 py-5">
-          <span className="text-2xl font-bold text-gray-900">Montant total</span>
-          <span className="text-2xl font-bold text-gray-900">
+          <span className="text-lg md:text-2xl font-bold text-gray-900">Montant total</span>
+          <span className="text-lg md:text-2xl font-bold text-gray-900">
             {formatPrice(total)} XOF CFA
           </span>
         </div>
@@ -600,16 +600,7 @@ function CartPageContent() {
         >
           Annuler
         </button>
-        {!isCommandeValidationMode && (
-          <button
-            type="button"
-            onClick={handlePutOnHold}
-            disabled={pending || items.length === 0 || Boolean(uploadRetryCandidateId)}
-            className="flex-1 rounded-full bg-gray-200 py-3 text-base font-bold text-gray-500 transition hover:bg-gray-300 disabled:opacity-60"
-          >
-            Mettre en attente
-          </button>
-        )}
+
         <button
           type="button"
           onClick={handleCheckout}
