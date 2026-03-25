@@ -600,9 +600,18 @@ function CartPageContent() {
           type="button"
           onClick={handleCancel}
           disabled={pending || isCommandeValidationMode}
-          className="flex-1 rounded-full border-2 border-red-500 py-3 text-base font-bold text-red-600 transition hover:bg-red-50"
+          className="flex-1 rounded-full border-2 border-[#00955F] py-3 text-base font-bold text-[#00955F] transition hover:bg-green-50 disabled:opacity-50"
         >
-          Annuler
+          Terminer
+        </button>
+
+        <button
+          type="button"
+          onClick={handlePutOnHold}
+          disabled={pending || items.length === 0}
+          className="flex-1 rounded-full bg-[#E0E0E0] py-3 text-base font-bold text-[#6B6B6B] transition hover:bg-[#d0d0d0] disabled:opacity-50"
+        >
+          Mettre en attente
         </button>
 
         <button

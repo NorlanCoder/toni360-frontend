@@ -364,7 +364,7 @@ export default function ClientOrdersPage() {
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-[#66666680] bg-white px-4 py-3 transition  sm:px-5 sm:py-4">
               <div className="w-14 h-14 rounded-full bg-[#FF3D00] flex items-center justify-center">
-                <Clock className="text-white"  />
+                <img src="/images/recuperer.svg" alt="En attente" className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-sm md:text-base text-[#383838]">Commandes en attentes</p>
@@ -373,7 +373,7 @@ export default function ClientOrdersPage() {
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-[#66666680] bg-white px-4 py-3 transition  sm:px-5 sm:py-4">
               <div className="w-14 h-14 rounded-full bg-[#00955F] flex items-center justify-center">
-                <MapPin className="text-white"  />
+                <img src="/images/preparer.svg" alt="Récupérées" className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-sm md:text-base text-[#383838]">Commandes récupérées</p>

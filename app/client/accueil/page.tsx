@@ -217,15 +217,7 @@ export default function AccueilClientPage() {
                         )}
                       </h3>
                       <p className="text-sm md:text-base text-black">{item.forme ?? "Produit"}</p>
-                      <p className="mt-1 flex items-center gap-1 text-xs text-gray-400">
-                        <MapPin size={11} />
-                        {item.pharmacieNom}
-                        {item.distanceKm != null && (
-                          <span className="text-toni-green-dark-2 font-medium ml-1">
-                            · {item.distanceKm.toFixed(1)} km
-                          </span>
-                        )}
-                      </p>
+                     
                     </div>
 
                     <div className="flex items-center justify-between mb-4">

@@ -114,7 +114,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
             {/* En-tête drawer */}
             <div>
               <div className="flex items-center justify-between px-5 pt-6 pb-8">
-                <Link href="/" aria-label="Accueil" onClick={() => setMobileMenuOpen(false)}>
+                <Link href="/client/accueil" aria-label="Accueil" onClick={() => setMobileMenuOpen(false)}>
                   <Image src="/images/logo.png" alt="Toni360" width={120} height={60} />
                 </Link>
                 <button
@@ -175,7 +175,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
       <aside className="hidden w-64 shrink-0 flex-col justify-between border-gray-200 bg-white lg:flex h-screen overflow-y-auto">
         <div>
           <div className="mb-10 mt-7 px-5">
-            <Link href="/" aria-label="Accueil">
+            <Link href="/client/accueil" aria-label="Accueil">
               <Image src="/images/logo.png" alt="Toni360" width={140} height={70} />
             </Link>
           </div>
@@ -229,7 +229,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
               <Menu size={24} />
             </button>
 
-            <Link href="/" aria-label="Accueil">
+            <Link href="/client/accueila" aria-label="Accueil">
               <Image src="/images/logo.png" alt="Toni360" width={100} height={50} priority />
             </Link>
 
