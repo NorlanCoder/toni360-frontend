@@ -13,6 +13,7 @@ import {
 } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import { useCart } from "@/lib/cart-context";
 
 type SearchResult = {
   key: string;
@@ -54,6 +55,7 @@ function RecherchePageContent() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [addingTo, setAddingTo] = useState<Record<string, boolean>>({});
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const { refreshCart } = useCart();
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -215,6 +217,7 @@ function RecherchePageContent() {
     try {
       await addPanierItem(session.token, item.produitId, qty, item.rechercheId, item.pharmacieId);
       toast.success(`${item.nom} ajouté au panier`);
+      refreshCart();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         clearAuthSession();
