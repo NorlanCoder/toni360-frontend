@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import { useCart } from "@/lib/cart-context";
 
 type CartItem = {
   id: string;
@@ -66,6 +67,7 @@ function ClientCartPageContent() {
   const [isLocating, setIsLocating] = useState(false);
   const [hasLocalized, setHasLocalized] = useState(false);
   const autoSearchAttemptedRef = useRef(false);
+  const { refreshCart, clearLocalCart, updateCount } = useCart();
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -95,6 +97,8 @@ function ClientCartPageContent() {
         })),
       );
       setItems(mappedItems);
+      const totalQty = mappedItems.reduce((sum, it) => sum + it.qty, 0);
+      updateCount(totalQty);
       return mappedItems;
     } catch (error) {
       if (error instanceof ApiError) {
@@ -150,6 +154,7 @@ function ClientCartPageContent() {
     setGlobalBusy(true);
     try {
       await clearPanier(token);
+      clearLocalCart();
       await loadPanier();
     } catch (error) {
       if (error instanceof ApiError) {

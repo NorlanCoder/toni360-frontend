@@ -16,6 +16,7 @@ import {
 } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import { useCart } from "@/lib/cart-context";
 
 interface CartItem {
   id: string;
@@ -51,6 +52,7 @@ function CartPageContent() {
   const [pharmacyTelephone, setPharmacyTelephone] = useState("");
   const [prescriptionCount, setPrescriptionCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { clearLocalCart } = useCart();
 
   const resolvePaymentPhone = (): string => {
     const session = getAuthSession();
@@ -359,6 +361,7 @@ function CartPageContent() {
         }
       }
 
+      clearLocalCart();
       router.push(`/client/orders?commande=${encodeURIComponent(commandeNumero)}`);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -403,6 +406,7 @@ function CartPageContent() {
           return;
         }
       }
+      clearLocalCart();
       router.push(`/client/orders?commande=${encodeURIComponent(holdCommandeNumero)}`);
     } catch (error) {
       if (error instanceof ApiError) {
