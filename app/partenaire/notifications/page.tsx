@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Bell, Menu, Search, User } from "lucide-react";
+
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import {
@@ -15,11 +13,8 @@ import {
   PartnerNotificationItem,
 } from "@/lib/api/partner";
 import { toast } from "sonner";
-import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 
 export default function PartenaireNotificationsPage() {
-  const { setOpen } = useSidebarContext();
-  const router = useRouter();
   const [notifications, setNotifications] = useState<PartnerNotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -86,46 +81,6 @@ export default function PartenaireNotificationsPage() {
 
   return (
     <>
-        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-
-          <div className="relative w-full max-w-lg">
-            <Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un médicament"
-              className="w-full rounded-full border-0 bg-emerald-50/60 py-3 pl-14 pr-4 text-base text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/partenaire/notifications"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Notifications</span>
-              <Bell className="h-5 w-5" />
-            </Link>
-            <button
-              type="button"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-              onClick={() => router.push("/partenaire/profil")}
-            >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </button>
-          </div>
-        </header>
-
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
           <h1 className="mb-6 text-2xl font-bold text-gray-900">Notifications partenaire</h1>
 

@@ -12,6 +12,8 @@ export interface PartnerCommande {
   statut_color?: string;
   patient: {
     id: string;
+    nom: string;
+    prenom: string;
     nom_complet: string;
     telephone?: string;
   } | null;

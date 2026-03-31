@@ -13,15 +13,11 @@ import {
   History,
   HelpCircle,
   LogOut,
-  Bell,
-  User,
-  Menu,
 } from "lucide-react";
 import { getPartnerProfile } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 import { filterPartnerNavigationByPermissions } from "@/lib/auth/authorization";
-import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 import {
   getPartnerCommandeCompteurs,
   getPartnerNotificationCount,
@@ -166,7 +162,6 @@ function ArrowButton() {
 export default function PartenaireDashboardPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const { setOpen } = useSidebarContext();
   const [displayName, setDisplayName] = useState(DEFAULT_PHARMACIE_LABEL);
   const [visibleNavItems, setVisibleNavItems] = useState(navItems);
   const [aPreparerCount, setAPreparerCount] = useState(0);
@@ -269,44 +264,6 @@ export default function PartenaireDashboardPage() {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-        {/* ─── HEADER ─── */}
-        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
-          {/* Hamburger (mobile) */}
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-
-          {/* Welcome text */}
-          <h1 className="text-xl font-bold text-gray-900 min-w-0 truncate">
-            Bienvenu {displayName}
-          </h1>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3 shrink-0">
-            <Link
-              href="/partenaire/notifications"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-5 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Notifications ({notificationCount})</span>
-              <Bell className="h-5 w-5" />
-            </Link>
-            <Link
-              href="/partenaire/profil"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-5 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </Link>
-          </div>
-        </header>
-
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-10 py-6 lg:py-8">
 

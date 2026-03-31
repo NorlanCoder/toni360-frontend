@@ -3,18 +3,17 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, User, Search, Package, Clock, CheckCircle, ChevronDown, Menu } from "lucide-react";
+import { Package, Clock, CheckCircle, ChevronDown } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { extractCollection, getPartnerCommandes } from "@/lib/api/partner";
 import { toast } from "sonner";
-import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 
 type TabKey = "a-preparer" | "en-attente" | "recuperees";
 
 interface Order {
   id: string;
-  patient: string;
+  patient: { nom: string; prenom: string };
   montant: string;
   statut: string;
 }
@@ -74,7 +73,6 @@ function DateSelect({ label, className = "" }: { label: string; className?: stri
 }
 
 export default function PartenaireRecupereesPage() {
-  const { setOpen } = useSidebarContext();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>("recuperees");
   const [orders, setOrders] = useState<Order[]>([]);
@@ -112,7 +110,7 @@ export default function PartenaireRecupereesPage() {
         setOrders(
           commandes.map((commande) => ({
             id: commande.id,
-            patient: commande.patient?.nom_complet ?? "Patient inconnu",
+            patient: { nom: commande.patient?.nom ?? "", prenom: commande.patient?.prenom ?? "" },
             montant: moneyFormat.format(commande.montant_total || 0),
             statut: commande.statut_label || "Récupérée",
           })),
@@ -135,45 +133,6 @@ export default function PartenaireRecupereesPage() {
 
   return (
     <>
-        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-
-          <div className="relative w-full max-w-lg">
-            <Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un médicament"
-              className="w-full rounded-full border-0 bg-emerald-50/60 py-3 pl-14 pr-4 text-base text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/partenaire/notifications"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Notifications</span>
-              <Bell className="h-5 w-5" />
-            </Link>
-            <Link
-              href="/partenaire/profil"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </Link>
-          </div>
-        </header>
-
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-24 py-6 lg:py-10">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <DateSelect label="Du" />
@@ -230,14 +189,14 @@ export default function PartenaireRecupereesPage() {
                 {orders.map((order) => (
                   <tr
                     key={order.id}
-                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60 hover:border-l-4 hover:border-l-emerald-500 transition-all cursor-pointer"
+                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60  transition-all cursor-pointer"
                     onClick={() => router.push(`/partenaire/commandes/${order.id}?from=recuperees`)}
                   >
                     <td className="px-8 py-6 text-base font-mono text-gray-700">
                       {order.id}
                     </td>
                     <td className="px-8 py-6 text-base font-semibold text-gray-900">
-                      {order.patient}
+                      {order.patient.nom} {order.patient.prenom}
                     </td>
                     <td className="px-8 py-6 text-base text-gray-600">
                       {order.montant}

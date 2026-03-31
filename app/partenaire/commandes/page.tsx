@@ -3,19 +3,18 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, User, Search, Package, Clock, CheckCircle, ChevronDown, Menu } from "lucide-react";
+import { Package, Clock, CheckCircle, ChevronDown } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
 import { extractCollection, getPartnerCommandes, PartnerCommande } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
 import { toast } from "sonner";
-import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type TabKey = "a-preparer" | "en-attente" | "recuperees";
 
 interface Order {
   id: string;
-  patient: string;
+  patient: { nom: string; prenom: string };
   date: string;
   statut: string;
 }
@@ -36,7 +35,19 @@ const days = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0")
 const months = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"));
 const years = Array.from({ length: 10 }, (_, i) => String(2020 + i));
 
-function DateSelect({ label, className = "" }: { label: string; className?: string }) {
+function DateSelect({
+  label,
+  className = "",
+  defaultDay = "",
+  defaultMonth = "",
+  defaultYear = "",
+}: {
+  label: string;
+  className?: string;
+  defaultDay?: string;
+  defaultMonth?: string;
+  defaultYear?: string;
+}) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <span className="text-base text-gray-700 font-medium">{label}</span>
@@ -46,7 +57,7 @@ function DateSelect({ label, className = "" }: { label: string; className?: stri
         <select
           aria-label="Jour"
           className="appearance-none w-[68px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          defaultValue=""
+          defaultValue={defaultDay}
         >
           <option value="" disabled>JJ</option>
           {days.map((d) => (
@@ -61,7 +72,7 @@ function DateSelect({ label, className = "" }: { label: string; className?: stri
         <select
           aria-label="Mois"
           className="appearance-none w-[72px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          defaultValue=""
+          defaultValue={defaultMonth}
         >
           <option value="" disabled>MM</option>
           {months.map((m) => (
@@ -76,7 +87,7 @@ function DateSelect({ label, className = "" }: { label: string; className?: stri
         <select
           aria-label="Année"
           className="appearance-none w-[88px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          defaultValue=""
+          defaultValue={defaultYear}
         >
           <option value="" disabled>AAAA</option>
           {years.map((y) => (
@@ -91,7 +102,6 @@ function DateSelect({ label, className = "" }: { label: string; className?: stri
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireDashboardPage() {
-  const { setOpen } = useSidebarContext();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>("a-preparer");
   const [orders, setOrders] = useState<Order[]>([]);
@@ -136,7 +146,7 @@ export default function PartenaireDashboardPage() {
         setOrders(
           combined.map((commande) => ({
             id: commande.id,
-            patient: commande.patient?.nom_complet ?? "Patient inconnu",
+            patient: { nom: commande.patient?.nom ?? "", prenom: commande.patient?.prenom ?? "" },
             date: commande.created_at
               ? formatDate.format(new Date(commande.created_at))
               : "-",
@@ -161,57 +171,31 @@ export default function PartenaireDashboardPage() {
 
   return (
     <>
-      {/* ───────────── MAIN AREA ──────────── */}
-        {/* ─── HEADER ─── */}
-        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
-          {/* Hamburger (mobile) */}
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-
-          {/* Search */}
-          <div className="relative w-full max-w-lg">
-            <Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un médicament"
-              className="w-full rounded-full border-0 bg-emerald-50/60 py-3 pl-14 pr-4 text-base text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3">
-            <Link
-              href="/partenaire/notifications"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Notifications</span>
-              <Bell className="h-5 w-5" />
-            </Link>
-            <Link
-              href="/partenaire/profil"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </Link>
-          </div>
-        </header>
-
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-24 py-6 lg:py-10">
           {/* Date filters */}
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <DateSelect label="Du" />
-            <DateSelect label="Au" />
-          </div>
+          {(() => {
+            const today = new Date();
+            const from = new Date(today);
+            from.setMonth(from.getMonth() - 6);
+            const pad = (n: number) => String(n).padStart(2, "0");
+            return (
+              <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <DateSelect
+                  label="Du"
+                  defaultDay={pad(from.getDate())}
+                  defaultMonth={pad(from.getMonth() + 1)}
+                  defaultYear={String(from.getFullYear())}
+                />
+                <DateSelect
+                  label="Au"
+                  defaultDay={pad(today.getDate())}
+                  defaultMonth={pad(today.getMonth() + 1)}
+                  defaultYear={String(today.getFullYear())}
+                />
+              </div>
+            );
+          })()}
 
           {/* Tabs */}
           <div className="mb-6 flex gap-0 border-b border-gray-200">
@@ -265,14 +249,14 @@ export default function PartenaireDashboardPage() {
                 {orders.map((order) => (
                   <tr
                     key={order.id}
-                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60 hover:border-l-4 hover:border-l-emerald-500 transition-all cursor-pointer"
+                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60  hover:border-l-emerald-500 transition-all cursor-pointer"
                     onClick={() => router.push(`/partenaire/commandes/${order.id}`)}
                   >
                     <td className="px-8 py-6 text-base font-mono text-gray-700">
                       {order.id}
                     </td>
                     <td className="px-8 py-6 text-base font-semibold text-gray-900">
-                      {order.patient}
+                      {order.patient.nom} {order.patient.prenom}
                     </td>
                     <td className="px-8 py-6 text-base text-gray-600">
                       {order.date}

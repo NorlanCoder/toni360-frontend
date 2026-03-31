@@ -2,14 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Bell, User, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
-
 export default function SupprimerComptePage() {
   const router = useRouter();
-  useSidebarContext();
   const [password, setPassword] = useState<string>("");
 
   const handleCancel = (): void => {
@@ -25,46 +22,6 @@ export default function SupprimerComptePage() {
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif" }}>
-        {/* Header */}
-        <header className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-0 px-4 md:px-6 pt-4 pb-3">
-          {/* Search bar */}
-          <div className="flex-1 flex justify-center md:mr-4">
-            <input
-              type="text"
-              placeholder="Rechercher un médicament"
-              autoComplete="off"
-              className="w-full max-w-[700px] px-5 py-[17px] rounded-full bg-[#ecf9f4] border border-[#b8e4d4] text-[17px] text-[#6b7280] placeholder-[#9ca3af] outline-none focus:border-[#10b981] transition-colors"
-            />
-          </div>
-
-          {/* Right actions */}
-          <div className="flex items-center gap-2 md:gap-4">
-            {/* Notifications */}
-            <Link href="/partenaire/notifications" className="flex items-center gap-3 pl-4 md:pl-6 pr-3 py-[10px] rounded-full border-[2px] border-[#10b981] text-[#10b981] hover:bg-[#ecf9f4] transition-colors">
-              <span className="text-[15px] md:text-[18px] font-bold">Notifications</span>
-              <span className="flex items-center justify-center w-[44px] h-[44px] rounded-full bg-[#10b981]">
-                <Bell
-                  className="w-[22px] h-[22px] text-white"
-                  fill="white"
-                  strokeWidth={0}
-                />
-              </span>
-            </Link>
-
-            {/* Mon Compte */}
-            <Link href="/partenaire/profil" className="flex items-center gap-3 pl-4 md:pl-6 pr-3 py-[10px] rounded-full border-[2px] border-[#10b981] text-[#10b981] hover:bg-[#ecf9f4] transition-colors">
-              <span className="text-[15px] md:text-[18px] font-bold">Mon Compte</span>
-              <span className="flex items-center justify-center w-[44px] h-[44px] rounded-full bg-[#10b981]">
-                <User
-                  className="w-[22px] h-[22px] text-white"
-                  fill="white"
-                  strokeWidth={2}
-                />
-              </span>
-            </Link>
-          </div>
-        </header>
-
         {/* Content area */}
         <main className="flex-1 flex flex-col items-center px-4 md:px-8 pt-6 md:pt-10 pb-10">
           {/* Tabs */}
