@@ -1,136 +1,159 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
+import { useEffect, useMemo, useState } from "react";
+import { BellOff } from "lucide-react";
+import { toast } from "sonner";
+import NotificationCard from "@/components/notifications/NotificationCard";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import {
   deletePartnerNotification,
   extractCollection,
+  getPartnerNotificationCount,
   getPartnerNotifications,
   markPartnerNotificationRead,
-  markPartnerNotificationUnread,
-  PartnerNotificationItem,
 } from "@/lib/api/partner";
-import { toast } from "sonner";
+
+interface Notification {
+  id: string;
+  title: string;
+  description: string;
+  isRead: boolean;
+}
 
 export default function PartenaireNotificationsPage() {
-  const [notifications, setNotifications] = useState<PartnerNotificationItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [nonReadCount, setNonReadCount] = useState(0);
 
-  useEffect(() => {
-    const loadNotifications = async () => {
-      const session = getAuthSession();
-      if (!session || session.userType !== "user" || !session.token) {
-        toast.error("Session partenaire invalide.");
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const response = await getPartnerNotifications(session.token, 100);
-        setNotifications(extractCollection(response.data.notifications));
-      } catch (err: unknown) {
-        toast.error(err instanceof ApiError ? err.message : "Impossible de charger les notifications.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    void loadNotifications();
+  const token = useMemo(() => {
+    const session = getAuthSession();
+    if (!session || session.userType !== "user") return null;
+    return session.token;
   }, []);
 
-  const handleToggleRead = async (notification: PartnerNotificationItem) => {
-    const session = getAuthSession();
-    if (!session || session.userType !== "user" || !session.token) {
-      toast.error("Session partenaire invalide.");
-      return;
-    }
+  const loadNotifications = async () => {
+    if (!token) return;
 
     try {
-      if (notification.is_read) {
-        await markPartnerNotificationUnread(session.token, notification.id);
-      } else {
-        await markPartnerNotificationRead(session.token, notification.id);
-      }
+      const [listResponse, countResponse] = await Promise.all([
+        getPartnerNotifications(token, 100),
+        getPartnerNotificationCount(token),
+      ]);
 
-      setNotifications((prev) =>
-        prev.map((item) =>
-          item.id === notification.id ? { ...item, is_read: !item.is_read } : item,
-        ),
+      setNotifications(
+        extractCollection(listResponse.data.notifications).map((n) => ({
+          id: n.id,
+          title: n.titre,
+          description: n.message,
+          isRead: n.is_read,
+        })),
       );
-    } catch (err: unknown) {
-      toast.error(err instanceof ApiError ? err.message : "Action impossible.");
+
+      setNonReadCount(countResponse.data.non_lues ?? countResponse.data.total_non_lues ?? 0);
+    } catch (err) {
+      if (err instanceof ApiError) toast.error(err.message);
     }
   };
 
-  const handleDelete = async (notificationId: string) => {
-    const session = getAuthSession();
-    if (!session || session.userType !== "user" || !session.token) {
-      toast.error("Session partenaire invalide.");
-      return;
-    }
+  useEffect(() => {
+    void loadNotifications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
+  const handleMarkAsRead = async (id: string) => {
+    if (!token) return;
     try {
-      await deletePartnerNotification(session.token, notificationId);
-      setNotifications((prev) => prev.filter((item) => item.id !== notificationId));
-    } catch (err: unknown) {
-      toast.error(err instanceof ApiError ? err.message : "Suppression impossible.");
+      await markPartnerNotificationRead(token, id);
+      await loadNotifications();
+    } catch (err) {
+      if (err instanceof ApiError) toast.error(err.message);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!token) return;
+    try {
+      await deletePartnerNotification(token, id);
+      await loadNotifications();
+    } catch (err) {
+      if (err instanceof ApiError) toast.error(err.message);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!token) return;
+    try {
+      await Promise.all(
+        notifications.filter((n) => n.isRead).map((n) => deletePartnerNotification(token, n.id)),
+      );
+      await loadNotifications();
+    } catch (err) {
+      if (err instanceof ApiError) toast.error(err.message);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (!token) return;
+    try {
+      await Promise.all(
+        notifications.filter((n) => !n.isRead).map((n) => markPartnerNotificationRead(token, n.id)),
+      );
+      await loadNotifications();
+    } catch (err) {
+      if (err instanceof ApiError) toast.error(err.message);
     }
   };
 
   return (
-    <>
-        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
-          <h1 className="mb-6 text-2xl font-bold text-gray-900">Notifications partenaire</h1>
+    <div className="px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
+      {nonReadCount > 0 && (
+        <p className="mb-4 text-sm text-gray-600">Notifications non lues : {nonReadCount}</p>
+      )}
 
-          {isLoading ? (
-            <div className="rounded-xl border border-gray-200 px-4 py-4 text-sm text-gray-500">Chargement des notifications...</div>
-          ) : notifications.length === 0 ? (
-            <div className="rounded-xl border border-gray-200 px-4 py-4 text-sm text-gray-500">Aucune notification.</div>
-          ) : (
-            <div className="space-y-3">
-              {notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`rounded-xl border px-4 py-4 ${
-                    notification.is_read ? "border-gray-200 bg-white" : "border-emerald-200 bg-emerald-50"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-gray-900">{notification.titre}</p>
-                      <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
-                      <p className="mt-2 text-xs text-gray-500">
-                        {notification.created_at
-                          ? new Date(notification.created_at).toLocaleString("fr-FR")
-                          : "-"}
-                      </p>
-                    </div>
-
-                    <div className="flex shrink-0 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void handleToggleRead(notification)}
-                        className="rounded-full border border-emerald-600 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                      >
-                        {notification.is_read ? "Marquer non lu" : "Marquer lu"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete(notification.id)}
-                        className="rounded-full border border-red-300 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
-                      >
-                        Supprimer
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+      {notifications.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-200px)]">
+          <div className="flex flex-col items-center justify-center">
+            <BellOff size={120} className="text-gray-400 mb-8" />
+            <div className="text-2xl text-gray-500 text-center">
+              Vous n&apos;avez aucune notification
             </div>
-          )}
-        </main>
-    </>
-  
+          </div>
+        </div>
+      ) : (
+        <div className="max-w-5xl mx-auto space-y-6">
+          <div className="space-y-4">
+            {notifications.map((notification) => (
+              <NotificationCard
+                key={notification.id}
+                title={notification.title}
+                description={notification.description}
+                isRead={notification.isRead}
+                onClick={() => {
+                  if (!notification.isRead) {
+                    void handleMarkAsRead(notification.id);
+                  }
+                }}
+                onDelete={() => void handleDelete(notification.id)}
+              />
+            ))}
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-3 md:gap-4 pt-6">
+            <button
+              onClick={() => void handleDeleteAll()}
+              className="px-6 md:px-12 py-2.5 md:py-3 bg-red-600 text-white font-bold text-sm md:text-lg rounded-full hover:bg-red-700 transition"
+            >
+              Tout supprimer
+            </button>
+            <button
+              onClick={() => void handleMarkAllAsRead()}
+              className="px-6 md:px-12 py-2.5 md:py-3 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold text-sm md:text-lg rounded-full hover:bg-toni-green-dark-2 hover:text-white transition"
+            >
+              Tout marquer comme lu
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -30,7 +30,7 @@ const navItems = [
   { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
   { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
   { label: "Notifications", icon: Bell, href: "/partenaire/notifications" },
-  { label: "Assistance et support", icon: HelpCircle, href: "/contact" },
+  { label: "Assistance et support", icon: HelpCircle, href: "/about" },
 ];
 
 /* Finds the most specific matching nav item for the current path */
