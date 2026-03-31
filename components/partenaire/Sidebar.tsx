@@ -24,7 +24,7 @@ import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 const navItems = [
   { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/dashboard" },
   { label: "Gestion de commande", icon: Package, href: "/partenaire/commandes" },
-  { label: "Gestion de Stocks", icon: Boxes, href: "/partenaire/stocks" },
+  // { label: "Gestion de Stocks", icon: Boxes, href: "/partenaire/stocks" },
   // { label: "Clients", icon: UserRound, href: "/client" },
   { label: "Gestion des employés", icon: Users, href: "/partenaire/employes" },
   { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
