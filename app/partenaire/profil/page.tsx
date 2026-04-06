@@ -107,17 +107,17 @@ export default function PartenaireProfil() {
     <div className="flex flex-1 flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-10 py-6 lg:py-8">
 
-          <div className="mb-8 flex items-center gap-8">
+          <div className="mb-8 flex items-center gap-5 sm:gap-8">
             <Link
               href="/partenaire/profil"
-              className="relative pb-3 text-lg sm:text-xl font-bold text-gray-900"
+              className="relative pb-2 sm:pb-3 text-sm sm:text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap"
             >
               Mes informations
               <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-emerald-600" />
             </Link>
             <Link
               href="/partenaire/profil/supprimer-compte"
-              className="pb-3 text-lg sm:text-xl font-bold text-gray-400 hover:text-gray-700"
+              className="pb-2 sm:pb-3 text-sm sm:text-lg sm:text-xl font-bold text-gray-400 hover:text-gray-700 whitespace-nowrap"
             >
               Supprimer mon compte
             </Link>

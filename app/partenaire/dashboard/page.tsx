@@ -403,12 +403,12 @@ export default function PartenaireDashboardPage() {
             </Link>
 
             {/* Card 5 — Donut chart */}
-            <div className="flex items-center justify-center rounded-2xl border border-emerald-300 bg-white p-6 min-h-[220px]">
-              <div className="flex items-center gap-8">
+            <div className="flex items-center justify-center rounded-2xl border border-emerald-300 bg-white p-4 min-h-[180px] sm:p-6 sm:min-h-[220px]">
+              <div className="flex flex-col items-center gap-4 w-full sm:flex-row sm:items-center sm:gap-8 sm:w-auto">
                 {/* SVG Donut */}
                 <svg
                   viewBox="0 0 100 100"
-                  className="h-40 w-40 shrink-0"
+                  className="h-32 w-32 shrink-0 sm:h-40 sm:w-40"
                   aria-hidden="true"
                 >
                   {/* Background ring */}
@@ -439,14 +439,14 @@ export default function PartenaireDashboardPage() {
                 </svg>
 
                 {/* Legend */}
-                <ul className="flex flex-col gap-3">
+                <ul className="flex flex-row flex-wrap justify-center gap-2 sm:flex-col sm:gap-3">
                   {donutSegments.map((seg) => (
                     <li key={seg.label} className="flex items-center gap-2">
                       <span
                         className="h-4 w-4 shrink-0 rounded-sm"
                         style={{ backgroundColor: seg.color }}
                       />
-                      <span className="text-sm text-gray-700">{seg.label}</span>
+                      <span className="text-xs sm:text-sm text-gray-700">{seg.label}</span>
                     </li>
                   ))}
                 </ul>

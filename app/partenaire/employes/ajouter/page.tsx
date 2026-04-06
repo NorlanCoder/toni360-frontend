@@ -165,11 +165,11 @@ export default function PartenaireAjouterEmployePage() {
                 </label>
                 <div className="flex items-center rounded-md border border-gray-300 bg-white overflow-hidden focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
                   <span className="flex items-center gap-1 border-r border-gray-300 bg-gray-50 px-3 py-2.5 text-sm text-gray-600">
-                    🇧🇯 +229
+                    +229
                   </span>
                   <input
                     type="tel"
-                    placeholder="65456565"
+                    placeholder="0165456565"
                     value={telephone}
                     onChange={(e) => setTelephone(e.target.value)}
                     className="w-full border-0 bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none"
