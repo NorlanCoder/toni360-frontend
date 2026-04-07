@@ -4,18 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, User, Menu, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { getPartnerProfile } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 
 import { getPartnerNotificationCount, getPartnerPharmacieProfile, updatePartnerPharmacieProfile } from "@/lib/api/partner";
 import { toast } from "sonner";
-import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 
 export default function PartenaireProfil() {
   const router = useRouter();
-  const { setOpen } = useSidebarContext();
   const [displayName, setDisplayName] = useState("Partenaire");
   const [notificationCount, setNotificationCount] = useState(0);
 
@@ -107,53 +105,19 @@ export default function PartenaireProfil() {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-
-          <h1 className="text-xl font-bold text-gray-900 min-w-0 truncate">
-            Bienvenue, {displayName}
-          </h1>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <Link
-              href="/partenaire/notifications"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-5 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Notifications ({notificationCount})</span>
-              <Bell className="h-5 w-5" />
-            </Link>
-            <button
-              type="button"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-5 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </button>
-          </div>
-        </header>
-
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-10 py-6 lg:py-8">
 
-          <div className="mb-8 flex items-center gap-8">
+          <div className="mb-8 flex items-center gap-5 sm:gap-8">
             <Link
               href="/partenaire/profil"
-              className="relative pb-3 text-lg sm:text-xl font-bold text-gray-900"
+              className="relative pb-2 sm:pb-3 text-sm sm:text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap"
             >
               Mes informations
               <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-emerald-600" />
             </Link>
             <Link
               href="/partenaire/profil/supprimer-compte"
-              className="pb-3 text-lg sm:text-xl font-bold text-gray-400 hover:text-gray-700"
+              className="pb-2 sm:pb-3 text-sm sm:text-lg sm:text-xl font-bold text-gray-400 hover:text-gray-700 whitespace-nowrap"
             >
               Supprimer mon compte
             </Link>

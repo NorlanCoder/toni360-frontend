@@ -7,6 +7,7 @@ import { canAccessPartnerRoute } from "@/lib/auth/authorization";
 import { toast } from "sonner";
 import { SidebarProvider } from "./_sidebar-context";
 import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import PartenaireHeader from "@/components/partenaire/PartenaireHeader";
 
 export default function PartenaireLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -44,8 +45,13 @@ export default function PartenaireLayout({ children }: { children: React.ReactNo
     <SidebarProvider>
       <div className="flex h-screen bg-white overflow-hidden">
         <PartenaireSidebar />
-        <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-          {children}
+        <div className="flex flex-1 flex-col min-w-0 bg-[#F8FFFC]">
+          <div className="sticky top-0 z-10">
+            <PartenaireHeader />
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {children}
+          </div>
         </div>
       </div>
     </SidebarProvider>
