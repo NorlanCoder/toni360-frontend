@@ -769,3 +769,59 @@ export async function fusionnerPartnerIncoherence(
     },
   );
 }
+
+// ─── Import batch ───────────────────────────────────────────────────────────
+
+export interface ImportBatchResultErreur {
+  ligne: number;
+  nom: string | null;
+  message: string;
+}
+
+export interface ImportBatchResult {
+  total: number;
+  ajoutes: number;
+  incoherences: number;
+  erreurs: ImportBatchResultErreur[];
+}
+
+/**
+ * Envoie un fichier CSV ou Excel au backend pour import en masse.
+ * Chaque ligne passe par le système de similitude (même logique que l'ajout manuel).
+ */
+export async function importerBatchPartnerProduits(
+  token: string,
+  fichier: File,
+): Promise<{ success: boolean; message: string; data: ImportBatchResult }> {
+  const form = new FormData();
+  form.append("fichier", fichier);
+
+  return apiRequest<{ success: boolean; message: string; data: ImportBatchResult }>(
+    "/pharmacie/produits/importer-batch",
+    {
+      method: "POST",
+      token,
+      body: form,
+      // Pas de Content-Type : le browser le pose automatiquement avec le boundary
+    },
+  );
+}
+
+/**
+ * Télécharge le template CSV rempli d'un exemple.
+ * Retourne un Blob à transformer en lien de téléchargement côté client.
+ */
+export async function telechargerTemplateImportProduits(token: string): Promise<Blob> {
+  const { API_BASE_URL } = await import("./config");
+  const response = await fetch(`${API_BASE_URL}/pharmacie/produits/template-import`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,*/*",
+    },
+  });
+  if (!response.ok) {
+    throw new Error("Impossible de télécharger le template.");
+  }
+  return response.blob();
+}
