@@ -243,9 +243,9 @@ export default function AccueilClientPage() {
                         </button>
                       </div>
 
-                      <span className="text-sm font-bold text-toni-green-dark-2">
+                      {/* <span className="text-sm font-bold text-toni-green-dark-2">
                         {item.prix.toLocaleString("fr-FR")} FCFA
-                      </span>
+                      </span> */}
                     </div>
 
                     <button
