@@ -2,18 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Clock, MapPin, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, MapPin, PackageCheck, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   annulerCommande,
   extractCollection,
-  getCommande,
-  getCommandeQrCode,
   getClientCommandeCompteurs,
   getClientCommandes,
-  initierCommandePaiement,
+  mettreEnAttenteCommande,
+  validerCommande,
 } from "@/lib/api/client";
-import { API_BASE_URL } from "@/lib/api/config";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 
@@ -24,91 +22,58 @@ interface ClientOrderItem {
   time: string;
   status: string;
   statusKey: string;
+  etat_ordonnance: string;
   pharmacy: string;
   montant: number;
 }
 
-interface OrderQrState {
-  orderId: string;
-  orderNumber: string;
-  code: string;
-  imageUrl?: string | null;
-  imageDataUrl?: string | null;
-  expiresAt?: string | null;
-  pharmacyName?: string;
-}
-
 const PENDING_PATIENT_STATUSES = new Set([
   "en_attente_ordonnance",
-  "ordonnance_en_verification",
   "ordonnance_rejetee",
+  "en_attente_client",
+]);
+
+const IN_PROGRESS_PATIENT_STATUSES = new Set([
+  "ordonnance_en_verification",
+  "ordonnance_validee",
+  "en_attente_paiement",
+  "en_cours",
+  "payee",
+  "en_preparation",
 ]);
 
 const TERMINATED_PATIENT_STATUSES = new Set([
-  "en_attente_paiement",
-  "payee",
-  "en_preparation",
-  "prete",
   "annulee",
+  "expiree",
 ]);
 
 const QR_VISIBLE_PATIENT_STATUSES = new Set([
-  "en_attente_paiement",
+  "en_cours",
   "payee",
   "en_preparation",
   "prete",
 ]);
-
-const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
-
-function resolveQrImageSrc(imageDataUrl?: string | null, imageUrl?: string | null): string | null {
-  if (imageDataUrl) {
-    return imageDataUrl;
-  }
-
-  if (!imageUrl) {
-    return null;
-  }
-
-  if (imageUrl.startsWith("/")) {
-    return `${API_ORIGIN}${imageUrl}`;
-  }
-
-  try {
-    const parsed = new URL(imageUrl);
-    const apiOrigin = new URL(API_ORIGIN);
-
-    if (
-      parsed.hostname === "localhost"
-      && parsed.port === ""
-      && parsed.pathname.startsWith("/storage/")
-    ) {
-      return `${apiOrigin.origin}${parsed.pathname}`;
-    }
-  } catch {
-    return imageUrl;
-  }
-
-  return imageUrl;
-}
 
 export default function ClientOrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<ClientOrderItem[]>([]);
   const [timelineByOrder, setTimelineByOrder] = useState<Record<string, string>>({});
-  const [stats, setStats] = useState({ terminees: 0, enAttente: 0, recuperees: 0 });
-  const [fromDay, setFromDay] = useState("");
-  const [fromMonth, setFromMonth] = useState("");
-  const [fromYear, setFromYear] = useState("");
-  const [toDay, setToDay] = useState("");
-  const [toMonth, setToMonth] = useState("");
-  const [toYear, setToYear] = useState("");
-  const [activeTab, setActiveTab] = useState<"Terminees" | "En attente" | "Recuperees">(
-    "Terminees"
+  const [stats, setStats] = useState({ terminees: 0, enAttente: 0, recuperees: 0, enCours: 0, pretes: 0 });
+  const _today = new Date();
+  const _from30 = new Date(_today);
+  _from30.setMonth(_today.getMonth() - 3);
+
+  const [fromDay, setFromDay] = useState(String(_from30.getDate()));
+  const [fromMonth, setFromMonth] = useState(String(_from30.getMonth() + 1));
+  const [fromYear, setFromYear] = useState(String(_from30.getFullYear()));
+  const [toDay, setToDay] = useState(String(_today.getDate()));
+  const [toMonth, setToMonth] = useState(String(_today.getMonth() + 1));
+  const [toYear, setToYear] = useState(String(_today.getFullYear()));
+  const [activeTab, setActiveTab] = useState<"Terminees" | "En attente" | "Recuperees" | "En cours" | "Prete">(
+    "En attente"
   );
-  const [loadingQrOrderId, setLoadingQrOrderId] = useState<string | null>(null);
+  const [loadingQrOrderId] = useState<string | null>(null);
   const [validatingOrderId, setValidatingOrderId] = useState<string | null>(null);
-  const [selectedQr, setSelectedQr] = useState<OrderQrState | null>(null);
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -118,16 +83,6 @@ export default function ClientOrdersPage() {
     return session.token;
   }, []);
 
-  const resolvePaymentPhone = (): string => {
-    const session = getAuthSession();
-    const rawPhone = session && typeof session.profile === "object" && session.profile
-      ? String((session.profile as { telephone?: unknown }).telephone ?? "")
-      : "";
-
-    const digits = rawPhone.replace(/\D/g, "");
-    const last8 = digits.length >= 8 ? digits.slice(-8) : "";
-    return last8 || "97000000";
-  };
 
   const loadOrders = useCallback(async () => {
     if (!token) {
@@ -149,6 +104,7 @@ export default function ClientOrdersPage() {
         time: createdAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
         status: order.statut_label,
         statusKey: String(order.statut ?? "").toLowerCase(),
+        etat_ordonnance: order.etat_ordonnance ?? "non_requise",
         pharmacy: order.pharmacie?.nom ?? "Pharmacie",
         montant: order.montant_total,
       };
@@ -156,17 +112,11 @@ export default function ClientOrdersPage() {
 
     setOrders(mappedOrders);
     setStats({
-      terminees:
-        counterResponse.data.en_attente_paiement
-        + counterResponse.data.payee
-        + counterResponse.data.en_preparation
-        + counterResponse.data.prete
-        + counterResponse.data.annulee,
-      enAttente:
-        counterResponse.data.en_attente_ordonnance
-        + counterResponse.data.ordonnance_en_verification
-        + counterResponse.data.ordonnance_rejetee,
-      recuperees: counterResponse.data.recuperee,
+      terminees: counterResponse.data.total_terminee ?? 0,
+      enAttente: counterResponse.data.total_en_attente ?? 0,
+      recuperees: counterResponse.data.total_recuperee ?? 0,
+      enCours: counterResponse.data.total_en_cours ?? 0,
+      pretes: counterResponse.data.total_prete ?? 0,
     });
 
     setTimelineByOrder(
@@ -213,6 +163,14 @@ export default function ClientOrdersPage() {
       return PENDING_PATIENT_STATUSES.has(order.statusKey);
     }
 
+    if (activeTab === "En cours") {
+      return IN_PROGRESS_PATIENT_STATUSES.has(order.statusKey);
+    }
+
+    if (activeTab === "Prete") {
+      return order.statusKey === "prete";
+    }
+
     return TERMINATED_PATIENT_STATUSES.has(order.statusKey);
   });
 
@@ -256,57 +214,25 @@ export default function ClientOrdersPage() {
 
     setValidatingOrderId(order.id);
     try {
-      await initierCommandePaiement(token, order.id, "MTN", resolvePaymentPhone());
+      await validerCommande(token, order.id);
 
-      // Optimistic UI: après une validation réussie, rendre l'action QR immédiatement visible.
       setOrders((prev) =>
         prev.map((entry) =>
           entry.id === order.id
-            ? { ...entry, status: "Paiement effectué", statusKey: "payee" }
+            ? { ...entry, status: "En cours de traitement", statusKey: "en_cours" }
             : entry,
         ),
       );
 
       try {
-        const qrResponse = await getCommandeQrCode(token, order.id);
-        setSelectedQr({
-          orderId: order.id,
-          orderNumber: qrResponse.data.commande?.numero ?? order.numero,
-          code: qrResponse.data.qr_code.code,
-          imageUrl: qrResponse.data.qr_code.image_url,
-          imageDataUrl: qrResponse.data.qr_code.image_data_url,
-          expiresAt: qrResponse.data.qr_code.expires_at,
-          pharmacyName: qrResponse.data.pharmacie?.nom,
-        });
-      } catch {
-        // Le QR pourra toujours être récupéré via le bouton "Voir QR".
-      }
-
-      try {
         await loadOrders();
       } catch {
-        // Fallback UI si le refresh est temporairement throttlé.
-        setOrders((prev) =>
-          prev.map((entry) =>
-            entry.id === order.id
-              ? { ...entry, status: "Paiement effectué", statusKey: "payee" }
-              : entry,
-          ),
-        );
+        // ignore
       }
-      setActiveTab("Terminees");
-      toast.success(`Commande ${order.numero} validée. Le QR code est disponible.`);
+      setActiveTab("En cours");
+      toast.success(`Commande ${order.numero} validée. La pharmacie va prendre en charge votre commande.`);
     } catch (error) {
       if (error instanceof ApiError) {
-        const fallbackToCheckout =
-          error.status === 400
-          && /ordonnance|vérification|verification/i.test(error.message);
-
-        if (fallbackToCheckout) {
-          router.push(`/client/dashboard/cart/checkout?commande=${encodeURIComponent(order.id)}`);
-          return;
-        }
-
         toast.error(error.message);
       }
     } finally {
@@ -314,31 +240,31 @@ export default function ClientOrdersPage() {
     }
   };
 
-  const handleShowQr = async (order: ClientOrderItem) => {
+  const handleMettreEnAttente = async (order: ClientOrderItem) => {
     if (!token) {
       return;
     }
 
-    if (order.statusKey === "en_attente_paiement") {
-      try {
-        setLoadingQrOrderId(order.id);
-        await initierCommandePaiement(token, order.id, "MTN", resolvePaymentPhone());
-        setOrders((prev) =>
-          prev.map((entry) =>
-            entry.id === order.id
-              ? { ...entry, status: "Paiement effectué", statusKey: "payee" }
-              : entry,
-          ),
-        );
-      } catch (error) {
-        if (error instanceof ApiError) {
-          toast.error(error.message);
-        }
-        setLoadingQrOrderId(null);
-        return;
-      } finally {
-        setLoadingQrOrderId(null);
+    try {
+      await mettreEnAttenteCommande(token, order.id);
+      setOrders((prev) =>
+        prev.map((entry) =>
+          entry.id === order.id
+            ? { ...entry, status: "En attente (client)", statusKey: "en_attente_client" }
+            : entry,
+        ),
+      );
+      toast.success("Commande mise en attente. Vous pourrez la valider plus tard.");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        toast.error(error.message);
       }
+    }
+  };
+
+  const handleShowQr = async (order: ClientOrderItem) => {
+    if (!token) {
+      return;
     }
 
     router.push(`/client/orders/${order.id}/qrcode`);
@@ -364,7 +290,7 @@ export default function ClientOrdersPage() {
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-[#66666680] bg-white px-4 py-3 transition  sm:px-5 sm:py-4">
               <div className="w-14 h-14 rounded-full bg-[#FF3D00] flex items-center justify-center">
-                <Clock className="text-white"  />
+                <img src="/images/recuperer.svg" alt="En attente" className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-sm md:text-base text-[#383838]">Commandes en attentes</p>
@@ -373,7 +299,7 @@ export default function ClientOrdersPage() {
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-[#66666680] bg-white px-4 py-3 transition  sm:px-5 sm:py-4">
               <div className="w-14 h-14 rounded-full bg-[#00955F] flex items-center justify-center">
-                <MapPin className="text-white"  />
+                <img src="/images/preparer.svg" alt="Récupérées" className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-sm md:text-base text-[#383838]">Commandes récupérées</p>
@@ -395,7 +321,7 @@ export default function ClientOrdersPage() {
               <span className="text-sm md:text-xl">Du</span>
               <div className="flex flex-wrap items-center gap-2">
                 <select value={fromDay} onChange={(e) => setFromDay(e.target.value)} className=" rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
-                  <option>JJ</option>
+                  <option value="">JJ</option>
                   {Array.from({ length: 31 }, (_, i) => (
                     <option key={`du-j-${i + 1}`} value={i + 1}>
                       {String(i + 1).padStart(2, "0")}
@@ -403,7 +329,7 @@ export default function ClientOrdersPage() {
                   ))}
                 </select>
                 <select value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} className=" rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
-                  <option>MM</option>
+                  <option value="">MM</option>
                   {Array.from({ length: 12 }, (_, i) => (
                     <option key={`du-m-${i + 1}`} value={i + 1}>
                       {String(i + 1).padStart(2, "0")}
@@ -411,7 +337,7 @@ export default function ClientOrdersPage() {
                   ))}
                 </select>
                 <select value={fromYear} onChange={(e) => setFromYear(e.target.value)} className=" rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
-                  <option>AAAA</option>
+                  <option value="">AAAA</option>
                   {[2024, 2025, 2026].map((year) => (
                     <option key={`du-y-${year}`} value={year}>
                       {year}
@@ -424,7 +350,7 @@ export default function ClientOrdersPage() {
               <span>Au</span>
               <div className="flex flex-wrap items-center gap-2">
                 <select value={toDay} onChange={(e) => setToDay(e.target.value)} className="rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
-                  <option>JJ</option>
+                  <option value="">JJ</option>
                   {Array.from({ length: 31 }, (_, i) => (
                     <option key={`au-j-${i + 1}`} value={i + 1}>
                       {String(i + 1).padStart(2, "0")}
@@ -432,7 +358,7 @@ export default function ClientOrdersPage() {
                   ))}
                 </select>
                 <select value={toMonth} onChange={(e) => setToMonth(e.target.value)} className="rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
-                  <option>MM</option>
+                  <option value="">MM</option>
                   {Array.from({ length: 12 }, (_, i) => (
                     <option key={`au-m-${i + 1}`} value={i + 1}>
                       {String(i + 1).padStart(2, "0")}
@@ -440,7 +366,7 @@ export default function ClientOrdersPage() {
                   ))}
                 </select>
                 <select value={toYear} onChange={(e) => setToYear(e.target.value)} className="rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
-                  <option>AAAA</option>
+                  <option value="">AAAA</option>
                   {[2024, 2025, 2026].map((year) => (
                     <option key={`au-y-${year}`} value={year}>
                       {year}
@@ -454,9 +380,11 @@ export default function ClientOrdersPage() {
           {/* Tabs */}
           <div className="mb-6 flex gap-4 overflow-x-auto pb-2 w-full font-semibold text-gray-600  sm:text-lg">
             {[
-              { label: "Terminées", value: "Terminees" as const, icon: CheckCircle2 },
               { label: "En attente", value: "En attente" as const, icon: Clock },
+              { label: "En cours", value: "En cours" as const, icon: Loader2 },
+              { label: "Prête", value: "Prete" as const, icon: PackageCheck },
               { label: "Récupérées", value: "Recuperees" as const, icon: MapPin },
+              { label: "Terminées", value: "Terminees" as const, icon: XCircle },
             ].map((tab) => (
               <button
                 key={tab.value}
@@ -493,31 +421,82 @@ export default function ClientOrdersPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:justify-end">
-                    {activeTab === "En attente" ? (
-                      <span className="rounded-full bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-600 sm:px-4 sm:text-sm">
+                    {/* Badge de statut */}
+                    {/* {activeTab === "En attente" && (
+                      <span className="rounded-full bg-orange-100 px-3 py-1.5 text-xs font-semibold text-orange-600 sm:px-4 sm:text-sm">
                         En attente
                       </span>
-                    ) : (
-                      <span className="rounded-full bg-[#dff1ea] px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] sm:px-4 sm:text-sm">
-                        {activeTab === "Recuperees" ? "Récupérée" : "Terminée"}
+                    )} */}
+                    {/* Badge ordonnance manquante — uniquement EN_ATTENTE_CLIENT sans ordonnance */}
+                    {activeTab === "En attente" && order.statusKey === "en_attente_client" && order.etat_ordonnance === "en_attente" && (
+                      <span className="rounded-full bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-600 sm:px-4 sm:text-sm">
+                        Ordonnance manquante
                       </span>
                     )}
-                    <button
-                      onClick={() => handleCancel(order.id)}
-                      className="text-red-500 hover:text-red-600 transition"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                    {activeTab === "En attente" && (
+                    {activeTab === "En cours" && (
+                      <span className="rounded-full bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-600 sm:px-4 sm:text-sm">
+                        En cours
+                      </span>
+                    )}
+                    {activeTab === "Prete" && (
+                      <span className="rounded-full bg-teal-100 px-3 py-1.5 text-xs font-semibold text-teal-600 sm:px-4 sm:text-sm">
+                        Prête
+                      </span>
+                    )}
+                    {activeTab === "Recuperees" && (
+                      <span className="rounded-full bg-[#dff1ea] px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] sm:px-4 sm:text-sm">
+                        Récupérée
+                      </span>
+                    )}
+                    {activeTab === "Terminees" && (
+                      <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500 sm:px-4 sm:text-sm">
+                        Terminée
+                      </span>
+                    )}
+
+                    {/* Bouton supprimer — masqué pour Terminées */}
+                    {activeTab !== "Terminees" && (
                       <button
-                        onClick={() => void handleValidatePendingOrder(order)}
-                        disabled={validatingOrderId === order.id}
-                        className="rounded-full bg-[#dff1ea] px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] sm:px-4 sm:text-sm"
+                        onClick={() => handleCancel(order.id)}
+                        className="text-red-500 hover:text-red-600 transition"
                       >
-                        {validatingOrderId === order.id ? "Validation..." : "Valider"}
+                        <Trash2 size={18} />
                       </button>
                     )}
-                    {QR_VISIBLE_PATIENT_STATUSES.has(order.statusKey) && (
+
+                    {/* Bouton mettre en attente — uniquement sur EN_ATTENTE_ORDONNANCE ou EN_ATTENTE_PAIEMENT */}
+                    {activeTab === "En attente" && (order.statusKey === "en_attente_ordonnance" || order.statusKey === "en_attente_paiement") && (
+                      <button
+                        onClick={() => void handleMettreEnAttente(order)}
+                        className="rounded-full border border-orange-400 bg-white px-3 py-1.5 text-xs font-semibold text-orange-500 sm:px-4 sm:text-sm"
+                      >
+                        Mettre en attente
+                      </button>
+                    )}
+
+                    {/* Bouton valider — sur EN_ATTENTE_PAIEMENT ou EN_ATTENTE_CLIENT */}
+                    {/* Si ordonnance manquante → "Voir" (redirige vers le détail) */}
+                    {activeTab === "En attente" && (order.statusKey === "en_attente_paiement" || order.statusKey === "en_attente_client") && (
+                      order.etat_ordonnance === "en_attente" ? (
+                        <button
+                          onClick={() => router.push(`/client/orders/${order.id}`)}
+                          className="rounded-full bg-orange-100 px-3 py-1.5 text-xs font-semibold text-orange-600 sm:px-4 sm:text-sm"
+                        >
+                          Voir
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => void handleValidatePendingOrder(order)}
+                          disabled={validatingOrderId === order.id}
+                          className="rounded-full bg-[#dff1ea] px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] sm:px-4 sm:text-sm disabled:opacity-60"
+                        >
+                          {validatingOrderId === order.id ? "Validation..." : "Valider"}
+                        </button>
+                      )
+                    )}
+
+                    {/* Bouton voir QR — masqué pour Terminées */}
+                    {activeTab !== "Terminees" && QR_VISIBLE_PATIENT_STATUSES.has(order.statusKey) && (
                       <button
                         onClick={() => handleShowQr(order)}
                         disabled={loadingQrOrderId === order.id}

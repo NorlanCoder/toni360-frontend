@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, KeyboardEvent, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -8,7 +8,6 @@ import {
   Bell,
   HelpCircle,
   Home,
-  ListOrdered,
   LogOut,
   Menu,
   Search,
@@ -16,9 +15,10 @@ import {
   User,
   X,
 } from "lucide-react";
-import { getProductSuggestions } from "@/lib/api/client";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 import { PiListChecks } from "react-icons/pi";
+import { SearchProvider, useSearch } from "@/lib/search-context";
+import { CartProvider, useCart } from "@/lib/cart-context";
 
 
 const navItems = [
@@ -32,123 +32,70 @@ const navItems = [
 ];
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const pathname = usePathname();
-  const [search, setSearch] = useState("");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isPublicClientPage =
     pathname.startsWith("/client/connexion") || pathname.startsWith("/client/inscription");
-
-  useEffect(() => {
-    if (isPublicClientPage) {
-      return;
-    }
-
-    const session = getAuthSession();
-    if (!session || session.userType !== "patient" || !session.token) {
-      clearAuthSession();
-      router.replace("/client/connexion");
-    }
-  }, [isPublicClientPage, router]);
-
-  useEffect(() => {
-    if (isPublicClientPage) {
-      return;
-    }
-
-    const term = search.trim();
-    if (!term) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      setActiveSuggestionIndex(-1);
-      return;
-    }
-
-    const session = getAuthSession();
-    if (!session || session.userType !== "patient" || !session.token) {
-      return;
-    }
-
-    let active = true;
-    const timeout = setTimeout(async () => {
-      try {
-        const response = await getProductSuggestions(session.token, term);
-        if (!active) {
-          return;
-        }
-        setSuggestions(response.data.suggestions);
-        setShowSuggestions(response.data.suggestions.length > 0);
-        setActiveSuggestionIndex(-1);
-      } catch {
-        if (!active) {
-          return;
-        }
-        setSuggestions([]);
-        setShowSuggestions(false);
-        setActiveSuggestionIndex(-1);
-      }
-    }, 250);
-
-    return () => {
-      active = false;
-      clearTimeout(timeout);
-    };
-  }, [isPublicClientPage, search]);
 
   if (isPublicClientPage) {
     return <>{children}</>;
   }
 
-  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const term = search.trim();
+  return (
+    <SearchProvider>
+      <CartProvider>
+        <ClientLayoutInner>{children}</ClientLayoutInner>
+      </CartProvider>
+    </SearchProvider>
+  );
+}
+
+function ClientLayoutInner({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { query, setQuery, triggerSearch } = useSearch();
+  const { cartCount } = useCart();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const session = getAuthSession();
+    if (!session || session.userType !== "patient" || !session.token) {
+      clearAuthSession();
+      router.replace("/client/connexion");
+    }
+  }, [router]);
+
+  const handleSearchInput = (value: string) => {
+    setQuery(value);
+    const term = value.trim();
+
     if (!term) {
+      triggerSearch("");
       return;
     }
 
-    setShowSuggestions(false);
-    setActiveSuggestionIndex(-1);
-    router.push(`/client/dashboard/cart?q=${encodeURIComponent(term)}&auto=1`);
+    // Redirect to accueil if not already there
+    if (pathname !== "/client/accueil") {
+      router.push("/client/accueil");
+    }
+
+    // Debounce the search
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      triggerSearch(term);
+    }, 400);
   };
 
-  const handleSuggestionClick = (value: string) => {
-    setSearch(value);
-    setShowSuggestions(false);
-    setActiveSuggestionIndex(-1);
-    router.push(`/client/dashboard/cart?q=${encodeURIComponent(value)}&auto=1`);
-  };
-
-  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (!showSuggestions || suggestions.length === 0) {
-      return;
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const term = query.trim();
+    if (!term || term.length < 1) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (pathname !== "/client/accueil") {
+      router.push("/client/accueil");
     }
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setActiveSuggestionIndex((prev) => (prev + 1) % suggestions.length);
-      return;
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setActiveSuggestionIndex((prev) => (prev <= 0 ? suggestions.length - 1 : prev - 1));
-      return;
-    }
-
-    if (event.key === "Enter" && activeSuggestionIndex >= 0 && activeSuggestionIndex < suggestions.length) {
-      event.preventDefault();
-      handleSuggestionClick(suggestions[activeSuggestionIndex]);
-      return;
-    }
-
-    if (event.key === "Escape") {
-      setShowSuggestions(false);
-      setActiveSuggestionIndex(-1);
-    }
+    triggerSearch(term);
   };
 
   return (
@@ -167,7 +114,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             {/* En-tête drawer */}
             <div>
               <div className="flex items-center justify-between px-5 pt-6 pb-8">
-                <Link href="/" aria-label="Accueil" onClick={() => setMobileMenuOpen(false)}>
+                <Link href="/client/accueil" aria-label="Accueil" onClick={() => setMobileMenuOpen(false)}>
                   <Image src="/images/logo.png" alt="Toni360" width={120} height={60} />
                 </Link>
                 <button
@@ -197,6 +144,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     >
                       <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
                       {label}
+                      {href === "/client/dashboard/cart" && cartCount > 0 && (
+                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-toni-green-dark-2 px-1 text-[11px] font-bold text-white">
+                          {cartCount > 99 ? "99+" : cartCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
@@ -223,7 +175,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       <aside className="hidden w-64 shrink-0 flex-col justify-between border-gray-200 bg-white lg:flex h-screen overflow-y-auto">
         <div>
           <div className="mb-10 mt-7 px-5">
-            <Link href="/" aria-label="Accueil">
+            <Link href="/client/accueil" aria-label="Accueil">
               <Image src="/images/logo.png" alt="Toni360" width={140} height={70} />
             </Link>
           </div>
@@ -243,6 +195,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 >
                   <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
                   {label}
+                  {href === "/client/dashboard/cart" && cartCount > 0 && (
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-toni-green-dark-2 px-1 text-[11px] font-bold text-white">
+                      {cartCount > 99 ? "99+" : cartCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -257,9 +214,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       </aside>
 
       {/* ── Contenu principal ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden ">
         {/* Top bar */}
-        <header className=" border-gray-200 bg-white px-4 py-3 lg:px-8 lg:pt-8 lg:pb-4">
+        <header className=" border-gray-200 bg-white px-4 py-3 lg:px-8 lg:pt-8 lg:pb-4 bg-[#F8FFFC] ">
 
           {/* Barre mobile : hamburger | logo centré | icônes */}
           <div className="flex items-center justify-between lg:hidden">
@@ -272,7 +229,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               <Menu size={24} />
             </button>
 
-            <Link href="/" aria-label="Accueil">
+            <Link href="/client/accueila" aria-label="Accueil">
               <Image src="/images/logo.png" alt="Toni360" width={100} height={50} priority />
             </Link>
 
@@ -280,31 +237,29 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               <Link href="/client/notifications" aria-label="Notifications" className="text-toni-green-dark-2">
                 <Bell size={22} />
               </Link>
-              <Link href="/client/dashboard/cart" aria-label="Panier" className="text-toni-green-dark-2">
+              <Link href="/client/dashboard/cart" aria-label="Panier" className="relative text-toni-green-dark-2">
                 <ShoppingCart size={22} />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-toni-green-dark-2 text-[10px] font-bold text-white">
+                    {cartCount > 99 ? "99+" : cartCount}
+                  </span>
+                )}
               </Link>
             </div>
           </div>
 
           {/* Barre desktop : recherche + boutons */}
           <div className="hidden lg:flex lg:flex-row lg:items-center lg:justify-between gap-3">
-            {/* Search — clic redirige vers la page de recherche */}
             <form
               className="relative w-full lg:max-w-xs"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const term = search.trim();
-                router.push(`/client/recherche${term ? `?q=${encodeURIComponent(term)}` : ""}`);
-              }}
+              onSubmit={handleSearchSubmit}
             >
               <input
                 type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onFocus={() => router.push(`/client/recherche${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ""}`)}
+                value={query}
+                onChange={(e) => handleSearchInput(e.target.value)}
                 placeholder="Rechercher un médicament..."
-                className="w-full rounded-full bg-toni-green-light border-none py-3 pl-6 pr-14 text-sm font-semibold text-gray-500 placeholder:text-gray-400 placeholder:font-semibold outline-none cursor-pointer"
-                readOnly
+                className="w-full rounded-full bg-toni-green-light border-none py-3 pl-6 pr-14 text-sm font-semibold text-gray-700 placeholder:text-gray-400 placeholder:font-semibold outline-none focus:ring-2 focus:ring-toni-green-dark-2"
               />
               <button
                 type="submit"
@@ -317,35 +272,37 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             <div className="flex items-center gap-3 shrink-0">
               <Link
                 href="/client/notifications"
-                className="flex items-center gap-2 rounded-full border border-toni-green-dark-2 px-4 py-2 text-sm font-semibold text-toni-green-dark-2 transition hover:bg-[#E6F6F0]"
+                className="flex items-center gap-2 rounded-full border-2 border-toni-green-dark-2 px-4 py-2 text-base font-bold text-toni-green-dark-2 transition hover:bg-[#E6F6F0]"
               >
                 <Bell size={16} />
                 Notifications
               </Link>
               <Link
                 href="/client/dashboard/cart"
-                className="flex items-center gap-2 rounded-full border border-toni-green-dark-2 px-4 py-2 text-sm font-semibold text-toni-green-dark-2 transition hover:bg-[#E6F6F0]"
+                className="relative flex items-center gap-2 rounded-full border-2 border-toni-green-dark-2 px-4 py-2 text-base font-bold text-toni-green-dark-2 transition hover:bg-[#E6F6F0]"
               >
                 <ShoppingCart size={16} />
                 Mon Panier
+                {cartCount > 0 && (
+                  <span className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-toni-green-dark-2 px-1 text-[11px] font-bold text-white">
+                    {cartCount > 99 ? "99+" : cartCount}
+                  </span>
+                )}
               </Link>
             </div>
           </div>
 
-          {/* Barre de recherche mobile (sous la top bar) — clic → page recherche */}
+          {/* Barre de recherche mobile */}
           <form
             className="mt-3 relative lg:hidden"
-            onSubmit={(e) => {
-              e.preventDefault();
-              router.push("/client/recherche");
-            }}
+            onSubmit={handleSearchSubmit}
           >
             <input
               type="text"
+              value={query}
+              onChange={(e) => handleSearchInput(e.target.value)}
               placeholder="Rechercher un médicament..."
-              onFocus={() => router.push("/client/recherche")}
-              className="w-full rounded-full bg-toni-green-light border-none py-3 pl-6 pr-14 text-sm font-semibold text-gray-500 placeholder:text-gray-400 placeholder:font-semibold outline-none cursor-pointer"
-              readOnly
+              className="w-full rounded-full bg-toni-green-light border-none py-3 pl-6 pr-14 text-sm font-semibold text-gray-700 placeholder:text-gray-400 placeholder:font-semibold outline-none focus:ring-2 focus:ring-toni-green-dark-2"
             />
             <button
               type="submit"
@@ -357,7 +314,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </header>
 
         {/* Page body */}
-        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 lg:py-8 bg-[#F8FFFC] ">{children}</main>
       </div>
     </div>
   );

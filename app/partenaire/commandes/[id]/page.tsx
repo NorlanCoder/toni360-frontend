@@ -1,11 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, User, Search, Menu, ArrowLeft, Download } from "lucide-react";
-import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import { ArrowLeft, Download } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
 import {
   getPartnerCommande,
@@ -36,6 +34,7 @@ interface OrderDetail {
   heure: string;
   paiement: "momo" | "visa" | "cash";
   pieceJointe: string | null;
+  pieceJointeUrl: string | null;
   items: OrderItem[];
   montantTotal: number;
   statut: OrderStatus;
@@ -58,7 +57,6 @@ export default function CommandeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [backendStatus, setBackendStatus] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
@@ -96,6 +94,7 @@ export default function CommandeDetailPage() {
           : "-",
         paiement: "momo",
         pieceJointe,
+        pieceJointeUrl: firstOrdonnanceUrl,
         items: commande.produits.map((produit) => ({
           medicament: produit.produit?.nom ?? "Médicament",
           qte: produit.quantite ?? 0,
@@ -190,51 +189,7 @@ export default function CommandeDetailPage() {
   const canMarkReady = READY_ALLOWED_STATUSES.has(backendStatus);
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      <PartenaireSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      {/* ───────────── MAIN AREA ──────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* ─── HEADER ─── */}
-        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-
-          <div className="relative w-full max-w-lg">
-            <Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un médicament"
-              className="w-full rounded-full border-0 bg-emerald-50/60 py-3 pl-14 pr-4 text-base text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/partenaire/notifications"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Notifications</span>
-              <Bell className="h-5 w-5" />
-            </Link>
-            <button
-              type="button"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </button>
-          </div>
-        </header>
-
+    <>
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10 bg-emerald-50">
           {/* Back + Title */}
@@ -247,9 +202,9 @@ export default function CommandeDetailPage() {
               <ArrowLeft className="h-4 w-4" />
               Retour
             </button>
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-gray-900">
               Détails de la commande{" "}
-              <span className="font-normal text-gray-500">{order.cmdRef}</span>
+              <span className="font-normal ">{order.cmdRef}</span>
             </h1>
           </div>
 
@@ -280,13 +235,13 @@ export default function CommandeDetailPage() {
             <div className="flex flex-col items-end gap-1">
               <p className="text-xs text-gray-400 uppercase tracking-wide">Méthode de paiement</p>
               {order.paiement === "momo" && (
-                <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 bg-white">
+                <div className="flex items-center gap-2 rounded-lg p-1 bg-white">
                   <Image
                     src="/images/momo.jpg"
                     alt="MoMo from MTN"
                     width={120}
                     height={72}
-                    className="object-contain h-20 w-28 rounded"
+                    className="object-contain h-10 rounded"
                   />
                 </div>
               )}
@@ -301,13 +256,15 @@ export default function CommandeDetailPage() {
                 <span className="text-sm text-gray-700 font-medium truncate max-w-[160px]">
                   {order.pieceJointe}
                 </span>
-                <button
-                  type="button"
-                  aria-label="Télécharger la pièce jointe"
+                <a
+                  href={order.pieceJointeUrl ?? "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Voir l'ordonnance"
                   className="flex items-center justify-center rounded-full bg-emerald-600 p-1.5 text-white hover:bg-emerald-700 transition-colors"
                 >
                   <Download className="h-4 w-4" />
-                </button>
+                </a>
               </div>
             </div>
           )}
@@ -398,8 +355,8 @@ export default function CommandeDetailPage() {
             )}
           </div>
         </main>
-      </div>
-    </div>
+    </>
+  
   );
 }
 

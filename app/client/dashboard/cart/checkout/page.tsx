@@ -5,17 +5,19 @@ import { useSearchParams } from "next/navigation";
 import { FileText, MapPin, Minus, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  clearPanier,
+  annulerCommande,
   createCommande,
   getCommande,
   getPanier,
   initierCommandePaiement,
+  mettreEnAttenteCommande,
   removePanierItem,
   updatePanierItemQuantity,
   uploadOrdonnanceForProduitCommande,
 } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import { useCart } from "@/lib/cart-context";
 
 interface CartItem {
   id: string;
@@ -51,6 +53,7 @@ function CartPageContent() {
   const [pharmacyTelephone, setPharmacyTelephone] = useState("");
   const [prescriptionCount, setPrescriptionCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { clearLocalCart } = useCart();
 
   const resolvePaymentPhone = (): string => {
     const session = getAuthSession();
@@ -238,14 +241,36 @@ function CartPageContent() {
   };
 
   const handleCancel = async () => {
+    if (pending) {
+      return;
+    }
+
     if (!token) {
+      clearAuthSession();
+      router.replace("/client/connexion");
+      return;
+    }
+
+    if (items.length === 0) {
+      router.push("/client/orders");
       return;
     }
 
     setPending(true);
     try {
-      await clearPanier(token);
-      router.push("/client/dashboard/cart");
+      const livePanierId = await resolveActivePanierId();
+      if (!livePanierId) {
+        router.push("/client/orders");
+        return;
+      }
+
+      const creation = await createCommande(token, livePanierId);
+      const commandeId = creation.data.commande.id;
+
+      await annulerCommande(token, commandeId, "Annulée par le patient depuis le checkout");
+
+      clearLocalCart();
+      router.push("/client/orders");
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.message);
@@ -359,6 +384,7 @@ function CartPageContent() {
         }
       }
 
+      clearLocalCart();
       router.push(`/client/orders?commande=${encodeURIComponent(commandeNumero)}`);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -387,22 +413,13 @@ function CartPageContent() {
         return;
       }
 
-      const creation = await createCommande(token, livePanierId, "Commande mise en attente par le patient");
+      const creation = await createCommande(token, livePanierId);
       const holdCommandeId = creation.data.commande.id;
       const holdCommandeNumero = creation.data.commande.numero_commande;
-      if (creation.data.necessite_ordonnance && ordonnanceFile) {
-        try {
-          await uploadOrdonnances(holdCommandeId, ordonnanceFile);
-        } catch (uploadError) {
-          setUploadRetryCandidateId(holdCommandeId);
-          setUploadRetryCandidateNumero(holdCommandeNumero);
-          setOrdonnanceFile(null);
-          if (uploadError instanceof ApiError) {
-            toast.error("L'ordonnance n'a pas pu être envoyée. Veuillez sélectionner un nouveau fichier et réessayer.");
-          }
-          return;
-        }
-      }
+
+      await mettreEnAttenteCommande(token, holdCommandeId);
+
+      clearLocalCart();
       router.push(`/client/orders?commande=${encodeURIComponent(holdCommandeNumero)}`);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -595,10 +612,19 @@ function CartPageContent() {
         <button
           type="button"
           onClick={handleCancel}
-          disabled={pending || isCommandeValidationMode}
-          className="flex-1 rounded-full border-2 border-red-500 py-3 text-base font-bold text-red-600 transition hover:bg-red-50"
+          disabled={pending}
+          className="flex-1 rounded-full border-2 border-[#00955F] py-3 text-base font-bold text-[#00955F] transition hover:bg-green-50 disabled:opacity-50"
         >
-          Annuler
+          Terminer
+        </button>
+
+        <button
+          type="button"
+          onClick={handlePutOnHold}
+          disabled={pending || items.length === 0}
+          className="flex-1 rounded-full bg-[#E0E0E0] py-3 text-base font-bold text-[#6B6B6B] transition hover:bg-[#d0d0d0] disabled:opacity-50"
+        >
+          Mettre en attente
         </button>
 
         <button

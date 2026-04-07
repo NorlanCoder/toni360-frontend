@@ -91,6 +91,7 @@ export interface CommandeSummary {
   numero_commande: string;
   statut: string;
   statut_label: string;
+  etat_ordonnance?: string;
   montant_total: number;
   pharmacie?: {
     nom?: string;
@@ -113,16 +114,22 @@ export interface PatientCommandeCompteursResponse {
   success: boolean;
   data: {
     en_attente_ordonnance: number;
+    en_attente_client: number;
     ordonnance_en_verification: number;
     ordonnance_rejetee: number;
     en_attente_paiement: number;
+    en_cours: number;
     payee: number;
     en_preparation: number;
     prete: number;
     recuperee: number;
     annulee: number;
     total: number;
-    en_cours: number;
+    total_en_attente: number;
+    total_en_cours: number;
+    total_prete: number;
+    total_recuperee: number;
+    total_terminee: number;
   };
 }
 
@@ -493,6 +500,20 @@ export async function annulerCommande(token: string, commandeId: string, motif?:
     token,
     body: json.body,
     headers: json.headers,
+  });
+}
+
+export async function validerCommande(token: string, commandeId: string): Promise<{ success: boolean; message?: string; data?: { commande?: { statut?: string; statut_label?: string } } }> {
+  return apiRequest<{ success: boolean; message?: string; data?: { commande?: { statut?: string; statut_label?: string } } }>(`/patient/commandes/${commandeId}/valider`, {
+    method: "POST",
+    token,
+  });
+}
+
+export async function mettreEnAttenteCommande(token: string, commandeId: string): Promise<{ success: boolean; message?: string }> {
+  return apiRequest<{ success: boolean; message?: string }>(`/patient/commandes/${commandeId}/mettre-en-attente`, {
+    method: "POST",
+    token,
   });
 }
 

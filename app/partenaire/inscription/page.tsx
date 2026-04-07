@@ -170,7 +170,7 @@ export default function DevenirPartenairePage() {
             </div>
 
             {/* Téléphone avec indicatif */}
-            <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden px-3 py-3 transition-colors focus-within:border-[#137551]">
+            <div className="flex items-center border text-black border-gray-300 rounded-lg overflow-hidden px-3 py-3 transition-colors focus-within:border-[#137551]">
               <PhoneInput
                 international
                 defaultCountry="BJ"
@@ -210,7 +210,7 @@ export default function DevenirPartenairePage() {
             <div>
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder="Mot de pass"
+                placeholder="Mot de passe"
                 value={formData.heureOuvrables}
                 onChange={(e) =>
                   setFormData({ ...formData, heureOuvrables: e.target.value })
