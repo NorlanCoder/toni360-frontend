@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Upload } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
-import { extractCollection, getPartnerProduits } from "@/lib/api/partner";
+import { extractCollection, getPartnerStocks } from "@/lib/api/partner";
 import { toast } from "sonner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
@@ -18,9 +18,6 @@ interface Medicine {
   prix: string;
   statut: "Disponible" | "Au seuil" | "Indisponible" | "Désactivé";
 }
-
-/* ──────────────────────── Mock data ──────────────────────────── */
-const mockMedicines: Medicine[] = [];
 
 
 /* ──────────────────────── Helpers ────────────────────────────── */
@@ -42,7 +39,7 @@ const filterMap: Record<FilterKey, Medicine["statut"] | null> = {
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireMedicamentsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("tous");
-  const [medicines, setMedicines] = useState<Medicine[]>(mockMedicines);
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const filters: { key: FilterKey; label: string }[] = [
@@ -78,24 +75,24 @@ export default function PartenaireMedicamentsPage() {
       }
 
       try {
-        const response = await getPartnerProduits(session.token, { per_page: 200 });
-        const produits = extractCollection(response.data);
+        const response = await getPartnerStocks(session.token, { per_page: 200 });
+        const stocks = extractCollection(response.data);
 
         setMedicines(
-          produits.map((produit) => {
+          stocks.map((stock) => {
             let statut: Medicine["statut"] = "Disponible";
-            if (!produit.is_active) {
-              statut = "Désactivé";
-            } else if ((produit.stock?.quantite ?? 0) <= 0) {
+            if (stock.statut === "rupture") {
               statut = "Indisponible";
-            } else if (produit.stock?.en_alerte) {
+            } else if (stock.statut === "alerte" || stock.statut === "critique") {
               statut = "Au seuil";
+            } else if (stock.statut === "expire") {
+              statut = "Désactivé";
             }
 
             return {
-              id: produit.id,
-              nom: produit.nom,
-              prix: moneyFormat.format(produit.prix_vente ?? 0),
+              id: stock.produit_id,
+              nom: stock.produit?.nom ?? "—",
+              prix: moneyFormat.format(stock.prix_unitaire ?? 0),
               statut,
             };
           }),

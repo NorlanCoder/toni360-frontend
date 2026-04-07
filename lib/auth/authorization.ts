@@ -5,6 +5,7 @@ type PermissionAction = "create" | "read" | "update" | "delete";
 const PARTNER_ROUTE_REQUIREMENTS: Array<{ prefix: string; permission: string }> = [
   { prefix: "/partenaire/employes/ajouter", permission: "gestion_users:create" },
   { prefix: "/partenaire/employes", permission: "gestion_users:read" },
+  { prefix: "/partenaire/medicaments/incoherences", permission: "gestion_produits:read" },
   { prefix: "/partenaire/medicaments/ajouter", permission: "gestion_produits:create" },
   { prefix: "/partenaire/medicaments", permission: "gestion_produits:read" },
   { prefix: "/partenaire/stocks", permission: "gestion_stocks:read" },

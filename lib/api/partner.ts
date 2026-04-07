@@ -128,10 +128,15 @@ export interface PartnerRolesResponse {
 export interface PartnerProduit {
   id: string;
   nom: string;
-  dci?: string | null;
-  forme: string;
+  nom_generique?: string | null;
+  forme?: string | null;
   dosage?: string | null;
-  prix_vente: number;
+  presentation?: string | null;
+  code_produit?: string | null;
+  categorie?: string | null;
+  fabricant?: string | null;
+  ordonnance_requise?: boolean;
+  description?: string | null;
   is_active: boolean;
   stock?: {
     quantite: number;
@@ -154,12 +159,24 @@ export interface PartnerProduitDetailResponse {
 
 export interface PartnerStockItem {
   id: string;
+  produit_id: string;
   quantite: number;
+  prix_unitaire?: number | null;
   seuil_alerte: number;
-  statut_label?: string;
+  seuil_critique?: number | null;
+  statut: string;
+  statut_label: string;
+  statut_couleur: string;
+  est_disponible: boolean;
+  date_expiration?: string | null;
+  expire_bientot?: boolean;
+  jours_avant_expiration?: number | null;
   produit?: {
     id: string;
     nom: string;
+    dci?: string | null;
+    forme?: string | null;
+    dosage?: string | null;
   } | null;
 }
 
@@ -425,6 +442,15 @@ export async function getPartnerProduits(
   });
 }
 
+export async function getPartnerProduitFormes(
+  token: string,
+): Promise<{ success: boolean; data: { formes: string[] } }> {
+  return apiRequest<{ success: boolean; data: { formes: string[] } }>("/pharmacie/produits/formes", {
+    method: "GET",
+    token,
+  });
+}
+
 export async function getPartnerStocks(
   token: string,
   params: { search?: string; per_page?: number } = {},
@@ -580,4 +606,166 @@ export async function deletePartnerNotification(
     method: "DELETE",
     token,
   });
+}
+
+/* ═══════════════════════ INCOHERENCES ═══════════════════════════ */
+
+export interface PartnerIncoherence {
+  id: string;
+  pharmacie_id: string;
+  user_id: string;
+  nom_saisi: string;
+  forme_saisie?: string | null;
+  dosage_saisi?: string | null;
+  quantite: number;
+  prix_unitaire?: number | null;
+  seuil_alerte?: number | null;
+  seuil_critique?: number | null;
+  date_expiration?: string | null;
+  lot?: string | null;
+  meilleure_similitude: number;
+  suggestions: ProduitSuggestion[];
+  statut: string;
+  statut_label: string;
+  statut_color: string;
+  statut_icon: string;
+  produit_fusionne_id?: string | null;
+  commentaire_admin?: string | null;
+  traite_par?: string | null;
+  traite_at?: string | null;
+  pharmacie?: { id: string; nom: string; ville?: string | null } | null;
+  user?: { id: string; nom: string; prenom: string; email: string } | null;
+  produit_fusionne?: {
+    id: string;
+    nom: string;
+    forme?: string | null;
+    dosage?: string | null;
+    code_produit?: string | null;
+  } | null;
+  traite_par_user?: { id: string; nom: string; prenom: string } | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ProduitSuggestion {
+  produit_id: string | null;
+  nom: string;
+  forme?: string | null;
+  dosage?: string | null;
+  score: number;
+  produit?: {
+    id: string;
+    nom: string;
+    code_produit?: string | null;
+    forme?: string | null;
+    dosage?: string | null;
+    presentation?: string | null;
+  } | null;
+}
+
+export interface PartnerIncoherencesResponse {
+  success: boolean;
+  data: PaginatedApi<PartnerIncoherence> | PartnerIncoherence[];
+}
+
+export interface PartnerIncoherenceDetailResponse {
+  success: boolean;
+  data: PartnerIncoherence;
+}
+
+export interface PartnerIncoherenceStatsResponse {
+  success: boolean;
+  data: {
+    total: number;
+    en_attente: number;
+    fusionnees: number;
+    confirmees_admin: number;
+    rejetees: number;
+  };
+}
+
+export interface SoumettreResultResponse {
+  success: boolean;
+  message: string;
+  data: {
+    action: "ajout_direct" | "incoherence_pharmacien" | "incoherence_admin";
+    score?: number;
+    produit?: { id: string; nom: string; code_produit?: string | null; forme?: string | null; dosage?: string | null };
+    stock?: Record<string, unknown>;
+    mouvement?: Record<string, unknown>;
+    incoherence?: PartnerIncoherence;
+  };
+}
+
+export async function soumettrePartnerProduit(
+  token: string,
+  payload: {
+    nom: string;
+    forme?: string;
+    dosage?: string;
+    quantite: number;
+    prix_unitaire?: number;
+    seuil_alerte?: number;
+    seuil_critique?: number;
+    date_expiration?: string;
+    lot?: string;
+  },
+): Promise<SoumettreResultResponse> {
+  return apiRequest<SoumettreResultResponse>("/pharmacie/produits/soumettre", {
+    method: "POST",
+    token,
+    ...buildJsonRequest(payload),
+  });
+}
+
+export async function getPartnerIncoherences(
+  token: string,
+  params?: { statut?: string; search?: string; date_debut?: string; date_fin?: string; per_page?: number },
+): Promise<PartnerIncoherencesResponse> {
+  const qs = new URLSearchParams();
+  if (params?.statut) qs.set("statut", params.statut);
+  if (params?.search) qs.set("search", params.search);
+  if (params?.date_debut) qs.set("date_debut", params.date_debut);
+  if (params?.date_fin) qs.set("date_fin", params.date_fin);
+  if (params?.per_page) qs.set("per_page", String(params.per_page));
+
+  const query = qs.toString();
+  return apiRequest<PartnerIncoherencesResponse>(`/pharmacie/incoherences${query ? `?${query}` : ""}`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function getPartnerIncoherenceStats(
+  token: string,
+): Promise<PartnerIncoherenceStatsResponse> {
+  return apiRequest<PartnerIncoherenceStatsResponse>("/pharmacie/incoherences/statistiques", {
+    method: "GET",
+    token,
+  });
+}
+
+export async function getPartnerIncoherence(
+  token: string,
+  id: string,
+): Promise<PartnerIncoherenceDetailResponse> {
+  return apiRequest<PartnerIncoherenceDetailResponse>(`/pharmacie/incoherences/${id}`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function fusionnerPartnerIncoherence(
+  token: string,
+  incoherenceId: string,
+  produitId: string,
+): Promise<{ success: boolean; message?: string; data?: Record<string, unknown> }> {
+  return apiRequest<{ success: boolean; message?: string; data?: Record<string, unknown> }>(
+    `/pharmacie/incoherences/${incoherenceId}/fusionner`,
+    {
+      method: "POST",
+      token,
+      ...buildJsonRequest({ produit_id: produitId }),
+    },
+  );
 }
