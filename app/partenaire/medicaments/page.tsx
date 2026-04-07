@@ -2,12 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Upload } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
-import { extractCollection, getPartnerProduits } from "@/lib/api/partner";
+import { extractCollection, getPartnerStocks } from "@/lib/api/partner";
 import { toast } from "sonner";
+import ImportModal from "./components/ImportModal";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type FilterKey = "tous" | "disponible" | "au-seuil" | "indisponible" | "desactives";
@@ -18,9 +19,6 @@ interface Medicine {
   prix: string;
   statut: "Disponible" | "Au seuil" | "Indisponible" | "Désactivé";
 }
-
-/* ──────────────────────── Mock data ──────────────────────────── */
-const mockMedicines: Medicine[] = [];
 
 
 /* ──────────────────────── Helpers ────────────────────────────── */
@@ -42,8 +40,9 @@ const filterMap: Record<FilterKey, Medicine["statut"] | null> = {
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireMedicamentsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("tous");
-  const [medicines, setMedicines] = useState<Medicine[]>(mockMedicines);
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const filters: { key: FilterKey; label: string }[] = [
     { key: "tous", label: "Tous" },
@@ -68,34 +67,34 @@ export default function PartenaireMedicamentsPage() {
     [],
   );
 
-  useEffect(() => {
-    const loadMedicines = async () => {
-      const session = getAuthSession();
-      if (!session || session.userType !== "user" || !session.token) {
-        toast.error("Session partenaire invalide.");
-        setIsLoading(false);
-        return;
-      }
+  const loadMedicines = useCallback(async () => {
+    setIsLoading(true);
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token) {
+      toast.error("Session partenaire invalide.");
+      setIsLoading(false);
+      return;
+    }
 
-      try {
-        const response = await getPartnerProduits(session.token, { per_page: 200 });
-        const produits = extractCollection(response.data);
+    try {
+      const response = await getPartnerStocks(session.token, { per_page: 200 });
+      const stocks = extractCollection(response.data);
 
         setMedicines(
-          produits.map((produit) => {
+          stocks.map((stock) => {
             let statut: Medicine["statut"] = "Disponible";
-            if (!produit.is_active) {
-              statut = "Désactivé";
-            } else if ((produit.stock?.quantite ?? 0) <= 0) {
+            if (stock.statut === "rupture") {
               statut = "Indisponible";
-            } else if (produit.stock?.en_alerte) {
+            } else if (stock.statut === "alerte" || stock.statut === "critique") {
               statut = "Au seuil";
+            } else if (stock.statut === "expire") {
+              statut = "Désactivé";
             }
 
             return {
-              id: produit.id,
-              nom: produit.nom,
-              prix: moneyFormat.format(produit.prix_vente ?? 0),
+              id: stock.produit_id,
+              nom: stock.produit?.nom ?? "—",
+              prix: moneyFormat.format(stock.prix_unitaire ?? 0),
               statut,
             };
           }),
@@ -105,16 +104,23 @@ export default function PartenaireMedicamentsPage() {
       } finally {
         setIsLoading(false);
       }
-    };
+    }, [moneyFormat]);
 
+  useEffect(() => {
     void loadMedicines();
-  }, [moneyFormat]);
+  }, [loadMedicines]);
 
   return (
     <>
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
-          {/* Action bar */}
+          {/* Import modal */}
+          {showImportModal && (
+            <ImportModal
+              onClose={() => setShowImportModal(false)}
+              onSuccess={() => void loadMedicines()}
+            />
+          )}
           <div className="mb-6 flex items-center gap-2 sm:gap-4">
             <Link
               href="/partenaire/medicaments/ajouter"
@@ -128,16 +134,18 @@ export default function PartenaireMedicamentsPage() {
               />
               Ajouter un médicament
             </Link>
+            
+            <Link
+              href="/partenaire/medicaments/incoherences"
+              aria-label="Incohérences"
+              className="flex items-center justify-center rounded-lg border border-gray-300 p-2 sm:p-3 text-emerald-700 transition-colors hover:bg-gray-50"
+            >
+              <Image src="/images/dossier.svg" alt="Incohérences" width={24} height={24} />
+            </Link>
             <button
               type="button"
               aria-label="Importer"
-              className="flex items-center justify-center rounded-lg border border-gray-300 p-2 sm:p-3 text-emerald-700 transition-colors hover:bg-gray-50"
-            >
-              <Image src="/images/dossier.svg" alt="Importer" width={24} height={24} />
-            </button>
-            <button
-              type="button"
-              aria-label="Exporter"
+              onClick={() => setShowImportModal(true)}
               className="flex items-center justify-center rounded-lg border border-gray-300 p-2 sm:p-3 text-emerald-700 transition-colors hover:bg-gray-50"
             >
               <Upload className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -190,30 +198,18 @@ export default function PartenaireMedicamentsPage() {
                     key={med.id}
                     className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50/40 transition-colors cursor-pointer"
                   >
-                    <td className="px-3 sm:px-8 py-3 sm:py-6">
-                      <Link
-                        href={`/partenaire/medicaments/${med.id}`}
-                        className="text-sm sm:text-base text-gray-700"
-                      >
-                        {med.nom}
-                      </Link>
+                    <td className="px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
+                      {med.nom}
                     </td>
-                    <td className="px-3 sm:px-8 py-3 sm:py-6">
-                      <Link
-                        href={`/partenaire/medicaments/${med.id}`}
-                        className="text-sm sm:text-base text-gray-700"
-                      >
-                        {med.prix}
-                      </Link>
+                    <td className="px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
+                      {med.prix}
                     </td>
                     <td className="px-3 sm:px-8 py-3 sm:py-6 text-right">
-                      <Link href={`/partenaire/medicaments/${med.id}`}>
-                        <span
-                          className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${statusStyles[med.statut]}`}
-                        >
-                          {med.statut}
-                        </span>
-                      </Link>
+                      <span
+                        className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${statusStyles[med.statut]}`}
+                      >
+                        {med.statut}
+                      </span>
                     </td>
                   </tr>
                 ))}
