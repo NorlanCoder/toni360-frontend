@@ -107,9 +107,9 @@ export default function PartenaireMedicamentDetailPage() {
         const response = await getPartnerProduit(session.token, id);
         const produit = response.data.produit;
         setNom(produit.nom);
-        setNomGenerique(produit.dci ?? "");
-        setForme(produit.forme);
-        setPrix(String(produit.prix_vente ?? 0));
+        setNomGenerique(produit.nom_generique ?? "");
+        setForme(produit.forme ?? "");
+        setPrix(String(produit.stock?.prix_unitaire ?? 0));
         setStockActuel(String(produit.stock?.quantite ?? 0));
         setSeuil(String(produit.stock?.seuil_alerte ?? 0));
       } catch (err: unknown) {
