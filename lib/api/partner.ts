@@ -142,6 +142,7 @@ export interface PartnerProduit {
     quantite: number;
     seuil_alerte: number;
     en_alerte: boolean;
+    prix_unitaire?: number | null;
   } | null;
 }
 

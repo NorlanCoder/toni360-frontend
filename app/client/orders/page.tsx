@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Clock, Loader2, MapPin, PackageCheck, Trash2, XCircle } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, Clock, Eye, Loader2, MapPin, PackageCheck, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   annulerCommande,
@@ -454,15 +455,7 @@ export default function ClientOrdersPage() {
                       </span>
                     )}
 
-                    {/* Bouton supprimer — masqué pour Terminées */}
-                    {activeTab !== "Terminees" && (
-                      <button
-                        onClick={() => handleCancel(order.id)}
-                        className="text-red-500 hover:text-red-600 transition"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    )}
+                   
 
                     {/* Bouton mettre en attente — uniquement sur EN_ATTENTE_ORDONNANCE ou EN_ATTENTE_PAIEMENT */}
                     {activeTab === "En attente" && (order.statusKey === "en_attente_ordonnance" || order.statusKey === "en_attente_paiement") && (
@@ -478,12 +471,13 @@ export default function ClientOrdersPage() {
                     {/* Si ordonnance manquante → "Voir" (redirige vers le détail) */}
                     {activeTab === "En attente" && (order.statusKey === "en_attente_paiement" || order.statusKey === "en_attente_client") && (
                       order.etat_ordonnance === "en_attente" ? (
-                        <button
-                          onClick={() => router.push(`/client/orders/${order.id}`)}
-                          className="rounded-full bg-orange-100 px-3 py-1.5 text-xs font-semibold text-orange-600 sm:px-4 sm:text-sm"
-                        >
-                          Voir
-                        </button>
+                        // <button
+                        //   onClick={() => router.push(`/client/orders/${order.id}`)}
+                        //   className="rounded-full bg-orange-100 px-3 py-1.5 text-xs font-semibold text-orange-600 sm:px-4 sm:text-sm"
+                        // >
+                        //   Voir
+                        // </button>
+                        ""
                       ) : (
                         <button
                           onClick={() => void handleValidatePendingOrder(order)}
@@ -503,6 +497,25 @@ export default function ClientOrdersPage() {
                         className="rounded-full border border-[#1f8a5b] bg-white px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] disabled:opacity-60 sm:px-4 sm:text-sm"
                       >
                         {loadingQrOrderId === order.id ? "Chargement..." : "Voir QR"}
+                      </button>
+                    )}
+
+                    {/* Bouton voir détail — toujours visible */}
+                    <Link
+                      href={`/client/orders/${order.id}`}
+                      className="flex items-center gap-1 rounded-full  bg-white  text-xs font-semibold text-gray-600 hover:bg-gray-50  sm:text-sm"
+                    >
+                      <Eye size={18} />
+                      
+                    </Link>
+
+                     {/* Bouton supprimer — masqué pour Terminées */}
+                    {activeTab !== "Terminees" && (
+                      <button
+                        onClick={() => handleCancel(order.id)}
+                        className="text-red-500 hover:text-red-600 transition"
+                      >
+                        <Trash2 size={18} />
                       </button>
                     )}
                   </div>

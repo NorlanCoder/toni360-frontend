@@ -196,7 +196,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
                   <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
                   {label}
                   {href === "/client/dashboard/cart" && cartCount > 0 && (
-                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-toni-green-dark-2 px-1 text-[11px] font-bold text-white">
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
                       {cartCount > 99 ? "99+" : cartCount}
                     </span>
                   )}
@@ -240,7 +240,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
               <Link href="/client/dashboard/cart" aria-label="Panier" className="relative text-toni-green-dark-2">
                 <ShoppingCart size={22} />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-toni-green-dark-2 text-[10px] font-bold text-white">
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                     {cartCount > 99 ? "99+" : cartCount}
                   </span>
                 )}
@@ -284,7 +284,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
                 <ShoppingCart size={16} />
                 Mon Panier
                 {cartCount > 0 && (
-                  <span className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-toni-green-dark-2 px-1 text-[11px] font-bold text-white">
+                  <span className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
                     {cartCount > 99 ? "99+" : cartCount}
                   </span>
                 )}
