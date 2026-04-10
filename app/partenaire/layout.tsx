@@ -32,7 +32,7 @@ export default function PartenaireLayout({ children }: { children: React.ReactNo
     }
 
     if (!canAccessPartnerRoute(session, pathname)) {
-      toast.error("Acces refuse: vous n'avez pas la permission requise.");
+      toast.error(`Accès refusé (${pathname}) : permission insuffisante.`);
       router.replace("/partenaire/dashboard");
     }
   }, [isPublicPartenairePage, pathname, router]);

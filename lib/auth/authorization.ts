@@ -3,6 +3,7 @@ import type { AuthSession } from "@/lib/api/session";
 type PermissionAction = "create" | "read" | "update" | "delete";
 
 const PARTNER_ROUTE_REQUIREMENTS: Array<{ prefix: string; permission: string }> = [
+  { prefix: "/partenaire/employes/historique", permission: "gestion_historique:read" },
   { prefix: "/partenaire/employes/ajouter", permission: "gestion_users:create" },
   { prefix: "/partenaire/employes", permission: "gestion_users:read" },
   { prefix: "/partenaire/medicaments/incoherences", permission: "gestion_produits:read" },
@@ -63,6 +64,10 @@ export function filterPartnerNavigationByPermissions<T extends { href: string }>
   items: T[],
 ): T[] {
   return items.filter((item) => {
+    if (item.href === "/partenaire/employes/historique") {
+      return hasPermission(session, "gestion_historique", "read");
+    }
+
     if (item.href.startsWith("/partenaire/employes")) {
       return hasPermission(session, "gestion_users", "read");
     }

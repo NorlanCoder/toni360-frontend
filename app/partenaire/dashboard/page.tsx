@@ -189,10 +189,10 @@ export default function PartenaireDashboardPage() {
       try {
         const [response, compteursResponse, stockStats, notifications, usersPage1, pharmacieProfile] = await Promise.all([
           getPartnerProfile(session.token),
-          getPartnerCommandeCompteurs(session.token),
-          getPartnerStockStats(session.token),
-          getPartnerNotificationCount(session.token),
-          getPartnerUsers(session.token, { page: 1 }),
+          getPartnerCommandeCompteurs(session.token).catch(() => null),
+          getPartnerStockStats(session.token).catch(() => null),
+          getPartnerNotificationCount(session.token).catch(() => null),
+          getPartnerUsers(session.token, { page: 1 }).catch(() => null),
           getPartnerPharmacieProfile(session.token).catch(() => null),
         ]);
 
@@ -202,18 +202,18 @@ export default function PartenaireDashboardPage() {
         const fallbackPharmacieName = user?.pharmacie?.nom?.trim() || titulaireName || DEFAULT_PHARMACIE_LABEL;
         setDisplayName(profilePharmacieName !== DEFAULT_PHARMACIE_LABEL ? profilePharmacieName : fallbackPharmacieName);
 
-        const compteurs = compteursResponse.data;
-        setAPreparerCount((compteurs.payee ?? 0) + (compteurs.en_preparation ?? 0));
-        setEnAttenteCount(compteurs.prete ?? 0);
-        setRecupereesCount(compteurs.recuperee ?? 0);
-        setStockTotal(stockStats.data.total_unites ?? 0);
+        const compteurs = compteursResponse?.data;
+        setAPreparerCount((compteurs?.a_traiter ?? 0) + (compteurs?.en_preparation ?? 0));
+        setEnAttenteCount(compteurs?.prete ?? 0);
+        setRecupereesCount(compteurs?.recuperee ?? 0);
+        setStockTotal(stockStats?.data.total_unites ?? 0);
         setNotificationCount(
-          notifications.data.total_non_lues
-          ?? notifications.data.non_lues
+          notifications?.data.total_non_lues
+          ?? notifications?.data.non_lues
           ?? 0,
         );
 
-        const firstPage = getPaginatorMeta(usersPage1.data);
+        const firstPage = usersPage1 ? getPaginatorMeta(usersPage1.data) : { users: [], lastPage: 0 };
         const allUsers: PartnerUserLike[] = [...firstPage.users];
 
         if (firstPage.lastPage > 1) {

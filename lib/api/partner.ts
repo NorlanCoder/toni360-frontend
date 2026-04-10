@@ -330,6 +330,20 @@ export async function rejeterPartnerOrdonnance(
   });
 }
 
+export async function notifierPartnerPatient(
+  token: string,
+  commandeId: string,
+  message: string,
+): Promise<{ success: boolean; message?: string }> {
+  const json = buildJsonRequest({ message });
+  return apiRequest<{ success: boolean; message?: string }>(`/pharmacie/commandes/${commandeId}/notifier-patient`, {
+    method: "POST",
+    token,
+    body: json.body,
+    headers: json.headers,
+  });
+}
+
 export async function getPartnerNotificationCount(token: string): Promise<PartnerNotificationCountResponse> {
   return apiRequest<PartnerNotificationCountResponse>("/pharmacie/notifications/count", {
     method: "GET",
@@ -339,6 +353,64 @@ export async function getPartnerNotificationCount(token: string): Promise<Partne
 
 export async function getPartnerStockStats(token: string): Promise<PartnerStockStatsResponse> {
   return apiRequest<PartnerStockStatsResponse>("/pharmacie/stocks/statistiques", {
+    method: "GET",
+    token,
+  });
+}
+
+export interface ActionLogEntry {
+  id: string;
+  user_id: string | null;
+  role_code: string | null;
+  action: string;
+  module: string;
+  description: string | null;
+  ip_address: string | null;
+  methode_http: string | null;
+  url: string | null;
+  statut_http: number | null;
+  created_at: string;
+  user?: {
+    id: string;
+    nom: string;
+    prenom: string;
+    role?: { code: string; libelle: string } | null;
+  } | null;
+}
+
+export interface PartnerHistoriqueResponse {
+  success: boolean;
+  data: PaginatedApi<ActionLogEntry>;
+}
+
+export interface PartnerHistoriqueUtilisateursResponse {
+  success: boolean;
+  data: { id: string; nom: string; role_code: string | null; role_label: string | null }[];
+}
+
+export async function getPartnerHistorique(
+  token: string,
+  params: { user_id?: string; module?: string; action?: string; date_debut?: string; date_fin?: string; per_page?: number; page?: number } = {},
+): Promise<PartnerHistoriqueResponse> {
+  const query = new URLSearchParams();
+  if (params.user_id) query.set("user_id", params.user_id);
+  if (params.module) query.set("module", params.module);
+  if (params.action) query.set("action", params.action);
+  if (params.date_debut) query.set("date_debut", params.date_debut);
+  if (params.date_fin) query.set("date_fin", params.date_fin);
+  if (params.per_page) query.set("per_page", String(params.per_page));
+  if (params.page) query.set("page", String(params.page));
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return apiRequest<PartnerHistoriqueResponse>(`/pharmacie/historique${suffix}`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function getPartnerHistoriqueUtilisateurs(
+  token: string,
+): Promise<PartnerHistoriqueUtilisateursResponse> {
+  return apiRequest<PartnerHistoriqueUtilisateursResponse>("/pharmacie/historique/utilisateurs", {
     method: "GET",
     token,
   });

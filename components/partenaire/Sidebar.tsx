@@ -29,7 +29,7 @@ const navItems = [
   // { label: "Clients", icon: UserRound, href: "/client" },
   { label: "Gestion des employés", icon: Users, href: "/partenaire/employes" },
   { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
-  { label: "Incohérences", icon: AlertTriangle, href: "/partenaire/medicaments/incoherences" },
+  // { label: "Incohérences", icon: AlertTriangle, href: "/partednaire/medicaments/incoherences" },
   { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
   { label: "Notifications", icon: Bell, href: "/partenaire/notifications" },
   { label: "Assistance et support", icon: HelpCircle, href: "/about" },

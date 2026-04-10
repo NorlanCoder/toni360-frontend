@@ -40,7 +40,7 @@ interface OrderDetail {
   statut: OrderStatus;
 }
 
-const READY_ALLOWED_STATUSES = new Set(["EN_ATTENTE_PAIEMENT", "PAYEE", "EN_PREPARATION"]);
+const READY_ALLOWED_STATUSES = new Set(["EN_ATTENTE_PAIEMENT", "EN_COURS", "PAYEE", "EN_PREPARATION"]);
 
 
 /* ──────────────────── Format helpers ────────────────────────── */
@@ -256,15 +256,13 @@ export default function CommandeDetailPage() {
                 <span className="text-sm text-gray-700 font-medium truncate max-w-[160px]">
                   {order.pieceJointe}
                 </span>
-                <a
-                  href={order.pieceJointeUrl ?? "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => router.push(`/partenaire/commandes/${order.id}/ordonnance`)}
                   aria-label="Voir l'ordonnance"
                   className="flex items-center justify-center rounded-full bg-emerald-600 p-1.5 text-white hover:bg-emerald-700 transition-colors"
                 >
                   <Download className="h-4 w-4" />
-                </a>
+                </button>
               </div>
             </div>
           )}
@@ -302,12 +300,12 @@ export default function CommandeDetailPage() {
           </div>{/* fin wrapper max-w-4xl */}
 
           {/* ── Boutons d'action ── */}
-          <div className="flex flex-wrap items-center gap-4 ml-8">
+          <div className="max-w-4xl flex flex-wrap items-center gap-4">
             {statut === "recuperee" ? (
               <button
                 type="button"
                 disabled
-                className="rounded-full bg-emerald-600 px-12 py-3 text-base font-semibold text-white cursor-default opacity-80"
+                className="w-full rounded-full bg-emerald-600 px-12 py-3 text-base font-semibold text-white cursor-default opacity-80"
               >
                 Commande récupérée
               </button>
@@ -316,7 +314,7 @@ export default function CommandeDetailPage() {
                 <button
                   type="button"
                   disabled
-                  className="rounded-full bg-emerald-50 border-2 border-emerald-400 px-12 py-3 text-base font-semibold text-emerald-700 cursor-default"
+                  className="w-full rounded-full bg-emerald-50 border-2 border-emerald-400 px-12 py-3 text-base font-semibold text-emerald-700 cursor-default"
                 >
                   En attente d&apos;être récupérée
                 </button>
@@ -324,26 +322,20 @@ export default function CommandeDetailPage() {
                   type="button"
                   onClick={handleRecuperer}
                   disabled={isSubmitting}
-                  className="rounded-full border-2 border-emerald-600 bg-emerald-600 px-12 py-3 text-base font-semibold text-white hover:bg-emerald-700 hover:border-emerald-700 transition-colors"
+                  className="w-full rounded-full border-2 border-emerald-600 bg-emerald-600 px-12 py-3 text-base font-semibold text-white hover:bg-emerald-700 hover:border-emerald-700 transition-colors"
                 >
                   {isSubmitting ? "Traitement..." : "Récupérer"}
                 </button>
               </>
             ) : (
               <>
-                <button
-                  type="button"
-                  onClick={() => router.push(`/partenaire/commandes/${order.id}/ordonnance`)}
-                  className="rounded-full bg-gray-200 px-10 py-3 text-base font-semibold text-gray-600 hover:bg-gray-300 transition-colors cursor-pointer"
-                >
-                  Demander ordonnance
-                </button>
+                
 
                 <button
                   type="button"
                   onClick={handleReady}
                   disabled={isSubmitting || !canMarkReady}
-                  className={`rounded-full border-2 px-12 py-3 text-base font-semibold transition-colors ${
+                  className={`w-full rounded-full border-2 px-12 py-3 text-base font-semibold transition-colors ${
                     canMarkReady
                       ? "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:border-emerald-700"
                       : "border-gray-300 bg-gray-200 text-gray-500 cursor-not-allowed"
