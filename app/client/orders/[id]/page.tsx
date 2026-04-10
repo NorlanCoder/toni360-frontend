@@ -5,9 +5,11 @@ import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, FileText, MapPin, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
+  annulerCommande,
   getCommande,
   uploadOrdonnanceForProduitCommande,
   validerCommande,
+  verifierDisponibiliteCommande,
 } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
@@ -20,6 +22,7 @@ interface OrderItem {
   price: number;
   requiresPrescription: boolean;
   hasOrdonnance: boolean;
+  ordonnanceUrl: string | null;
 }
 
 export default function OrderDetailPage() {
@@ -42,7 +45,11 @@ function OrderDetailContent() {
   const [commandeNumero, setCommandeNumero] = useState("");
   const [commandeStatut, setCommandeStatut] = useState("");
   const [ordonnanceFile, setOrdonnanceFile] = useState<File | null>(null);
-  const [pending, setPending] = useState(false);
+  const [pendingAnnuler, setPendingAnnuler] = useState(false);
+  const [pendingHold, setPendingHold] = useState(false);
+  const [pendingValider, setPendingValider] = useState(false);
+  const [pendingVerif, setPendingVerif] = useState(false);
+  const [verificationDone, setVerificationDone] = useState(false);
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -75,6 +82,7 @@ function OrderDetailContent() {
         price: Number(p.prix_unitaire ?? 0),
         requiresPrescription: Boolean(p.ordonnance_requise),
         hasOrdonnance: Boolean(p.ordonnance),
+        ordonnanceUrl: p.ordonnance?.fichier_url ?? null,
       }));
       setItems(mappedItems);
     } catch (error) {
@@ -95,6 +103,38 @@ function OrderDetailContent() {
   const formatPrice = (v: number) => Number(v).toLocaleString("fr-FR").replace(/,/g, " ");
 
   const canValidate = commandeStatut === "en_attente_paiement" || commandeStatut === "en_attente_client";
+  const isEnAttenteClient = commandeStatut === "en_attente_client";
+
+  const handleVerifierDisponibilite = async () => {
+    if (!token || pendingVerif) return;
+    setPendingVerif(true);
+    try {
+      const res = await verifierDisponibiliteCommande(token, commandeId);
+      if (res.data?.commande_annulee) {
+        toast.error("Tous les produits sont en rupture de stock. La commande a été annulée.");
+        router.push("/client/orders");
+        return;
+      }
+      const supprimes = res.data?.produits_supprimes ?? [];
+      const ajustes = res.data?.produits_ajustes ?? [];
+      if (supprimes.length > 0) {
+        toast.warning(`${supprimes.length} produit(s) retiré(s) : ${supprimes.map((p) => p.nom).join(", ")}.`);
+      }
+      if (ajustes.length > 0) {
+        toast.warning(`${ajustes.length} produit(s) ajusté(s) : ${ajustes.map((p) => `${p.nom} (${p.quantite_demandee}→${p.quantite_ajustee})`).join(", ")}.`);
+      }
+      if (supprimes.length === 0 && ajustes.length === 0) {
+        toast.success("Tous les produits sont disponibles !");
+      }
+      // Recharger les données de la commande mises à jour
+      await loadCommande();
+      setVerificationDone(true);
+    } catch (error) {
+      if (error instanceof ApiError) toast.error(error.message);
+    } finally {
+      setPendingVerif(false);
+    }
+  };
 
   const uploadOrdonnances = async (file: File) => {
     if (!token) return;
@@ -113,21 +153,21 @@ function OrderDetailContent() {
     }
   };
 
+  const anyPending = pendingAnnuler || pendingHold || pendingValider;
+
   const handleValider = async () => {
-    if (!token || pending) return;
+    if (!token || anyPending) return;
 
     if (hasMissingPrescription && !ordonnanceFile) {
       toast.warning("Veuillez ajouter l'ordonnance avant de valider.");
       return;
     }
 
-    setPending(true);
+    setPendingValider(true);
     try {
       if (ordonnanceFile) {
         try {
           await uploadOrdonnances(ordonnanceFile);
-          // L'upload d'ordonnance met la commande en PRETE côté backend
-          // Pas besoin d'appeler validerCommande
           toast.success("Ordonnance soumise ! La pharmacie va vérifier votre ordonnance.");
           router.push("/client/orders");
           return;
@@ -140,11 +180,25 @@ function OrderDetailContent() {
 
       await validerCommande(token, commandeId);
       toast.success("Commande validée ! La pharmacie va prendre en charge votre commande.");
+      router.push("/client/orders?tab=en_cours");
+    } catch (error) {
+      if (error instanceof ApiError) toast.error(error.message);
+    } finally {
+      setPendingValider(false);
+    }
+  };
+
+  const handleAnnuler = async () => {
+    if (!token || anyPending) return;
+    setPendingAnnuler(true);
+    try {
+      await annulerCommande(token, commandeId);
+      toast.success("Commande annulée.");
       router.push("/client/orders");
     } catch (error) {
       if (error instanceof ApiError) toast.error(error.message);
     } finally {
-      setPending(false);
+      setPendingAnnuler(false);
     }
   };
 
@@ -216,31 +270,40 @@ function OrderDetailContent() {
         {items.map((item, idx) => (
           <div
             key={item.id}
-            className={`flex flex-col gap-2 px-6 py-4 sm:grid sm:grid-cols-[1fr_100px_150px_150px] sm:gap-2 sm:items-center ${
-              idx < items.length - 1 ? "border-b border-[#66666680]" : ""
-            }`}
+            className={idx < items.length - 1 ? "border-b border-[#66666680]" : ""}
           >
-            <div>
-              <p className="font-semibold text-gray-900 flex items-center gap-2">
-                {item.name}
-                {item.requiresPrescription && <FileText size={15} className="text-red-500 shrink-0" />}
-              </p>
+            <div className="flex flex-col gap-2 px-6 py-4 sm:grid sm:grid-cols-[1fr_100px_150px_150px] sm:gap-2 sm:items-center">
+              <div>
+                <p className="font-semibold text-gray-900 flex items-center gap-2">
+                  {item.name}
+                  {item.requiresPrescription && (
+                    <span className="relative group/ordo shrink-0">
+                      <FileText size={15} className="text-red-500" />
+                      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white z-10">
+                        Ordonnance requise
+                      </span>
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <span className="text-sm text-gray-700 text-center">
+                <span className="sm:hidden text-gray-400 mr-1">Qté :</span>
+                {item.qty}
+              </span>
+
+              <span className="text-sm text-gray-700 whitespace-nowrap">
+                <span className="sm:hidden text-gray-400 mr-1">Prix :</span>
+                {formatPrice(item.price)} XOF CFA
+              </span>
+
+              <span className="text-sm text-gray-700 whitespace-nowrap">
+                <span className="sm:hidden text-gray-400 mr-1">Total :</span>
+                {formatPrice(item.qty * item.price)} XOF CFA
+              </span>
             </div>
 
-            <span className="text-sm text-gray-700 text-center">
-              <span className="sm:hidden text-gray-400 mr-1">Qté :</span>
-              {item.qty}
-            </span>
 
-            <span className="text-sm text-gray-700 whitespace-nowrap">
-              <span className="sm:hidden text-gray-400 mr-1">Prix :</span>
-              {formatPrice(item.price)} XOF CFA
-            </span>
-
-            <span className="text-sm text-gray-700 whitespace-nowrap">
-              <span className="sm:hidden text-gray-400 mr-1">Total :</span>
-              {formatPrice(item.qty * item.price)} XOF CFA
-            </span>
           </div>
         ))}
 
@@ -253,8 +316,27 @@ function OrderDetailContent() {
         </div>
       </div>
 
-      {/* Section ordonnance — uniquement si des produits manquent une ordonnance */}
-      {hasMissingPrescription && (
+      {/* Ordonnance déjà soumise */}
+      {items.some((i) => i.ordonnanceUrl) && (
+        <div className="mt-5 flex flex-col gap-2">
+          <p className="text-sm font-semibold text-gray-700">Ordonnance soumise :</p>
+          <a
+            href={items.find((i) => i.ordonnanceUrl)!.ordonnanceUrl!}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block"
+          >
+            <img
+              src={items.find((i) => i.ordonnanceUrl)!.ordonnanceUrl!}
+              alt="Ordonnance"
+              className="max-h-60 rounded-xl border border-gray-200 object-contain hover:opacity-90 transition"
+            />
+          </a>
+        </div>
+      )}
+
+      {/* Section ordonnance — uniquement si des produits manquent une ordonnance et commande active */}
+      {hasMissingPrescription && canValidate && (
         <div className="mt-5 flex flex-col gap-2">
           <p className="text-sm text-gray-600 mb-1">
             {missingPrescriptionItems.length} médicament(s) nécessitent une ordonnance.
@@ -302,24 +384,88 @@ function OrderDetailContent() {
       )}
 
       {/* Actions */}
-      {canValidate && (
+      {isEnAttenteClient && !verificationDone ? (
+        /* Étape 1 : Vérifier la disponibilité avant de valider */
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
-            onClick={() => router.push("/client/orders")}
-            disabled={pending}
+            onClick={handleAnnuler}
+            disabled={pendingVerif || anyPending}
             className="flex-1 rounded-full border-2 border-[#00955F] py-3 text-base font-bold text-[#00955F] transition hover:bg-green-50 disabled:opacity-50"
           >
-            Retour
+            {pendingAnnuler ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-5 h-5 rounded-full border-2 border-[#00955F] border-t-transparent animate-spin" />
+                Annulation…
+              </span>
+            ) : "Terminer"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleVerifierDisponibilite}
+            disabled={pendingVerif}
+            className="flex-1 rounded-full bg-toni-green-dark-2 py-3 text-base font-bold text-white transition hover:bg-toni-green-dark disabled:opacity-70"
+          >
+            {pendingVerif ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                Vérification…
+              </span>
+            ) : "Vérifier disponibilité"}
+          </button>
+        </div>
+      ) : canValidate ? (
+        /* Étape 2 : 3 boutons standard après vérification */
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={handleAnnuler}
+            disabled={anyPending}
+            className="flex-1 rounded-full border-2 border-[#00955F] py-3 text-base font-bold text-[#00955F] transition hover:bg-green-50 disabled:opacity-50"
+          >
+            {pendingAnnuler ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-5 h-5 rounded-full border-2 border-[#00955F] border-t-transparent animate-spin" />
+                Annulation…
+              </span>
+            ) : "Terminer"}
+          </button>
+
+          <button
+            type="button"
+            onClick={async () => {
+              if (!token || anyPending) return;
+              setPendingHold(true);
+              try {
+                const { mettreEnAttenteCommande } = await import("@/lib/api/client");
+                await mettreEnAttenteCommande(token, commandeId);
+                toast.success("Commande mise en attente.");
+                router.push("/client/orders");
+              } catch (error) {
+                if (error instanceof ApiError) toast.error(error.message);
+              } finally {
+                setPendingHold(false);
+              }
+            }}
+            disabled={anyPending}
+            className="flex-1 rounded-full bg-gray-200 py-3 text-base font-bold text-gray-500 transition hover:bg-gray-300 disabled:opacity-50"
+          >
+            {pendingHold ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-5 h-5 rounded-full border-2 border-gray-500 border-t-transparent animate-spin" />
+                Traitement…
+              </span>
+            ) : "Mettre en attente"}
           </button>
 
           <button
             type="button"
             onClick={handleValider}
-            disabled={pending || (hasMissingPrescription && !ordonnanceFile)}
+            disabled={anyPending || (hasMissingPrescription && !ordonnanceFile)}
             className="flex-1 rounded-full bg-toni-green-dark-2 py-3 text-base font-bold text-white transition hover:bg-toni-green-dark disabled:opacity-70"
           >
-            {pending ? (
+            {pendingValider ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                 Traitement…
@@ -327,7 +473,7 @@ function OrderDetailContent() {
             ) : "Valider la commande"}
           </button>
         </div>
-      )}
+      ) : null}
 
       {canValidate && hasMissingPrescription && !ordonnanceFile && (
         <p className="text-sm text-red-500 text-center mt-2">

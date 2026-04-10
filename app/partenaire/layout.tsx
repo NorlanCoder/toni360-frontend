@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
-import { canAccessPartnerRoute } from "@/lib/auth/authorization";
+import { canAccessPartnerRoute, getPartnerHomeRoute, shouldRedirectAwayFromDashboard } from "@/lib/auth/authorization";
 import { toast } from "sonner";
 import { SidebarProvider } from "./_sidebar-context";
 import PartenaireSidebar from "@/components/partenaire/Sidebar";
@@ -31,8 +31,14 @@ export default function PartenaireLayout({ children }: { children: React.ReactNo
       return;
     }
 
+    // Redirige les rôles sans dashboard vers leur page principale
+    if (pathname.startsWith("/partenaire/dashboard") && shouldRedirectAwayFromDashboard(session)) {
+      router.replace(getPartnerHomeRoute(session));
+      return;
+    }
+
     if (!canAccessPartnerRoute(session, pathname)) {
-      toast.error("Acces refuse: vous n'avez pas la permission requise.");
+      toast.error(`Accès refusé (${pathname}) : permission insuffisante.`);
       router.replace("/partenaire/dashboard");
     }
   }, [isPublicPartenairePage, pathname, router]);

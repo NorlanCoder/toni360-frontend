@@ -345,7 +345,12 @@ function ClientCartPageContent() {
             className="relative rounded-2xl border border-gray-200 bg-white p-4 sm:p-6"
           >
             {item.requiresPrescription && (
-              <FileText size={18} className="absolute right-4 top-4 text-red-500" />
+              <span className="absolute right-4 top-4 group/ordo">
+                <FileText size={18} className="text-red-500" />
+                <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white z-10">
+                  Ordonnance requise
+                </span>
+              </span>
             )}
             <div className="mb-5 sm:mb-6">
               <h3 className="text-base md:text-xl font-semibold text-gray-900">{item.name}</h3>
@@ -427,7 +432,14 @@ function ClientCartPageContent() {
                     <div className="min-w-0">
                       <p className="font-semibold text-gray-900 flex items-center gap-2">
                         {produit.nom}
-                        {produit.ordonnance && <FileText size={14} className="text-red-500" />}
+                        {produit.ordonnance && (
+                          <span className="relative group/ordo shrink-0">
+                            <FileText size={14} className="text-red-500" />
+                            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white z-10">
+                              Ordonnance requise
+                            </span>
+                          </span>
+                        )}
                       </p>
                       <p className="text-sm text-gray-500">{produit.type}</p>
                       <p className="text-sm text-gray-500">

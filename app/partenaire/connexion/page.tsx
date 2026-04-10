@@ -10,6 +10,7 @@ import "react-phone-number-input/style.css";
 import { getPartnerProfile, loginPartner } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
+import { getPartnerHomeRoute } from "@/lib/auth/authorization";
 import { toast } from "sonner";
 
 export default function ConnexionPartenairePage() {
@@ -50,16 +51,17 @@ export default function ConnexionPartenairePage() {
 
       const profileResponse = await getPartnerProfile(response.data.token);
 
-      saveAuthSession({
-        userType: "user",
+      const session = {
+        userType: "user" as const,
         token: response.data.token,
         tokenType: response.data.token_type,
         profile: profileResponse.data.user ?? response.data.user ?? null,
         permissions: profileResponse.data.permissions ?? response.data.permissions ?? [],
-      });
+      };
+      saveAuthSession(session);
 
       toast.success(response.message ?? "Connexion réussie.");
-      router.push("/partenaire/dashboard");
+      router.push(getPartnerHomeRoute(session));
     } catch (error: unknown) {
       if (error instanceof ApiError) {
         toast.error(error.message);

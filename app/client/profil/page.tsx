@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
 import { getPatientProfile } from "@/lib/api/auth";
-import { updatePatientProfile } from "@/lib/api/client";
+import { updatePatientProfile, deletePatientAccount } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession, saveAuthSession } from "@/lib/api/session";
 
 export default function ProfilPage() {
   const [activeTab, setActiveTab] = useState<"info" | "delete">("info");
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({
     nomComplet: "",
     email: "",
@@ -19,6 +21,7 @@ export default function ProfilPage() {
   });
   const [deletePassword, setDeletePassword] = useState("");
 
+  const router = useRouter();
   const session = useMemo(() => getAuthSession(), []);
   const token = session?.userType === "patient" ? session.token : null;
 
@@ -39,6 +42,7 @@ export default function ProfilPage() {
           nomComplet,
           email: patient.email,
           telephone: patient.telephone,
+          ville: patient.ville ?? "",
         }));
       } catch (error) {
         if (error instanceof ApiError) {
@@ -69,6 +73,7 @@ export default function ProfilPage() {
         prenom,
         email: formData.email,
         telephone: formData.telephone,
+        ville: formData.ville || null,
       });
 
       saveAuthSession({
@@ -86,14 +91,28 @@ export default function ProfilPage() {
     }
   };
 
-  const handleDeleteAccount = (e: React.FormEvent) => {
+  const handleDeleteAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!deletePassword.trim()) {
       toast.warning("Entrez votre mot de passe pour continuer.");
       return;
     }
-
-    toast.info("La suppression de compte sera activée dans une phase dédiée.");
+    if (!token) return;
+    setIsDeleting(true);
+    try {
+      await deletePatientAccount(token, deletePassword);
+      toast.success("Votre compte a été supprimé avec succès.");
+      clearAuthSession();
+      router.replace("/client/connexion");
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.message || "Mot de passe incorrect.");
+      } else {
+        toast.error("Une erreur est survenue. Veuillez réessayer.");
+      }
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -143,8 +162,8 @@ export default function ProfilPage() {
                     <input
                       type="email"
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-3 border-2 font-bold  border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                      disabled
+                      className="w-full px-4 py-3 border-2 font-bold border-gray-200 rounded-lg text-base text-gray-400 bg-gray-50 cursor-not-allowed"
                     />
                   </div>
 
@@ -160,15 +179,26 @@ export default function ProfilPage() {
                   </div>
 
                   {/* Ville */}
-                  {/* <div>
-                    <label className="block font-bold   text-base text-gray-500 mb-2">Ville</label>
-                    <input
-                      type="text"
+                  <div>
+                    <label className="block font-bold text-base text-gray-500 mb-2">Ville</label>
+                    <select
                       value={formData.ville}
                       onChange={(e) => setFormData({ ...formData, ville: e.target.value })}
-                      className="w-full px-4 py-3 border-2 font-bold  border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
-                    />
-                  </div> */}
+                      className="w-full px-4 py-3 border-2 font-bold border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                    >
+                      <option value="">— Sélectionner une ville —</option>
+                      <option value="Cotonou">Cotonou</option>
+                      <option value="Porto-Novo">Porto-Novo</option>
+                      <option value="Parakou">Parakou</option>
+                      <option value="Abomey-Calavi">Abomey-Calavi</option>
+                      <option value="Djougou">Djougou</option>
+                      <option value="Bohicon">Bohicon</option>
+                      <option value="Natitingou">Natitingou</option>
+                      <option value="Kandi">Kandi</option>
+                      <option value="Ouidah">Ouidah</option>
+                      <option value="Lokossa">Lokossa</option>
+                    </select>
+                  </div>
                 </div>
 
           {/* Submit Button */}
@@ -214,9 +244,10 @@ export default function ProfilPage() {
                     </button>
                     <button
                       type="submit"
-                      className="px-6 md:px-12 py-2.5 md:py-3 bg-red-600 text-white font-bold text-sm md:text-lg rounded-full hover:bg-red-700 transition"
+                      disabled={isDeleting}
+                      className="px-6 md:px-12 py-2.5 md:py-3 bg-red-600 text-white font-bold text-sm md:text-lg rounded-full hover:bg-red-700 transition disabled:opacity-60"
                     >
-                      Supprimer
+                      {isDeleting ? "Suppression..." : "Supprimer"}
                     </button>
                   </div>
                 </form>

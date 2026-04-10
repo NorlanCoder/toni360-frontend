@@ -17,7 +17,7 @@ import {
 import { getPartnerProfile } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
-import { filterPartnerNavigationByPermissions } from "@/lib/auth/authorization";
+import { filterPartnerNavigationByPermissions, hasPermission } from "@/lib/auth/authorization";
 import {
   getPartnerCommandeCompteurs,
   getPartnerNotificationCount,
@@ -187,13 +187,18 @@ export default function PartenaireDashboardPage() {
       }
 
       try {
+        const canReadCommandes  = hasPermission(session, "gestion_commandes", "read");
+        const canReadStocks     = hasPermission(session, "gestion_stocks", "read");
+        const canReadUsers      = hasPermission(session, "gestion_users", "read");
+        const canReadParametrage = hasPermission(session, "parametrage_pharmacie", "read");
+
         const [response, compteursResponse, stockStats, notifications, usersPage1, pharmacieProfile] = await Promise.all([
           getPartnerProfile(session.token),
-          getPartnerCommandeCompteurs(session.token),
-          getPartnerStockStats(session.token),
-          getPartnerNotificationCount(session.token),
-          getPartnerUsers(session.token, { page: 1 }),
-          getPartnerPharmacieProfile(session.token).catch(() => null),
+          canReadCommandes  ? getPartnerCommandeCompteurs(session.token) : Promise.resolve(null),
+          canReadStocks     ? getPartnerStockStats(session.token)        : Promise.resolve(null),
+          getPartnerNotificationCount(session.token).catch(() => null),
+          canReadUsers      ? getPartnerUsers(session.token, { page: 1 }) : Promise.resolve(null),
+          canReadParametrage ? getPartnerPharmacieProfile(session.token)  : Promise.resolve(null),
         ]);
 
         const user = response.data.user;
@@ -202,18 +207,18 @@ export default function PartenaireDashboardPage() {
         const fallbackPharmacieName = user?.pharmacie?.nom?.trim() || titulaireName || DEFAULT_PHARMACIE_LABEL;
         setDisplayName(profilePharmacieName !== DEFAULT_PHARMACIE_LABEL ? profilePharmacieName : fallbackPharmacieName);
 
-        const compteurs = compteursResponse.data;
-        setAPreparerCount((compteurs.payee ?? 0) + (compteurs.en_preparation ?? 0));
-        setEnAttenteCount(compteurs.prete ?? 0);
-        setRecupereesCount(compteurs.recuperee ?? 0);
-        setStockTotal(stockStats.data.total_unites ?? 0);
+        const compteurs = compteursResponse?.data;
+        setAPreparerCount((compteurs?.a_traiter ?? 0) + (compteurs?.en_preparation ?? 0));
+        setEnAttenteCount(compteurs?.prete ?? 0);
+        setRecupereesCount(compteurs?.recuperee ?? 0);
+        setStockTotal(stockStats?.data.total_unites ?? 0);
         setNotificationCount(
-          notifications.data.total_non_lues
-          ?? notifications.data.non_lues
+          notifications?.data.total_non_lues
+          ?? notifications?.data.non_lues
           ?? 0,
         );
 
-        const firstPage = getPaginatorMeta(usersPage1.data);
+        const firstPage = usersPage1 ? getPaginatorMeta(usersPage1.data) : { users: [], lastPage: 0 };
         const allUsers: PartnerUserLike[] = [...firstPage.users];
 
         if (firstPage.lastPage > 1) {
@@ -245,7 +250,7 @@ export default function PartenaireDashboardPage() {
 
         setVisibleNavItems(filterPartnerNavigationByPermissions(session, navItems));
       } catch (error: unknown) {
-        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        if (error instanceof ApiError && error.status === 401) {
           clearAuthSession();
           router.replace("/partenaire/connexion");
           return;

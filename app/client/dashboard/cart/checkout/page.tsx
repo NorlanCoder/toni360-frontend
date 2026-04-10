@@ -9,11 +9,11 @@ import {
   createCommande,
   getCommande,
   getPanier,
-  initierCommandePaiement,
   mettreEnAttenteCommande,
   removePanierItem,
   updatePanierItemQuantity,
   uploadOrdonnanceForProduitCommande,
+  validerCommande,
 } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
@@ -44,7 +44,11 @@ function CartPageContent() {
   const isCommandeValidationMode = Boolean(commandeIdFromUrl);
 
   const [items, setItems] = useState<CartItem[]>([]);
-  const [pending, setPending] = useState(false);
+  const [pendingCancel, setPendingCancel] = useState(false);
+  const [pendingHold, setPendingHold] = useState(false);
+  const [pendingCheckout, setPendingCheckout] = useState(false);
+  const [pendingItems, setPendingItems] = useState(false);
+  const anyPending = pendingCancel || pendingHold || pendingCheckout || pendingItems;
   const [ordonnanceFile, setOrdonnanceFile] = useState<File | null>(null);
   const [uploadRetryCandidateId, setUploadRetryCandidateId] = useState<string | null>(null);
   const [uploadRetryCandidateNumero, setUploadRetryCandidateNumero] = useState<string | null>(null);
@@ -209,7 +213,7 @@ function CartPageContent() {
     }
 
     const nextQty = Math.max(1, item.qty + delta);
-    setPending(true);
+    setPendingItems(true);
     try {
       await updatePanierItemQuantity(token, id, nextQty);
       await loadPanier();
@@ -218,7 +222,7 @@ function CartPageContent() {
         toast.error(error.message);
       }
     } finally {
-      setPending(false);
+      setPendingItems(false);
     }
   };
 
@@ -227,7 +231,7 @@ function CartPageContent() {
       return;
     }
 
-    setPending(true);
+    setPendingItems(true);
     try {
       await removePanierItem(token, id);
       await loadPanier();
@@ -236,12 +240,12 @@ function CartPageContent() {
         toast.error(error.message);
       }
     } finally {
-      setPending(false);
+      setPendingItems(false);
     }
   };
 
   const handleCancel = async () => {
-    if (pending) {
+    if (anyPending) {
       return;
     }
 
@@ -256,7 +260,7 @@ function CartPageContent() {
       return;
     }
 
-    setPending(true);
+    setPendingCancel(true);
     try {
       const livePanierId = await resolveActivePanierId();
       if (!livePanierId) {
@@ -276,12 +280,12 @@ function CartPageContent() {
         toast.error(error.message);
       }
     } finally {
-      setPending(false);
+      setPendingCancel(false);
     }
   };
 
   const handleCheckout = async () => {
-    if (pending) {
+    if (anyPending) {
       return;
     }
 
@@ -292,7 +296,7 @@ function CartPageContent() {
         return;
       }
 
-      setPending(true);
+      setPendingCheckout(true);
       try {
         if (ordonnanceFile) {
           try {
@@ -306,24 +310,15 @@ function CartPageContent() {
           }
         }
 
-        const paiement = await initierCommandePaiement(
-          token,
-          commandeIdFromUrl,
-          "MTN",
-          resolvePaymentPhone(),
-        );
+        await validerCommande(token, commandeIdFromUrl);
 
-        if (!paiement.data.reference && !paiement.data.qr_code?.code) {
-          toast.warning("Paiement validé mais QR code non généré. Réessayez dans quelques secondes.");
-        }
-
-        router.push("/client/orders");
+        router.push("/client/orders?tab=en_cours");
       } catch (error) {
         if (error instanceof ApiError) {
           toast.error(error.message);
         }
       } finally {
-        setPending(false);
+        setPendingCheckout(false);
       }
 
       return;
@@ -340,7 +335,7 @@ function CartPageContent() {
         toast.warning("Veuillez sélectionner un nouveau fichier d'ordonnance.");
         return;
       }
-      setPending(true);
+      setPendingCheckout(true);
       try {
         await uploadOrdonnances(uploadRetryCandidateId, ordonnanceFile);
         const numero = uploadRetryCandidateNumero;
@@ -353,12 +348,12 @@ function CartPageContent() {
           toast.error("L'ordonnance n'a pas pu être envoyée. Veuillez sélectionner un nouveau fichier et réessayer.");
         }
       } finally {
-        setPending(false);
+        setPendingCheckout(false);
       }
       return;
     }
 
-    setPending(true);
+    setPendingCheckout(true);
     try {
       const livePanierId = await resolveActivePanierId();
       if (!livePanierId) {
@@ -369,6 +364,13 @@ function CartPageContent() {
       const creation = await createCommande(token, livePanierId);
       const commandeId = creation.data.commande.id;
       const commandeNumero = creation.data.commande.numero_commande;
+
+      if (!creation.data.necessite_ordonnance) {
+        await validerCommande(token, commandeId);
+        clearLocalCart();
+        router.push("/client/orders?tab=en_cours");
+        return;
+      }
 
       if (creation.data.necessite_ordonnance && ordonnanceFile) {
         try {
@@ -384,19 +386,20 @@ function CartPageContent() {
         }
       }
 
+      await validerCommande(token, commandeId);
       clearLocalCart();
-      router.push(`/client/orders?commande=${encodeURIComponent(commandeNumero)}`);
+      router.push("/client/orders?tab=en_cours");
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.message);
       }
     } finally {
-      setPending(false);
+      setPendingCheckout(false);
     }
   };
 
   const handlePutOnHold = async () => {
-    if (pending) {
+    if (anyPending) {
       return;
     }
 
@@ -405,7 +408,7 @@ function CartPageContent() {
       return;
     }
 
-    setPending(true);
+    setPendingHold(true);
     try {
       const livePanierId = await resolveActivePanierId();
       if (!livePanierId) {
@@ -426,7 +429,7 @@ function CartPageContent() {
         toast.error(error.message);
       }
     } finally {
-      setPending(false);
+      setPendingHold(false);
     }
   };
 
@@ -491,7 +494,14 @@ function CartPageContent() {
             <div>
               <p className="font-semibold text-gray-900 flex items-center gap-2">
                 {item.name}
-                {item.requiresPrescription && <FileText size={15} className="text-red-500 shrink-0" />}
+                {item.requiresPrescription && (
+                  <span className="relative group/ordo shrink-0">
+                    <FileText size={15} className="text-red-500" />
+                    <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white z-10">
+                      Ordonnance requise
+                    </span>
+                  </span>
+                )}
               </p>
               <p className="text-sm text-gray-500">{item.type}</p>
             </div>
@@ -502,7 +512,7 @@ function CartPageContent() {
                 <button
                   type="button"
                   onClick={() => updateQty(item.id, -1)}
-                  disabled={pending || isCommandeValidationMode}
+                  disabled={anyPending || isCommandeValidationMode}
                   className="w-7 h-7 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-50"
                 >
                   <Minus size={13} />
@@ -511,7 +521,7 @@ function CartPageContent() {
                 <button
                   type="button"
                   onClick={() => updateQty(item.id, 1)}
-                  disabled={pending || isCommandeValidationMode}
+                  disabled={anyPending || isCommandeValidationMode}
                   className="w-7 h-7 rounded-full flex items-center justify-center text-toni-green-dark-2 hover:bg-toni-green-light"
                 >
                   <Plus size={13} />
@@ -535,7 +545,7 @@ function CartPageContent() {
             <button
               type="button"
               onClick={() => removeItem(item.id)}
-              disabled={pending || isCommandeValidationMode}
+              disabled={anyPending || isCommandeValidationMode}
               className="flex sm:justify-center text-red-400 hover:text-red-600"
               aria-label="Supprimer"
             >
@@ -612,28 +622,38 @@ function CartPageContent() {
         <button
           type="button"
           onClick={handleCancel}
-          disabled={pending}
+          disabled={anyPending}
           className="flex-1 rounded-full border-2 border-[#00955F] py-3 text-base font-bold text-[#00955F] transition hover:bg-green-50 disabled:opacity-50"
         >
-          Terminer
+          {pendingCancel ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-5 h-5 rounded-full border-2 border-[#00955F] border-t-transparent animate-spin" />
+              Traitement…
+            </span>
+          ) : "Terminer"}
         </button>
 
         <button
           type="button"
           onClick={handlePutOnHold}
-          disabled={pending || items.length === 0}
+          disabled={anyPending || items.length === 0}
           className="flex-1 rounded-full bg-[#E0E0E0] py-3 text-base font-bold text-[#6B6B6B] transition hover:bg-[#d0d0d0] disabled:opacity-50"
         >
-          Mettre en attente
+          {pendingHold ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-5 h-5 rounded-full border-2 border-[#6B6B6B] border-t-transparent animate-spin" />
+              Traitement…
+            </span>
+          ) : "Mettre en attente"}
         </button>
 
         <button
           type="button"
           onClick={handleCheckout}
-          disabled={pending || items.length === 0 || (hasPrescription && !ordonnanceFile)}
+          disabled={anyPending || items.length === 0 || (hasPrescription && !ordonnanceFile)}
           className="flex-1 rounded-full bg-toni-green-dark-2 py-3 text-base font-bold text-white transition hover:bg-toni-green-dark disabled:opacity-70"
         >
-          {pending ? (
+          {pendingCheckout ? (
             <span className="flex items-center justify-center gap-2">
               <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
               Traitement…

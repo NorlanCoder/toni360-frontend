@@ -129,6 +129,7 @@ export interface PatientCommandeCompteursResponse {
     total_en_cours: number;
     total_prete: number;
     total_recuperee: number;
+    total_annulee: number;
     total_terminee: number;
   };
 }
@@ -164,6 +165,7 @@ export interface CommandeDetailResponse {
           id: string;
           statut?: string;
           statut_label?: string;
+          fichier_url?: string | null;
         } | null;
         produit?: {
           id: string;
@@ -300,6 +302,7 @@ export interface PatientProfileResponse {
       nom_complet?: string;
       email: string;
       telephone: string;
+      ville?: string | null;
     };
   };
 }
@@ -403,8 +406,11 @@ export async function clearPanier(token: string): Promise<PatientPanierResponse>
   });
 }
 
-export async function getClientCommandes(token: string, statut?: string): Promise<PatientCommandesResponse> {
-  const qs = statut ? `?statut=${encodeURIComponent(statut)}` : "";
+export async function getClientCommandes(token: string, statut?: string, perPage?: number): Promise<PatientCommandesResponse> {
+  const params = new URLSearchParams();
+  if (statut) params.set("statut", statut);
+  if (perPage) params.set("per_page", String(perPage));
+  const qs = params.toString() ? `?${params.toString()}` : "";
   return apiRequest<PatientCommandesResponse>(`/patient/commandes${qs}`, {
     method: "GET",
     token,
@@ -517,6 +523,24 @@ export async function mettreEnAttenteCommande(token: string, commandeId: string)
   });
 }
 
+export interface VerifierDisponibiliteCommandeResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    commande_annulee?: boolean;
+    commande?: CommandeDetailResponse["data"]["commande"];
+    produits_supprimes?: Array<{ id: string; nom: string }>;
+    produits_ajustes?: Array<{ id: string; nom: string; quantite_demandee: number; quantite_ajustee: number }>;
+  };
+}
+
+export async function verifierDisponibiliteCommande(token: string, commandeId: string): Promise<VerifierDisponibiliteCommandeResponse> {
+  return apiRequest<VerifierDisponibiliteCommandeResponse>(`/patient/commandes/${commandeId}/verifier-disponibilite`, {
+    method: "POST",
+    token,
+  });
+}
+
 export async function uploadOrdonnanceForProduitCommande(
   token: string,
   produitCommandeId: string,
@@ -579,11 +603,21 @@ export async function deleteReadClientNotifications(token: string): Promise<{ su
 
 export async function updatePatientProfile(
   token: string,
-  payload: Partial<Pick<PatientProfileResponse["data"]["patient"], "nom" | "prenom" | "email" | "telephone">>,
+  payload: Partial<Pick<PatientProfileResponse["data"]["patient"], "nom" | "prenom" | "email" | "telephone" | "ville">>,
 ): Promise<PatientProfileResponse> {
   const json = buildJsonRequest(payload);
   return apiRequest<PatientProfileResponse>("/patient/profile", {
     method: "PUT",
+    token,
+    body: json.body,
+    headers: json.headers,
+  });
+}
+
+export async function deletePatientAccount(token: string, password: string): Promise<{ success: boolean; message?: string }> {
+  const json = buildJsonRequest({ password });
+  return apiRequest<{ success: boolean; message?: string }>("/patient/account", {
+    method: "DELETE",
     token,
     body: json.body,
     headers: json.headers,

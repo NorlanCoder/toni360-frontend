@@ -206,7 +206,12 @@ export default function AccueilClientPage() {
                     className="relative rounded-2xl border border-gray-200 bg-white p-4 sm:p-6"
                   >
                     {item.ordonnance && (
-                      <FileText size={18} className="absolute right-4 top-4 text-red-500" />
+                      <span className="absolute right-4 top-4 group/ordo">
+                        <FileText size={18} className="text-red-500" />
+                        <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white z-10">
+                          Ordonnance requise
+                        </span>
+                      </span>
                     )}
 
                     <div className="mb-5 sm:mb-6">

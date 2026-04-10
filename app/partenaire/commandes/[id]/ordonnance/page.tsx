@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
-import { getPartnerCommande, rejeterPartnerOrdonnance, validerPartnerOrdonnance } from "@/lib/api/partner";
+import { getPartnerCommande, rejeterPartnerOrdonnance, validerPartnerOrdonnance, notifierPartnerPatient } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
 import { toast } from "sonner";
 
@@ -15,7 +15,9 @@ export default function OrdonnancePage() {
   const [notification, setNotification] = useState("");
   const [decision, setDecision] = useState<"valide" | "refuse" | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [isRefusing, setIsRefusing] = useState(false);
+  const [isEnvoyant, setIsEnvoyant] = useState(false);
   const [ordonnanceUrl, setOrdonnanceUrl] = useState<string | null>(null);
   const [isLoadingOrd, setIsLoadingOrd] = useState(true);
 
@@ -57,20 +59,29 @@ export default function OrdonnancePage() {
       return;
     }
 
-    setIsSubmitting(true);
+    setIsValidating(true);
     try {
       await validerPartnerOrdonnance(session.token, id);
       setDecision("valide");
+      toast.success("Ordonnance validée. Le patient a été notifié.");
       router.push(`/partenaire/commandes/${id}`);
     } catch (err: unknown) {
       toast.error(err instanceof ApiError ? err.message : "Validation impossible.");
     } finally {
-      setIsSubmitting(false);
+      setIsValidating(false);
     }
   }
 
   function handleRefuser() {
-    setDecision("refuse");
+    if (!notification.trim()) {
+      toast.warning("Écrivez un motif de refus dans la zone de notification.");
+      return;
+    }
+    setIsRefusing(true);
+    setTimeout(() => {
+      setDecision("refuse");
+      setIsRefusing(false);
+    }, 0);
   }
 
   async function handleEnvoyer() {
@@ -82,16 +93,24 @@ export default function OrdonnancePage() {
       return;
     }
 
-    setIsSubmitting(true);
+    setIsEnvoyant(true);
     try {
-      await rejeterPartnerOrdonnance(session.token, id, notification.trim());
-      setShowSuccess(true);
-      setNotification("");
-      setDecision(null);
+      if (decision === "refuse") {
+        // Rejeter l'ordonnance avec le motif
+        await rejeterPartnerOrdonnance(session.token, id, notification.trim());
+        setShowSuccess(true);
+        setNotification("");
+        setDecision(null);
+      } else {
+        // Envoyer une simple notification au patient
+        await notifierPartnerPatient(session.token, id, notification.trim());
+        toast.success("Notification envoyée au patient.");
+        setNotification("");
+      }
     } catch (err: unknown) {
       toast.error(err instanceof ApiError ? err.message : "Envoi impossible.");
     } finally {
-      setIsSubmitting(false);
+      setIsEnvoyant(false);
     }
   }
 
@@ -142,26 +161,26 @@ export default function OrdonnancePage() {
                 <button
                   type="button"
                   onClick={handleValider}
-                  disabled={isSubmitting}
+                  disabled={isValidating || isRefusing || isEnvoyant}
                   className={`flex-1 rounded-full px-8 py-3 text-base font-semibold transition-colors ${
                     decision === "valide"
                       ? "bg-emerald-700 text-white"
                       : "bg-emerald-600 text-white hover:bg-emerald-700"
-                  }`}
+                  } disabled:opacity-60`}
                 >
-                  Valider
+                  {isValidating ? "Validation..." : "Valider"}
                 </button>
                 <button
                   type="button"
                   onClick={handleRefuser}
-                  disabled={isSubmitting}
+                  disabled={isValidating || isRefusing || isEnvoyant}
                   className={`flex-1 rounded-full border-2 px-8 py-3 text-base font-semibold transition-colors ${
                     decision === "refuse"
                       ? "border-red-600 bg-red-50 text-red-700"
                       : "border-emerald-600 bg-white text-emerald-700 hover:bg-emerald-50"
-                  }`}
+                  } disabled:opacity-60`}
                 >
-                  Refuser
+                  {isRefusing ? "..." : "Refuser"}
                 </button>
               </div>
 
@@ -178,10 +197,10 @@ export default function OrdonnancePage() {
                   <button
                     type="button"
                     onClick={handleEnvoyer}
-                    disabled={!notification.trim() || isSubmitting}
+                    disabled={!notification.trim() || isEnvoyant || isValidating || isRefusing}
                     className="rounded-full border-2 border-emerald-600 px-10 py-3 text-base font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    {isSubmitting ? "Envoi..." : "Envoyer"}
+                    {isEnvoyant ? "Envoi..." : "Envoyer"}
                   </button>
                 </div>
               </div>

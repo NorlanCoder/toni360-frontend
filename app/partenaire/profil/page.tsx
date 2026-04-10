@@ -10,6 +10,7 @@ import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 
 import { getPartnerNotificationCount, getPartnerPharmacieProfile, updatePartnerPharmacieProfile } from "@/lib/api/partner";
+import { hasPermission } from "@/lib/auth/authorization";
 import { toast } from "sonner";
 
 export default function PartenaireProfil() {
@@ -36,10 +37,12 @@ export default function PartenaireProfil() {
       }
 
       try {
-        const [userResponse, profileResponse, notifications] = await Promise.all([
+        const canReadParametrage = hasPermission(session, "parametrage_pharmacie", "read");
+
+        const [userResponse, pharmacieProfile, notifications] = await Promise.all([
           getPartnerProfile(session.token),
-          getPartnerPharmacieProfile(session.token),
-          getPartnerNotificationCount(session.token),
+          canReadParametrage ? getPartnerPharmacieProfile(session.token) : Promise.resolve(null),
+          getPartnerNotificationCount(session.token).catch(() => null),
         ]);
 
         const user = userResponse.data.user;
@@ -49,19 +52,22 @@ export default function PartenaireProfil() {
         }
 
         setNotificationCount(
-          notifications.data.total_non_lues
-          ?? notifications.data.non_lues
+          notifications?.data.total_non_lues
+          ?? notifications?.data.non_lues
           ?? 0,
         );
-        const profile = profileResponse.data;
-        setNom(profile.nom ?? "");
-        setAdresse(profile.adresse ?? "");
-        setTelephone(profile.telephone ?? "");
-        setEmail(profile.email ?? "");
-        setLicence(profile.numero_agrement ?? "");
-        setHoraires("Voir paramétrage horaires");
+
+        if (pharmacieProfile) {
+          const profile = pharmacieProfile.data;
+          setNom(profile.nom ?? "");
+          setAdresse(profile.adresse ?? "");
+          setTelephone(profile.telephone ?? "");
+          setEmail(profile.email ?? "");
+          setLicence(profile.numero_agrement ?? "");
+          setHoraires("Voir paramétrage horaires");
+        }
       } catch (err: unknown) {
-        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+        if (err instanceof ApiError && err.status === 401) {
           clearAuthSession();
           router.replace("/partenaire/connexion");
           return;

@@ -1,11 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Menu, Search, User } from "lucide-react";
+import { Bell, Menu, User } from "lucide-react";
 import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
+import { useMemo } from "react";
+import { getAuthSession } from "@/lib/api/session";
 
 export default function PartenaireHeader() {
   const { setOpen } = useSidebarContext();
+  const session = useMemo(() => getAuthSession(), []);
+  const profile = session?.profile as { prenom?: string; nom?: string } | null;
+  const displayName = profile?.prenom || profile?.nom || "";
 
   return (
     <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between  bg-white px-4 md:px-8">
@@ -19,14 +24,11 @@ export default function PartenaireHeader() {
         <Menu className="h-6 w-6" />
       </button>
 
-      {/* Search */}
-      <div className="relative min-w-0 flex-1 max-w-lg">
-        <Search className="absolute left-3 sm:left-5 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Rechercher un médicament"
-          className="w-full rounded-full border-0 bg-emerald-50/60 py-2 sm:py-3 pl-9 sm:pl-14 pr-3 sm:pr-4 text-sm sm:text-base text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-        />
+      {/* Welcome */}
+      <div className="min-w-0 flex-1">
+        <p className="text-base sm:text-xl font-semibold text-gray-800 truncate">
+          Bienvenu{displayName ? `, ${displayName}` : ""} 👋
+        </p>
       </div>
 
       {/* Actions */}

@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Clock, Eye, Loader2, MapPin, PackageCheck, Trash2, XCircle } from "lucide-react";
+import { Eye, Loader2, PackageCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   annulerCommande,
@@ -56,10 +56,19 @@ const QR_VISIBLE_PATIENT_STATUSES = new Set([
 ]);
 
 export default function ClientOrdersPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <ClientOrdersContent />
+    </Suspense>
+  );
+}
+
+function ClientOrdersContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [orders, setOrders] = useState<ClientOrderItem[]>([]);
   const [timelineByOrder, setTimelineByOrder] = useState<Record<string, string>>({});
-  const [stats, setStats] = useState({ terminees: 0, enAttente: 0, recuperees: 0, enCours: 0, pretes: 0 });
+  const [stats, setStats] = useState({ terminees: 0, enAttente: 0, recuperees: 0, enCours: 0, pretes: 0, annulees: 0 });
   const _today = new Date();
   const _from30 = new Date(_today);
   _from30.setMonth(_today.getMonth() - 3);
@@ -70,9 +79,17 @@ export default function ClientOrdersPage() {
   const [toDay, setToDay] = useState(String(_today.getDate()));
   const [toMonth, setToMonth] = useState(String(_today.getMonth() + 1));
   const [toYear, setToYear] = useState(String(_today.getFullYear()));
-  const [activeTab, setActiveTab] = useState<"Terminees" | "En attente" | "Recuperees" | "En cours" | "Prete">(
-    "En attente"
-  );
+
+  const initTab = useMemo((): "Terminees" | "En attente" | "Recuperees" | "En cours" | "Prete" => {
+    const tab = searchParams.get("tab");
+    if (tab === "en_cours") return "En cours";
+    if (tab === "prete") return "Prete";
+    if (tab === "recuperees") return "Recuperees";
+    if (tab === "terminees") return "Terminees";
+    return "En attente";
+  }, [searchParams]);
+
+  const [activeTab, setActiveTab] = useState<"Terminees" | "En attente" | "Recuperees" | "En cours" | "Prete">(initTab);
   const [loadingQrOrderId] = useState<string | null>(null);
   const [validatingOrderId, setValidatingOrderId] = useState<string | null>(null);
 
@@ -92,7 +109,7 @@ export default function ClientOrdersPage() {
     }
 
     const [ordersResponse, counterResponse] = await Promise.all([
-      getClientCommandes(token),
+      getClientCommandes(token, undefined, 200),
       getClientCommandeCompteurs(token),
     ]);
 
@@ -118,6 +135,7 @@ export default function ClientOrdersPage() {
       recuperees: counterResponse.data.total_recuperee ?? 0,
       enCours: counterResponse.data.total_en_cours ?? 0,
       pretes: counterResponse.data.total_prete ?? 0,
+      annulees: counterResponse.data.total_annulee ?? 0,
     });
 
     setTimelineByOrder(
@@ -282,7 +300,7 @@ export default function ClientOrdersPage() {
           <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:mb-10 lg:grid-cols-3 lg:gap-4">
             <div className="flex items-center gap-3 rounded-xl border border-[#66666680] bg-white px-4 py-3 transition -sm sm:px-5 sm:py-4">
               <div className="w-14 h-14 rounded-full bg-[#004B2F] flex items-center justify-center">
-                <CheckCircle2 className="text-white"  />
+                <img src="/images/recuperer.svg" alt="Terminées" className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-sm md:text-base text-[#383838] ">Commandes terminées</p>
@@ -291,7 +309,7 @@ export default function ClientOrdersPage() {
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-[#66666680] bg-white px-4 py-3 transition  sm:px-5 sm:py-4">
               <div className="w-14 h-14 rounded-full bg-[#FF3D00] flex items-center justify-center">
-                <img src="/images/recuperer.svg" alt="En attente" className="w-6 h-6" />
+                <img src="/images/preparer.svg" alt="En attente" className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-sm md:text-base text-[#383838]">Commandes en attentes</p>
@@ -300,13 +318,14 @@ export default function ClientOrdersPage() {
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-[#66666680] bg-white px-4 py-3 transition  sm:px-5 sm:py-4">
               <div className="w-14 h-14 rounded-full bg-[#00955F] flex items-center justify-center">
-                <img src="/images/preparer.svg" alt="Récupérées" className="w-6 h-6" />
+                <img src="/images/location.svg" alt="Récupérées" className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-sm md:text-base text-[#383838]">Commandes récupérées</p>
                 <h1 className="text-xl md:text-[32px] font-bold text-[#383838]">{stats.recuperees}</h1>
               </div>
             </div>
+            
             {/* <button
               onClick={() => router.push("/client/dashboard/cart")}
               className="flex items-center justify-center gap-2 rounded-xl border border-[#66666680] bg-white px-4 py-3 font-semibold text-[#008F4F] transition hover:bg-[#d8f5ea]"
@@ -381,11 +400,11 @@ export default function ClientOrdersPage() {
           {/* Tabs */}
           <div className="mb-6 flex gap-4 overflow-x-auto pb-2 w-full font-semibold text-gray-600  sm:text-lg">
             {[
-              { label: "En attente", value: "En attente" as const, icon: Clock },
+              { label: "En attente", value: "En attente" as const, img: "/images/attente.svg" },
               { label: "En cours", value: "En cours" as const, icon: Loader2 },
               { label: "Prête", value: "Prete" as const, icon: PackageCheck },
-              { label: "Récupérées", value: "Recuperees" as const, icon: MapPin },
-              { label: "Terminées", value: "Terminees" as const, icon: XCircle },
+              { label: "Récupérées", value: "Recuperees" as const, img: "/images/location-2.svg" },
+              { label: "Terminées", value: "Terminees" as const, img: "/images/terminee.svg" },
             ].map((tab) => (
               <button
                 key={tab.value}
@@ -395,7 +414,11 @@ export default function ClientOrdersPage() {
                     : "border-transparent hover:text-gray-900"
                   }`}
               >
-                <tab.icon size={16} />
+                {"img" in tab ? (
+                  <img src={tab.img} alt={tab.label} className="w-5 h-5" />
+                ) : (
+                  <tab.icon size={16} />
+                )}
                 {tab.label}
               </button>
             ))}
@@ -414,7 +437,7 @@ export default function ClientOrdersPage() {
                       Commande NO {order.numero}
                     </p>
                     <p className="mt-1 text-base text-gray-500">
-                      Étape actuelle: {timelineByOrder[order.id] ?? order.status} ({order.pharmacy})
+                      Votre commande a été localisée à la pharmacie  {timelineByOrder[order.id] ?? order.status} {order.pharmacy}
                     </p>
                     <div className="mt-2 text-base text-[#282828] italic ">
                       {order.date} &nbsp; {order.time}
@@ -532,3 +555,4 @@ export default function ClientOrdersPage() {
     </div>
   );
 }
+
