@@ -23,6 +23,20 @@ const MODULE_LABELS: Record<string, string> = {
   PARAMETRAGE_PHARMACIE: "Paramétrage",
 };
 
+const ACTION_LABELS: Record<string, string> = {
+  CREATE: "Création",
+  UPDATE: "Modification",
+  DELETE: "Suppression",
+  READ:   "Consultation",
+};
+
+const ACTION_COLORS: Record<string, string> = {
+  CREATE: "bg-emerald-100 text-emerald-700",
+  UPDATE: "bg-blue-100 text-blue-700",
+  DELETE: "bg-red-100 text-red-700",
+  READ:   "bg-gray-100 text-gray-600",
+};
+
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireHistoriquePage() {
   const [entries, setEntries] = useState<ActionLogEntry[]>([]);
@@ -150,24 +164,23 @@ export default function PartenaireHistoriquePage() {
               ? `${entry.user.prenom} ${entry.user.nom}`
               : null;
             const moduleLabel = MODULE_LABELS[entry.module] ?? entry.module;
-            const titre = entry.action
-              ? `[${moduleLabel}] ${entry.action}`
-              : moduleLabel;
-            const description = entry.description ?? (employeNom ? `Par ${employeNom}` : "");
+            const actionLabel = ACTION_LABELS[entry.action] ?? entry.action;
+            const actionColor = ACTION_COLORS[entry.action] ?? "bg-gray-100 text-gray-600";
+            const description = entry.description ?? "";
 
             return (
               <div
                 key={entry.id}
-                className="rounded-full p-2 flex items-center gap-4 bg-[#E6F6F0]"
+                className="rounded-2xl px-4 py-3 flex items-center gap-4 bg-[#E6F6F0]"
               >
-                {/* Logo */}
+                {/* Icône */}
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full border-2 border-toni-green-dark-2 flex items-center justify-center bg-white">
+                  <div className="w-11 h-11 rounded-full border-2 border-toni-green-dark-2 flex items-center justify-center bg-white">
                     <Image
                       src="/images/icon.png"
                       alt="Toni360"
-                      width={32}
-                      height={32}
+                      width={28}
+                      height={28}
                       className="object-contain"
                     />
                   </div>
@@ -175,15 +188,22 @@ export default function PartenaireHistoriquePage() {
 
                 {/* Texte */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-gray-900 text-base mb-0.5">{titre}</h3>
-                  <p className="text-gray-600 text-sm truncate">{description}</p>
+                  <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                    <span className="font-bold text-gray-900 text-sm">{moduleLabel}</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${actionColor}`}>
+                      {actionLabel}
+                    </span>
+                  </div>
+                  {description && (
+                    <p className="text-gray-600 text-xs truncate">{description}</p>
+                  )}
                   {employeNom && (
-                    <p className="text-xs text-emerald-700 font-medium">{employeNom}</p>
+                    <p className="text-xs text-emerald-700 font-medium mt-0.5">{employeNom}</p>
                   )}
                 </div>
 
                 {/* Date & heure */}
-                <span className="flex-shrink-0 text-xs text-gray-500 pr-3 text-right whitespace-nowrap">
+                <span className="flex-shrink-0 text-xs text-gray-400 pr-1 text-right whitespace-nowrap">
                   {date}
                   <br />
                   {heure}

@@ -75,7 +75,7 @@ export default function PartenaireSidebar() {
             <div>
               {/* En-tête drawer */}
               <div className="flex items-center justify-between px-5 pt-6 pb-8">
-                <Link href="/" aria-label="Accueil" onClick={onClose}>
+                <Link href="/partenaire/dashboard" aria-label="Accueil" onClick={onClose}>
                   <Image src="/images/logo.png" alt="Toni360" width={120} height={60} />
                 </Link>
                 <button
@@ -131,7 +131,7 @@ export default function PartenaireSidebar() {
       <aside className="hidden w-64 shrink-0 flex-col justify-between  border-gray-200 bg-white lg:flex h-screen overflow-y-auto">
         <div>
           <div className="mb-10 mt-7 px-5">
-            <Link href="/" aria-label="Accueil">
+            <Link href="/partenaire/dashboard" aria-label="Accueil">
               <Image src="/images/logo.png" alt="Toni360" width={140} height={70} />
             </Link>
           </div>

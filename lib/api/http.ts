@@ -51,9 +51,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
-      const session = getAuthSession();
-      clearAuthSession();
-      redirectToLoginBySession(session);
+      // const session = getAuthSession();
+      // clearAuthSession();
+      // redirectToLoginBySession(session);
     }
 
     const message = extractApiErrorMessage(payload, "Une erreur est survenue.");

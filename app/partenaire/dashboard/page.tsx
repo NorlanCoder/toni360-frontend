@@ -17,7 +17,7 @@ import {
 import { getPartnerProfile } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
-import { filterPartnerNavigationByPermissions } from "@/lib/auth/authorization";
+import { filterPartnerNavigationByPermissions, hasPermission } from "@/lib/auth/authorization";
 import {
   getPartnerCommandeCompteurs,
   getPartnerNotificationCount,
@@ -187,13 +187,18 @@ export default function PartenaireDashboardPage() {
       }
 
       try {
+        const canReadCommandes  = hasPermission(session, "gestion_commandes", "read");
+        const canReadStocks     = hasPermission(session, "gestion_stocks", "read");
+        const canReadUsers      = hasPermission(session, "gestion_users", "read");
+        const canReadParametrage = hasPermission(session, "parametrage_pharmacie", "read");
+
         const [response, compteursResponse, stockStats, notifications, usersPage1, pharmacieProfile] = await Promise.all([
           getPartnerProfile(session.token),
-          getPartnerCommandeCompteurs(session.token).catch(() => null),
-          getPartnerStockStats(session.token).catch(() => null),
+          canReadCommandes  ? getPartnerCommandeCompteurs(session.token) : Promise.resolve(null),
+          canReadStocks     ? getPartnerStockStats(session.token)        : Promise.resolve(null),
           getPartnerNotificationCount(session.token).catch(() => null),
-          getPartnerUsers(session.token, { page: 1 }).catch(() => null),
-          getPartnerPharmacieProfile(session.token).catch(() => null),
+          canReadUsers      ? getPartnerUsers(session.token, { page: 1 }) : Promise.resolve(null),
+          canReadParametrage ? getPartnerPharmacieProfile(session.token)  : Promise.resolve(null),
         ]);
 
         const user = response.data.user;
@@ -245,7 +250,7 @@ export default function PartenaireDashboardPage() {
 
         setVisibleNavItems(filterPartnerNavigationByPermissions(session, navItems));
       } catch (error: unknown) {
-        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        if (error instanceof ApiError && error.status === 401) {
           clearAuthSession();
           router.replace("/partenaire/connexion");
           return;
