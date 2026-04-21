@@ -152,16 +152,14 @@ export default function ConnexionPartenairePage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Champ téléphone ou email */}
             {loginMethod === "phone" ? (
-              <div
-                className="flex items-center rounded-lg overflow-hidden px-3 py-2 border border-[#e0e0e0] transition-colors focus-within:border-[#137551]"
-                style={{ backgroundColor: "#f1f1f1" }}
-              >
+               <div className="flex rounded-md border bg-white border-black px-3 py-2.5 text-black transition-colors focus-within:border-toni-green-dark-2 sm:py-3">
                 <PhoneInput
                   international
                   defaultCountry="BJ"
-                  placeholder="numéro de téléphone"
+                  placeholder="Numéro de téléphone"
                   value={formData.telephone}
                   onChange={(value) => setFormData({ ...formData, telephone: value })}
+                  className=" bg-white"
                 />
               </div>
             ) : (
@@ -174,7 +172,7 @@ export default function ConnexionPartenairePage() {
                     setFormData({ ...formData, email: e.target.value })
                   }
                   className="w-full px-4 py-4 rounded-lg outline-none transition-colors border border-[#e0e0e0] focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
-                  style={{ backgroundColor: "#f1f1f1" }}
+                  style={{ backgroundColor: "#ffffff" }}
                 />
               </div>
             )}
@@ -195,7 +193,7 @@ export default function ConnexionPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full pl-11 pr-12 py-4 bg-transparent rounded-lg outline-none text-gray-700 text-sm placeholder-gray-400"
+                className="w-full pl-11 pr-12 py-4 bg-white rounded-lg outline-none text-gray-700 text-sm placeholder-gray-400"
               />
               <button
                 type="button"

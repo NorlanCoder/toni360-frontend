@@ -18,6 +18,7 @@ export default function DevenirPartenairePage() {
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [acceptedCGU, setAcceptedCGU] = useState(false);
 
   const [formData, setFormData] = useState({
     nomPharmacie: "",
@@ -69,6 +70,16 @@ export default function DevenirPartenairePage() {
 
     if (formData.licence && formData.licence.size > 5 * 1024 * 1024) {
       toast.warning("La licence ne doit pas depasser 5 Mo.");
+      return;
+    }
+
+    if (!acceptedCGU) {
+      toast.warning("Vous devez accepter les Conditions Générales d'Utilisation.");
+      return;
+    }
+
+    if (!acceptedCGU) {
+      toast.warning("Vous devez accepter les Conditions Générales d'Utilisation.");
       return;
     }
 
@@ -140,7 +151,7 @@ export default function DevenirPartenairePage() {
         </h1>
 
         {/* Formulaire */}
-        <form onSubmit={handleSubmit} className="w-full">
+        <form onSubmit={handleSubmit} className="w-full bg-white">
           {/* Grille deux colonnes */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
             {/* Nom officiel de la pharmacie */}
@@ -152,7 +163,7 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, nomPharmacie: e.target.value })
                 }
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
 
@@ -165,18 +176,19 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, adresseComplete: e.target.value })
                 }
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
 
             {/* Téléphone avec indicatif */}
-            <div className="flex items-center border text-black border-gray-300 rounded-lg overflow-hidden px-3 py-3 transition-colors focus-within:border-[#137551]">
+            <div className="flex items-center border bg-white text-black border-gray-300 rounded-lg overflow-hidden px-3 py-3 transition-colors focus-within:border-[#137551]">
               <PhoneInput
                 international
                 defaultCountry="BJ"
                 placeholder="numéro de téléphone"
                 value={formData.telephone}
                 onChange={(value) => setFormData({ ...formData, telephone: value })}
+                className="bg-white"
               />
             </div>
 
@@ -189,7 +201,7 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, jourOuverture: e.target.value })
                 }
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
 
@@ -202,7 +214,7 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
 
@@ -215,7 +227,7 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, heureOuvrables: e.target.value })
                 }
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
 
@@ -228,7 +240,7 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, villeExercice: e.target.value })
                 }
-                className="w-full px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
 
@@ -241,7 +253,7 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, confirmPassword: e.target.value })
                 }
-                className="w-full px-4 py-3.5 pr-12 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full bg-white px-4 py-3.5 pr-12 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
               <button
                 type="button"
@@ -279,6 +291,42 @@ export default function DevenirPartenairePage() {
             <p className="text-center text-xs text-gray-500 mt-1">{fileName}</p>
           )}
 
+          {/* Case à cocher CGU */}
+          <div className="mt-6 rounded-md border border-gray-200 bg-white p-4 text-sm text-gray-600">
+            <p className="mb-3">
+              <span className="font-bold">Attention !! </span>
+              Si vous cochez la case ci-dessous, vous confirmez avoir pris
+              connaissance des présentes CGU et acceptez de vous y soumettre
+              sans réserve. Il est donc conseillé aux Utilisateurs de lire
+              attentivement les{" "}
+              <Link
+                href="/terms-of-use"
+                className="font-semibold hover:underline"
+                style={{ color: "#137551" }}
+              >
+                Conditions Générales d&apos;Utilisation
+              </Link>.
+            </p>
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={acceptedCGU}
+                onChange={(e) => setAcceptedCGU(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-green-700"
+              />
+              <span>
+                Je reconnais avoir lu et accepté les{" "}
+                <Link
+                  href="/terms-of-use"
+                  className="font-semibold hover:underline"
+                  style={{ color: "#137551" }}
+                >
+                  Conditions Générales d&apos;Utilisation
+                </Link>.
+              </span>
+            </label>
+          </div>
+
           {/* Bouton S'inscrire */}
           <div className="mt-8">
             <button
@@ -301,18 +349,6 @@ export default function DevenirPartenairePage() {
             style={{ color: "#137551", fontSize: "1.18rem" }}
           >
             Connectez-vous
-          </Link>
-        </p>
-
-        {/* Texte légal */}
-        <p className="text-center mt-3 text-sm text-gray-500">
-          En cliquant sur s&apos;inscrire, vous Acceptez{" "}
-          <Link
-            href="/return-policy"
-            className="font-semibold hover:underline"
-            style={{ color: "#137551" }}
-          >
-            nos Conditions d&apos;utilisation et la Politique de confidentialité.
           </Link>
         </p>
       </div>

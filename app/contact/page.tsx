@@ -97,7 +97,7 @@ export default function ContactPage() {
                 <span className="text-gray-500">•</span>
                 <span className="font-medium">Téléphone</span>
                 <span className="mx-2">:</span>
-                <span>+229 12 34 56 78.</span>
+                <span><Link href={"tel:+2290129111487"}> +229 01 29 11 14 87</Link> .</span>
               </li>
             </ul>
           </div>

@@ -50,17 +50,17 @@ export default function Hero() {
         </div>
         {/* Liens légaux */}
         <div className="flex flex-wrap items-center justify-center gap-4 text-white text-sm">
-          <a href="#" className="hover:text-white/80 transition underline">
+          <Link href="/terms-of-use" className="hover:text-white/80 transition underline">
             Conditions générales d&apos;utilisation
-          </a>
+          </Link>
           <span className="hidden sm:inline">•</span>
-          <a href="#" className="hover:text-white/80 transition underline">
+          <Link href="/privacy" className="hover:text-white/80 transition underline">
             Politiques de confidentialité
-          </a>
+          </Link>
           <span className="hidden sm:inline">•</span>
-          <a href="#" className="hover:text-white/80 transition underline">
+          <Link href="/contacts" className="hover:text-white/80 transition underline">
             Contactez-nous
-          </a>
+          </Link>
         </div>      </div>
     </section>
   );

@@ -8,8 +8,8 @@ const navLinks = [
     { label: "A propos", href: "/about" },
     { label: "Contacts", href: "/contacts" },
     { label: "FAQ", href: "/faq" },
-    { label: "Conditions générales de retour", href: "/return-policy" },
-    { label: "Confidentialité", href: "/privacy" },
+    { label: "Conditions générales d'utilisation", href: "/terms-of-use" },
+    { label: "Politiques de confidentialité", href: "/privacy" },
 ];
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
