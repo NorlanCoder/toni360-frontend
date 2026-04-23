@@ -218,7 +218,7 @@ export default function ConnexionPartenairePage() {
                 <span className="text-gray-600 text-sm">Se souvenir de moi</span>
               </label>
               <Link
-                href="#"
+                href="/mot-de-passe-oublie"
                 className="text-gray-600 text-sm hover:underline"
               >
                 Mot de passe oublié ?

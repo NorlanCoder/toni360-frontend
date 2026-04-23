@@ -497,7 +497,7 @@ function CartPageContent() {
                 {item.requiresPrescription && (
                   <span className="relative group/ordo shrink-0">
                     <FileText size={15} className="text-red-500" />
-                    <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white z-10">
+                    <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-red-500 px-2 py-1 text-xs text-white z-10">
                       Ordonnance requise
                     </span>
                   </span>

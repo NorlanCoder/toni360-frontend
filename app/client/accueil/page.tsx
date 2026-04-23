@@ -36,7 +36,7 @@ type SearchResult = {
 
 export default function AccueilClientPage() {
   const router = useRouter();
-  const [displayName, setDisplayName] = useState("Mr Vagelas");
+  const [displayName, setDisplayName] = useState("");
   const { searchTerm, searchVersion } = useSearch();
   const { refreshCart } = useCart();
 
@@ -208,7 +208,7 @@ export default function AccueilClientPage() {
                     {item.ordonnance && (
                       <span className="absolute right-4 top-4 group/ordo">
                         <FileText size={18} className="text-red-500" />
-                        <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white z-10">
+                        <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-red-500 px-2 py-1 text-xs text-white z-10">
                           Ordonnance requise
                         </span>
                       </span>

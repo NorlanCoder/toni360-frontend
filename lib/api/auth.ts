@@ -163,3 +163,31 @@ export async function logoutPartner(token: string): Promise<LogoutResponse> {
     token,
   });
 }
+
+export interface PasswordResetResponse {
+  success: boolean;
+  message: string;
+}
+
+export async function forgotPassword(email: string): Promise<PasswordResetResponse> {
+  const json = buildJsonRequest({ email });
+  return apiRequest<PasswordResetResponse>("/auth/forgot-password", {
+    method: "POST",
+    body: json.body,
+    headers: json.headers,
+  });
+}
+
+export async function resetPassword(payload: {
+  token: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+}): Promise<PasswordResetResponse> {
+  const json = buildJsonRequest(payload);
+  return apiRequest<PasswordResetResponse>("/auth/reset-password", {
+    method: "POST",
+    body: json.body,
+    headers: json.headers,
+  });
+}

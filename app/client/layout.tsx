@@ -251,7 +251,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           {/* Barre desktop : recherche + boutons */}
           <div className="hidden lg:flex lg:flex-row lg:items-center lg:justify-between gap-3">
             <form
-              className="relative w-full lg:max-w-xs"
+              className="relative w-full lg:max-w-lg"
               onSubmit={handleSearchSubmit}
             >
               <input

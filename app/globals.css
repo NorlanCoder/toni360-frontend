@@ -52,8 +52,6 @@ summary,
   cursor: pointer !important;
 }
 
-button[disabled],
-button:disabled,
 input:disabled,
 select:disabled {
   cursor: not-allowed !important;
