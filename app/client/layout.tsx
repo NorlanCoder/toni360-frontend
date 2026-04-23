@@ -66,6 +66,14 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     }
   }, [router]);
 
+  // Vider la barre de recherche quand on quitte la page d'accueil
+  useEffect(() => {
+    if (pathname !== "/client/accueil") {
+      setQuery("");
+      triggerSearch("");
+    }
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSearchInput = (value: string) => {
     setQuery(value);
     const term = value.trim();

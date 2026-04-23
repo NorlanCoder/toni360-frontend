@@ -203,7 +203,7 @@ export default function AccueilClientPage() {
                 return (
                   <div
                     key={item.key}
-                    className="relative rounded-2xl border border-gray-200 bg-white p-4 sm:p-6"
+                    className="relative flex flex-col rounded-2xl border border-gray-200 bg-white p-4 sm:p-6"
                   >
                     {item.ordonnance && (
                       <span className="absolute right-4 top-4 group/ordo">
@@ -214,7 +214,7 @@ export default function AccueilClientPage() {
                       </span>
                     )}
 
-                    <div className="mb-5 sm:mb-6">
+                    <div className="mb-5 sm:mb-6 pr-8 flex-1">
                       <h3 className="text-base md:text-xl font-semibold text-gray-900">
                         {item.nom}
                         {item.dosage && (
@@ -257,7 +257,7 @@ export default function AccueilClientPage() {
                       type="button"
                       onClick={() => handleAddToCart(item)}
                       disabled={addingTo[item.key]}
-                      className="block w-full rounded-full bg-toni-green py-2.5 md:py-3 text-sm md:text-base font-bold text-white transition hover:bg-toni-green-dark disabled:opacity-60"
+                      className="mt-auto block w-full rounded-full bg-toni-green py-2.5 md:py-3 text-sm md:text-base font-bold text-white transition hover:bg-toni-green-dark disabled:opacity-60"
                     >
                       {addingTo[item.key] ? (
                         <span className="flex items-center justify-center gap-2">
