@@ -2,11 +2,13 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, FileText, MapPin, Plus } from "lucide-react";
+import { ArrowLeft, Eye, FileText, MapPin, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   annulerCommande,
   getCommande,
+  modifierProduitCommande,
+  supprimerProduitCommande,
   uploadOrdonnanceForProduitCommande,
   validerCommande,
   verifierDisponibiliteCommande,
@@ -42,14 +44,19 @@ function OrderDetailContent() {
   const [pharmacyName, setPharmacyName] = useState("");
   const [pharmacyAdresse, setPharmacyAdresse] = useState("");
   const [pharmacyTelephone, setPharmacyTelephone] = useState("");
+  const [pharmacyEmail, setPharmacyEmail] = useState("");
   const [commandeNumero, setCommandeNumero] = useState("");
   const [commandeStatut, setCommandeStatut] = useState("");
   const [ordonnanceFile, setOrdonnanceFile] = useState<File | null>(null);
+  const [ordonnancePreviewUrl, setOrdonnancePreviewUrl] = useState<string | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showServerPreviewModal, setShowServerPreviewModal] = useState(false);
   const [pendingAnnuler, setPendingAnnuler] = useState(false);
   const [pendingHold, setPendingHold] = useState(false);
   const [pendingValider, setPendingValider] = useState(false);
   const [pendingVerif, setPendingVerif] = useState(false);
   const [verificationDone, setVerificationDone] = useState(false);
+  const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -71,8 +78,9 @@ function OrderDetailContent() {
       setCommandeNumero(commande.numero_commande ?? "");
       setCommandeStatut(String(commande.statut ?? "").toLowerCase());
       setPharmacyName(commande.pharmacie?.nom ?? "");
-      setPharmacyAdresse(commande.pharmacie?.adresse ?? "");
+      setPharmacyAdresse([commande.pharmacie?.adresse, commande.pharmacie?.ville].filter(Boolean).join(", "));
       setPharmacyTelephone(commande.pharmacie?.telephone ?? "");
+      setPharmacyEmail(commande.pharmacie?.email ?? "");
 
       const mappedItems: OrderItem[] = commande.produits.map((p) => ({
         id: p.id,
@@ -153,7 +161,7 @@ function OrderDetailContent() {
     }
   };
 
-  const anyPending = pendingAnnuler || pendingHold || pendingValider;
+  const anyPending = pendingAnnuler || pendingHold || pendingValider || pendingItemId !== null;
 
   const handleValider = async () => {
     if (!token || anyPending) return;
@@ -233,38 +241,64 @@ function OrderDetailContent() {
       </h1>
 
       {/* Header pharmacie */}
-      <div className="rounded-2xl bg-gradient-to-r from-[#004B2F] to-[#00B16F] px-6 py-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex-1">
-          <h2 className="text-xl font-bold text-white sm:text-2xl leading-snug">{pharmacyName}</h2>
+      <div className="rounded-2xl bg-gradient-to-r from-[#004B2F] to-[#00B16F] px-6 py-6 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-center">
+        {/* Colonne 1 : nom + adresse */}
+        <div>
+          <h2 className="text-xl font-bold text-white sm:text-2xl leading-snug">
+            <span className="block">{pharmacyName.split(' ')[0]}</span>
+            <span className="block">
+              {pharmacyName.split(' ').slice(1).join(' ')}
+            </span>
+          </h2>
           {pharmacyAdresse && (
             <p className="mt-1 text-sm text-green-100 leading-snug">{pharmacyAdresse}</p>
           )}
         </div>
-        <div className="flex flex-col gap-1 sm:text-right">
+
+        {/* Colonne 2 : email + téléphone (centré) */}
+        <div className="flex flex-col gap-3 sm:items-center sm:text-center">
+          {pharmacyEmail && (
+            <a
+              href={`mailto:${pharmacyEmail}`}
+              className="text-white text-sm font-medium hover:underline"
+            >
+              {pharmacyEmail}
+            </a>
+          )}
           {pharmacyTelephone && (
-            <p className="text-white text-sm font-medium">{pharmacyTelephone}</p>
+            <a
+              href={`tel:${pharmacyTelephone}`}
+              className="text-white text-sm font-medium hover:underline"
+            >
+              {pharmacyTelephone}
+            </a>
           )}
         </div>
-        {pharmacyAdresse && (
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 self-start sm:self-auto rounded-full bg-white px-5 py-2.5 text-sm font-bold text-toni-green-dark-2 hover:bg-gray-50 transition shrink-0"
-          >
-            <MapPin size={16} />
-            Itinéraire
-          </a>
-        )}
+
+        {/* Colonne 3 : bouton itinéraire (aligné à droite) */}
+        <div className="flex sm:justify-end">
+          {pharmacyAdresse && (
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-toni-green-dark-2 hover:bg-gray-50 transition shrink-0"
+            >
+              <MapPin size={16} />
+              Itinéraire
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Table produits */}
       <div className="overflow-hidden bg-white">
-        <div className="hidden sm:grid sm:grid-cols-[1fr_100px_150px_150px] gap-2 px-6 py-3 text-base font-bold text-[#B5B5B5] border-b border-[#66666680]">
+        <div className={`hidden gap-2 px-6 py-3 text-base font-bold text-[#B5B5B5] border-b border-[#66666680] ${isEnAttenteClient && !verificationDone ? "sm:grid sm:grid-cols-[1fr_120px_150px_150px_40px]" : "sm:grid sm:grid-cols-[1fr_100px_150px_150px]"}`}>
           <span>Nom du produit</span>
           <span className="text-center">Qté</span>
           <span>Prix</span>
           <span>Total</span>
+          {isEnAttenteClient && !verificationDone && <span />}
         </div>
 
         {items.map((item, idx) => (
@@ -272,7 +306,7 @@ function OrderDetailContent() {
             key={item.id}
             className={idx < items.length - 1 ? "border-b border-[#66666680]" : ""}
           >
-            <div className="flex flex-col gap-2 px-6 py-4 sm:grid sm:grid-cols-[1fr_100px_150px_150px] sm:gap-2 sm:items-center">
+            <div className={`flex flex-col gap-2 px-6 py-4 sm:gap-2 sm:items-center ${isEnAttenteClient && !verificationDone ? "sm:grid sm:grid-cols-[1fr_120px_150px_150px_40px]" : "sm:grid sm:grid-cols-[1fr_100px_150px_150px]"}`}>
               <div>
                 <p className="font-semibold text-gray-900 flex items-center gap-2">
                   {item.name}
@@ -287,10 +321,65 @@ function OrderDetailContent() {
                 </p>
               </div>
 
-              <span className="text-sm text-gray-700 text-center">
-                <span className="sm:hidden text-gray-400 mr-1">Qté :</span>
-                {item.qty}
-              </span>
+              <div className="flex sm:justify-center">
+                {isEnAttenteClient && !verificationDone ? (
+                  <div className="inline-flex items-center rounded-full border border-gray-200 px-2 py-1">
+                    <button
+                      type="button"
+                      disabled={pendingItemId === item.id || item.qty <= 1}
+                      onClick={async () => {
+                        if (!token || pendingItemId) return;
+                        const newQty = item.qty - 1;
+                        if (newQty < 1) return;
+                        setPendingItemId(item.id);
+                        try {
+                          await modifierProduitCommande(token, commandeId, item.id, newQty);
+                          setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, qty: newQty } : i));
+                          setVerificationDone(false);
+                        } catch (error) {
+                          if (error instanceof ApiError) toast.error(error.message);
+                        } finally {
+                          setPendingItemId(null);
+                        }
+                      }}
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                    >
+                      <Minus size={13} />
+                    </button>
+                    <span className="px-3 text-sm font-semibold text-gray-800 min-w-[24px] text-center">
+                      {pendingItemId === item.id
+                        ? <span className="inline-block w-3 h-3 rounded-full border-2 border-gray-400 border-t-transparent animate-spin" />
+                        : item.qty}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={pendingItemId === item.id}
+                      onClick={async () => {
+                        if (!token || pendingItemId) return;
+                        const newQty = item.qty + 1;
+                        setPendingItemId(item.id);
+                        try {
+                          await modifierProduitCommande(token, commandeId, item.id, newQty);
+                          setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, qty: newQty } : i));
+                          setVerificationDone(false);
+                        } catch (error) {
+                          if (error instanceof ApiError) toast.error(error.message);
+                        } finally {
+                          setPendingItemId(null);
+                        }
+                      }}
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-toni-green-dark-2 hover:bg-toni-green-light disabled:opacity-40"
+                    >
+                      <Plus size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-sm text-gray-700 text-center">
+                    <span className="sm:hidden text-gray-400 mr-1">Qté :</span>
+                    {item.qty}
+                  </span>
+                )}
+              </div>
 
               <span className="text-sm text-gray-700 whitespace-nowrap">
                 <span className="sm:hidden text-gray-400 mr-1">Prix :</span>
@@ -301,6 +390,30 @@ function OrderDetailContent() {
                 <span className="sm:hidden text-gray-400 mr-1">Total :</span>
                 {formatPrice(item.qty * item.price)} XOF CFA
               </span>
+
+              {isEnAttenteClient && !verificationDone && (
+                <button
+                  type="button"
+                  disabled={pendingItemId === item.id || items.length <= 1}
+                  onClick={async () => {
+                    if (!token || pendingItemId) return;
+                    setPendingItemId(item.id);
+                    try {
+                      await supprimerProduitCommande(token, commandeId, item.id);
+                      setItems((prev) => prev.filter((i) => i.id !== item.id));
+                      setVerificationDone(false);
+                    } catch (error) {
+                      if (error instanceof ApiError) toast.error(error.message);
+                    } finally {
+                      setPendingItemId(null);
+                    }
+                  }}
+                  className="flex sm:justify-center text-red-400 hover:text-red-600 transition disabled:opacity-40"
+                  aria-label="Supprimer"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
 
 
@@ -317,23 +430,88 @@ function OrderDetailContent() {
       </div>
 
       {/* Ordonnance déjà soumise */}
-      {items.some((i) => i.ordonnanceUrl) && (
-        <div className="mt-5 flex flex-col gap-2">
-          <p className="text-sm font-semibold text-gray-700">Ordonnance soumise :</p>
-          <a
-            href={items.find((i) => i.ordonnanceUrl)!.ordonnanceUrl!}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block"
-          >
-            <img
-              src={items.find((i) => i.ordonnanceUrl)!.ordonnanceUrl!}
-              alt="Ordonnance"
-              className="max-h-60 rounded-xl border border-gray-200 object-contain hover:opacity-90 transition"
-            />
-          </a>
-        </div>
-      )}
+      {items.some((i) => i.ordonnanceUrl) && (() => {
+        const url = items.find((i) => i.ordonnanceUrl)!.ordonnanceUrl!;
+        const isPdf = url.toLowerCase().includes(".pdf") || url.toLowerCase().includes("pdf");
+        return (
+          <div className="mt-5 flex flex-col gap-2">
+            <p className="text-sm font-semibold text-gray-700">Ordonnance soumise :</p>
+            <div className="flex items-center gap-3 rounded-xl border border-toni-green-dark-2/30 bg-green-50 px-4 py-3">
+              {/* Miniature */}
+              <button
+                type="button"
+                onClick={() => setShowServerPreviewModal(true)}
+                className="shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-gray-200 bg-white flex items-center justify-center hover:opacity-80 transition"
+                title="Prévisualiser"
+              >
+                {!isPdf ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={url} alt="aperçu" className="w-full h-full object-cover" />
+                ) : (
+                  <FileText size={22} className="text-toni-green-dark-2" />
+                )}
+              </button>
+              {/* Nom */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 truncate">{isPdf ? "Ordonnance.pdf" : "Ordonnance"}</p>
+                <p className="text-xs text-gray-400">Déjà soumise</p>
+              </div>
+              {/* Actions */}
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowServerPreviewModal(true)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition"
+                  title="Prévisualiser"
+                >
+                  <Eye size={16} />
+                </button>
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition"
+                  title="Ouvrir dans un nouvel onglet"
+                >
+                  <FileText size={15} />
+                </a>
+              </div>
+            </div>
+
+            {/* Modal preview ordonnance serveur */}
+            {showServerPreviewModal && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+                onClick={() => setShowServerPreviewModal(false)}
+              >
+                <div
+                  className="relative max-w-2xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-semibold text-gray-800">Ordonnance soumise</p>
+                    <button
+                      type="button"
+                      onClick={() => setShowServerPreviewModal(false)}
+                      className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                  <div className="p-4 flex justify-center">
+                    {!isPdf ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={url} alt="Ordonnance" className="max-h-[70vh] w-auto rounded-lg object-contain" />
+                    ) : (
+                      <iframe src={url} title="Ordonnance PDF" className="w-full h-[70vh] rounded-lg" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Section ordonnance — uniquement si des produits manquent une ordonnance et commande active */}
       {hasMissingPrescription && canValidate && (
@@ -341,19 +519,72 @@ function OrderDetailContent() {
           <p className="text-sm text-gray-600 mb-1">
             {missingPrescriptionItems.length} médicament(s) nécessitent une ordonnance.
           </p>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-3 text-sm font-medium text-gray-700 hover:text-toni-green-dark-2 transition"
-          >
-            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-toni-green-dark-2 text-white shrink-0">
-              <Plus size={18} />
-            </span>
-            {ordonnanceFile
-              ? <span className="text-toni-green-dark-2 truncate max-w-[240px]">{ordonnanceFile.name}</span>
-              : "Ajouter une ordonnance"
-            }
-          </button>
+
+          {/* Fichier sélectionné : prévisualisation */}
+          {ordonnanceFile ? (
+            <div className="flex items-center gap-3 rounded-xl border border-toni-green-dark-2/30 bg-green-50 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(true)}
+                className="shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-gray-200 bg-white flex items-center justify-center hover:opacity-80 transition"
+                title="Prévisualiser"
+              >
+                {ordonnancePreviewUrl && ordonnanceFile.type.startsWith("image/") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={ordonnancePreviewUrl} alt="aperçu" className="w-full h-full object-cover" />
+                ) : (
+                  <FileText size={22} className="text-toni-green-dark-2" />
+                )}
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 truncate">{ordonnanceFile.name}</p>
+                <p className="text-xs text-gray-400">{(ordonnanceFile.size / 1024).toFixed(0)} Ko</p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowPreviewModal(true)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition"
+                  title="Prévisualiser"
+                >
+                  <Eye size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition"
+                  title="Remplacer"
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrdonnanceFile(null);
+                    if (ordonnancePreviewUrl) URL.revokeObjectURL(ordonnancePreviewUrl);
+                    setOrdonnancePreviewUrl(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-red-500 transition"
+                  title="Supprimer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-3 text-sm font-medium text-gray-700 hover:text-toni-green-dark-2 transition"
+            >
+              <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-toni-green-dark-2 text-white shrink-0">
+                <Plus size={18} />
+              </span>
+              Ajouter une ordonnance
+            </button>
+          )}
+
           <input
             ref={fileInputRef}
             type="file"
@@ -362,9 +593,13 @@ function OrderDetailContent() {
             onChange={(e) => {
               const file = e.target.files?.[0] ?? null;
               if (!file) return;
-              const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+              const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+              const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".pdf"];
               const MAX_SIZE = 5 * 1024 * 1024;
-              if (!ALLOWED_TYPES.includes(file.type)) {
+              const ext = "." + (file.name.split(".").pop() ?? "").toLowerCase();
+              const mimeOk = file.type ? ALLOWED_TYPES.includes(file.type) : false;
+              const extOk = ALLOWED_EXTENSIONS.includes(ext);
+              if (!mimeOk && !extOk) {
                 toast.error("Format non supporté. Seuls JPG, PNG et PDF sont acceptés.");
                 e.target.value = "";
                 return;
@@ -374,12 +609,68 @@ function OrderDetailContent() {
                 e.target.value = "";
                 return;
               }
+              if (ordonnancePreviewUrl) URL.revokeObjectURL(ordonnancePreviewUrl);
+              setOrdonnancePreviewUrl(URL.createObjectURL(file));
               setOrdonnanceFile(file);
             }}
           />
           <p className="text-xs text-gray-400 mt-1">
             Formats acceptés : JPG, PNG, PDF — Taille max : 5 Mo
           </p>
+
+          {/* Modal preview fichier local */}
+          {showPreviewModal && ordonnancePreviewUrl && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+              onClick={() => setShowPreviewModal(false)}
+            >
+              <div
+                className="relative max-w-2xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-semibold text-gray-800 truncate max-w-[80%]">{ordonnanceFile?.name}</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowPreviewModal(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="p-4 flex justify-center">
+                  {ordonnanceFile?.type.startsWith("image/") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={ordonnancePreviewUrl} alt="Ordonnance" className="max-h-[70vh] w-auto rounded-lg object-contain" />
+                  ) : (
+                    <iframe src={ordonnancePreviewUrl} title="Ordonnance PDF" className="w-full h-[70vh] rounded-lg" />
+                  )}
+                </div>
+                <div className="flex gap-2 px-4 pb-4 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => { setShowPreviewModal(false); fileInputRef.current?.click(); }}
+                    className="flex items-center gap-2 rounded-full border border-toni-green-dark-2 px-4 py-2 text-sm font-medium text-toni-green-dark-2 hover:bg-green-50 transition"
+                  >
+                    <Pencil size={14} /> Remplacer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPreviewModal(false);
+                      setOrdonnanceFile(null);
+                      if (ordonnancePreviewUrl) URL.revokeObjectURL(ordonnancePreviewUrl);
+                      setOrdonnancePreviewUrl(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="flex items-center gap-2 rounded-full border border-red-400 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50 transition"
+                  >
+                    <Trash2 size={14} /> Supprimer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -401,10 +692,17 @@ function OrderDetailContent() {
             ) : "Terminer"}
           </button>
 
+          <a
+            href="/client/orders"
+            className="flex-1 rounded-full bg-gray-200 py-3 text-base font-bold text-gray-500 transition hover:bg-gray-300 text-center"
+          >
+            Garder en attente
+          </a>
+
           <button
             type="button"
             onClick={handleVerifierDisponibilite}
-            disabled={pendingVerif}
+            disabled={pendingVerif || anyPending}
             className="flex-1 rounded-full bg-toni-green-dark-2 py-3 text-base font-bold text-white transition hover:bg-toni-green-dark disabled:opacity-70"
           >
             {pendingVerif ? (

@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { FileText, MapPin, Minus, Plus, Trash2 } from "lucide-react";
+import { Eye, FileText, MapPin, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   annulerCommande,
@@ -50,6 +50,8 @@ function CartPageContent() {
   const [pendingItems, setPendingItems] = useState(false);
   const anyPending = pendingCancel || pendingHold || pendingCheckout || pendingItems;
   const [ordonnanceFile, setOrdonnanceFile] = useState<File | null>(null);
+  const [ordonnancePreviewUrl, setOrdonnancePreviewUrl] = useState<string | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [uploadRetryCandidateId, setUploadRetryCandidateId] = useState<string | null>(null);
   const [uploadRetryCandidateNumero, setUploadRetryCandidateNumero] = useState<string | null>(null);
   const [pharmacyName, setPharmacyName] = useState(pharmacyNameFromUrl);
@@ -315,7 +317,7 @@ function CartPageContent() {
 
         await validerCommande(token, commandeIdFromUrl);
 
-        router.push("/client/orders?tab=en_cours");
+        router.push(`/client/orders/${commandeIdFromUrl}/qrcode`);
       } catch (error) {
         if (error instanceof ApiError) {
           toast.error(error.message);
@@ -371,7 +373,7 @@ function CartPageContent() {
       if (!creation.data.necessite_ordonnance) {
         await validerCommande(token, commandeId);
         clearLocalCart();
-        router.push("/client/orders?tab=en_cours");
+        router.push(`/client/orders/${commandeId}/qrcode`);
         return;
       }
 
@@ -391,7 +393,7 @@ function CartPageContent() {
 
       await validerCommande(token, commandeId);
       clearLocalCart();
-      router.push("/client/orders?tab=en_cours");
+      router.push(`/client/orders/${commandeId}/qrcode`);
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.message);
@@ -602,19 +604,77 @@ function CartPageContent() {
           <p className="text-sm text-gray-600 mb-1">
             {prescriptionCount} médicament(s) de cette commande nécessitent une ordonnance.
           </p>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-3 text-sm font-medium text-gray-700 hover:text-toni-green-dark-2 transition"
-          >
-            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-toni-green-dark-2 text-white shrink-0">
-              <Plus size={18} />
-            </span>
-            {ordonnanceFile
-              ? <span className="text-toni-green-dark-2 truncate max-w-[240px]">{ordonnanceFile.name}</span>
-              : "Ajouter une ordonnance"
-            }
-          </button>
+
+          {/* Fichier sélectionné : prévisualisation */}
+          {ordonnanceFile ? (
+            <div className="flex items-center gap-3 rounded-xl border border-toni-green-dark-2/30 bg-green-50 px-4 py-3">
+              {/* Miniature ou icône PDF */}
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(true)}
+                className="shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-gray-200 bg-white flex items-center justify-center hover:opacity-80 transition"
+                title="Prévisualiser"
+              >
+                {ordonnancePreviewUrl && ordonnanceFile.type.startsWith("image/") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={ordonnancePreviewUrl} alt="aperçu" className="w-full h-full object-cover" />
+                ) : (
+                  <FileText size={22} className="text-toni-green-dark-2" />
+                )}
+              </button>
+
+              {/* Nom du fichier */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 truncate">{ordonnanceFile.name}</p>
+                <p className="text-xs text-gray-400">{(ordonnanceFile.size / 1024).toFixed(0)} Ko</p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowPreviewModal(true)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition"
+                  title="Prévisualiser"
+                >
+                  <Eye size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition"
+                  title="Remplacer"
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrdonnanceFile(null);
+                    if (ordonnancePreviewUrl) URL.revokeObjectURL(ordonnancePreviewUrl);
+                    setOrdonnancePreviewUrl(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-red-500 transition"
+                  title="Supprimer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-3 text-sm font-medium text-gray-700 hover:text-toni-green-dark-2 transition"
+            >
+              <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-toni-green-dark-2 text-white shrink-0">
+                <Plus size={18} />
+              </span>
+              Ajouter une ordonnance
+            </button>
+          )}
+
           <input
             ref={fileInputRef}
             type="file"
@@ -623,9 +683,13 @@ function CartPageContent() {
             onChange={(e) => {
               const file = e.target.files?.[0] ?? null;
               if (!file) return;
-              const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+              const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+              const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".pdf"];
               const MAX_SIZE = 5 * 1024 * 1024; // 5 Mo
-              if (!ALLOWED_TYPES.includes(file.type)) {
+              const ext = "." + (file.name.split(".").pop() ?? "").toLowerCase();
+              const mimeOk = file.type ? ALLOWED_TYPES.includes(file.type) : false;
+              const extOk = ALLOWED_EXTENSIONS.includes(ext);
+              if (!mimeOk && !extOk) {
                 toast.error("Format non supporté. Seuls les fichiers JPG, PNG et PDF sont acceptés.");
                 e.target.value = "";
                 return;
@@ -635,12 +699,68 @@ function CartPageContent() {
                 e.target.value = "";
                 return;
               }
+              if (ordonnancePreviewUrl) URL.revokeObjectURL(ordonnancePreviewUrl);
+              setOrdonnancePreviewUrl(URL.createObjectURL(file));
               setOrdonnanceFile(file);
             }}
           />
           <p className="text-xs text-gray-400 mt-1">
             Formats acceptés : JPG, PNG, PDF — Taille max : 5 Mo
           </p>
+
+          {/* Modal de prévisualisation */}
+          {showPreviewModal && ordonnancePreviewUrl && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+              onClick={() => setShowPreviewModal(false)}
+            >
+              <div
+                className="relative max-w-2xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-semibold text-gray-800 truncate max-w-[80%]">{ordonnanceFile?.name}</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowPreviewModal(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="p-4 flex justify-center">
+                  {ordonnanceFile?.type.startsWith("image/") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={ordonnancePreviewUrl} alt="Ordonnance" className="max-h-[70vh] w-auto rounded-lg object-contain" />
+                  ) : (
+                    <iframe src={ordonnancePreviewUrl} title="Ordonnance PDF" className="w-full h-[70vh] rounded-lg" />
+                  )}
+                </div>
+                <div className="flex gap-2 px-4 pb-4 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => { setShowPreviewModal(false); fileInputRef.current?.click(); }}
+                    className="flex items-center gap-2 rounded-full border border-toni-green-dark-2 px-4 py-2 text-sm font-medium text-toni-green-dark-2 hover:bg-green-50 transition"
+                  >
+                    <Pencil size={14} /> Remplacer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPreviewModal(false);
+                      setOrdonnanceFile(null);
+                      URL.revokeObjectURL(ordonnancePreviewUrl);
+                      setOrdonnancePreviewUrl(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="flex items-center gap-2 rounded-full border border-red-400 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50 transition"
+                  >
+                    <Trash2 size={14} /> Supprimer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
