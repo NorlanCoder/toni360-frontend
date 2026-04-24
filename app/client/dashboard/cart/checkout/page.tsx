@@ -55,6 +55,7 @@ function CartPageContent() {
   const [pharmacyName, setPharmacyName] = useState(pharmacyNameFromUrl);
   const [pharmacyAdresse, setPharmacyAdresse] = useState("");
   const [pharmacyTelephone, setPharmacyTelephone] = useState("");
+  const [pharmacyEmail, setPharmacyEmail] = useState("");
   const [prescriptionCount, setPrescriptionCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { clearLocalCart } = useCart();
@@ -92,6 +93,7 @@ function CartPageContent() {
       setPharmacyName(firstPharmacie?.nom ?? pharmacyNameFromUrl);
       setPharmacyAdresse([firstPharmacie?.adresse, firstPharmacie?.ville].filter(Boolean).join(", "));
       setPharmacyTelephone(firstPharmacie?.telephone ?? "");
+      setPharmacyEmail(firstPharmacie?.email ?? "");
 
       const mappedItems = panier.pharmacies.flatMap((pharmacieBloc) =>
         pharmacieBloc.produits.map((item) => ({
@@ -129,6 +131,7 @@ function CartPageContent() {
       setPharmacyName(commande.pharmacie?.nom ?? pharmacyNameFromUrl);
       setPharmacyAdresse(commande.pharmacie?.adresse ?? "");
       setPharmacyTelephone(commande.pharmacie?.telephone ?? "");
+      setPharmacyEmail((commande.pharmacie as { email?: string })?.email ?? "");
 
       const mappedItems: CartItem[] = commande.produits.map((item) => ({
         id: item.id,
@@ -446,29 +449,54 @@ function CartPageContent() {
     <section className="mx-auto w-full max-w-6xl px-3 pb-6 sm:px-6 sm:pb-8">
 
       {/* ── Header pharmacie ── */}
-      <div className="rounded-2xl bg-gradient-to-r from-[#004B2F] to-[#00B16F] px-6 py-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex-1">
-          <h2 className="text-xl font-bold text-white sm:text-2xl leading-snug">{pharmacyName}</h2>
+      <div className="rounded-2xl bg-gradient-to-r from-[#004B2F] to-[#00B16F] px-6 py-6 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-center">
+        {/* Colonne 1 : nom + adresse */}
+        <div>
+          <h2 className="text-xl font-bold text-white sm:text-2xl leading-snug">
+            <span className="block">{pharmacyName.split(' ')[0]}</span>
+            <span className="block">
+              {pharmacyName.split(' ').slice(1).join(' ')}
+            </span>
+          </h2>
           {pharmacyAdresse && (
             <p className="mt-1 text-sm text-green-100 leading-snug">{pharmacyAdresse}</p>
           )}
         </div>
-        <div className="flex flex-col gap-1 sm:text-right">
+
+        {/* Colonne 2 : email + téléphone (centré) */}
+        <div className="flex flex-col gap-3 sm:items-center sm:text-center">
+          {pharmacyEmail && (
+            <a
+              href={`mailto:${pharmacyEmail}`}
+              className="text-white text-sm font-medium hover:underline"
+            >
+              {pharmacyEmail}
+            </a>
+          )}
           {pharmacyTelephone && (
-            <p className="text-white text-sm font-medium">{pharmacyTelephone}</p>
+            <a
+              href={`tel:${pharmacyTelephone}`}
+              className="text-white text-sm font-medium hover:underline"
+            >
+              {pharmacyTelephone}
+            </a>
           )}
         </div>
-        {pharmacyAdresse && (
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 self-start sm:self-auto rounded-full bg-white px-5 py-2.5 text-sm font-bold text-toni-green-dark-2 hover:bg-gray-50 transition shrink-0"
-          >
-            <MapPin size={16} />
-            Itinéraire
-          </a>
-        )}
+
+        {/* Colonne 3 : bouton itinéraire (aligné à droite) */}
+        <div className="flex sm:justify-end">
+          {pharmacyAdresse && (
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-toni-green-dark-2 hover:bg-gray-50 transition shrink-0"
+            >
+              <MapPin size={16} />
+              Itinéraire
+            </a>
+          )}
+        </div>
       </div>
 
       {/* ── Table produits ── */}
@@ -486,9 +514,8 @@ function CartPageContent() {
         {items.map((item, idx) => (
           <div
             key={item.id}
-            className={`flex flex-col gap-3 px-6 py-4 sm:grid sm:grid-cols-[1fr_180px_150px_150px_44px] sm:gap-2 sm:items-center ${
-              idx < items.length - 1 ? "border-b border-[#66666680]" : ""
-            }`}
+            className={`flex flex-col gap-3 px-6 py-4 sm:grid sm:grid-cols-[1fr_180px_150px_150px_44px] sm:gap-2 sm:items-center ${idx < items.length - 1 ? "border-b border-[#66666680]" : ""
+              }`}
           >
             {/* Nom */}
             <div>
