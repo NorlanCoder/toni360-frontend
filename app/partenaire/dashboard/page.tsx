@@ -141,10 +141,10 @@ function getPharmacieName(value: unknown): string {
 }
 
 /* ────────────────── Arrow button (green circle) ──────────────── */
-function ArrowButton() {
+function ArrowButton({ bg = "bg-emerald-700 hover:bg-emerald-800" }: { bg?: string }) {
   return (
     <span
-      className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-white transition-colors hover:bg-emerald-600"
+      className={`flex h-10 w-10 items-center justify-center rounded-full ${bg} text-white transition-colors`}
       aria-label="Voir le détail"
     >
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
@@ -303,7 +303,7 @@ export default function PartenaireDashboardPage() {
               </div>
               {/* Arrow */}
               <div>
-                <ArrowButton />
+                <ArrowButton bg="bg-red-600 hover:bg-red-700" />
               </div>
             </Link>
 
@@ -335,7 +335,7 @@ export default function PartenaireDashboardPage() {
               </div>
               {/* Arrow */}
               <div>
-                <ArrowButton />
+                <ArrowButton bg="bg-[#b7860b] hover:bg-[#9a7009]" />
               </div>
             </Link>
 
@@ -367,7 +367,7 @@ export default function PartenaireDashboardPage() {
               </div>
               {/* Arrow */}
               <div>
-                <ArrowButton />
+                <ArrowButton bg="bg-emerald-700 hover:bg-emerald-800" />
               </div>
             </Link>
           </div>
@@ -378,7 +378,7 @@ export default function PartenaireDashboardPage() {
             {/* Card 4 — Stocks disponibles */}
             <Link
               href="/partenaire/stocks"
-              className="group flex flex-col rounded-2xl bg-[#e6f7f0] border border-emerald-300 p-6 min-h-[220px] transition-shadow hover:shadow-md"
+              className="group flex flex-col rounded-2xl bg-[#B0E3D1] border border-[#00955F] p-6 min-h-[220px] transition-shadow hover:shadow-md"
             >
               {/* Icon */}
               <div className="mb-4">
@@ -403,7 +403,7 @@ export default function PartenaireDashboardPage() {
               </div>
               {/* Arrow */}
               <div>
-                <ArrowButton />
+                <ArrowButton bg="bg-emerald-700 hover:bg-emerald-800" />
               </div>
             </Link>
 

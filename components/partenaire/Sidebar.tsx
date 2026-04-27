@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
-  Boxes,
   Users,
   UserRound,
   Pill,
@@ -15,10 +14,11 @@ import {
   Bell,
   LogOut,
   X,
-  AlertTriangle,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { filterPartnerNavigationByPermissions } from "@/lib/auth/authorization";
 import { getAuthSession } from "@/lib/api/session";
+import { getPartnerNotificationCount } from "@/lib/api/partner";
 import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 
 /* ──────────────────── Nav items ─────────────────────── */
@@ -59,6 +59,25 @@ export default function PartenaireSidebar() {
   const session = getAuthSession();
   const visibleNavItems = filterPartnerNavigationByPermissions(session, navItems);
   const activeHref = getActiveHref(pathname, visibleNavItems);
+  const [notifCount, setNotifCount] = useState(0);
+
+  useEffect(() => {
+    if (!session?.token) return;
+    const token = session.token;
+
+    const fetchCount = async () => {
+      try {
+        const res = await getPartnerNotificationCount(token);
+        setNotifCount(res.data.non_lues ?? res.data.total_non_lues ?? 0);
+      } catch {
+        // silently ignore
+      }
+    };
+
+    void fetchCount();
+    const id = setInterval(() => void fetchCount(), 60_000);
+    return () => clearInterval(id);
+  }, [session?.token]);
 
   return (
     <>
@@ -71,7 +90,7 @@ export default function PartenaireSidebar() {
             onClick={onClose}
           />
           {/* Panneau */}
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white flex flex-col justify-between shadow-xl">
+          <aside className="absolute left-0 top-0 bottom-0 w-80 bg-white flex flex-col justify-between shadow-xl">
             <div>
               {/* En-tête drawer */}
               <div className="flex items-center justify-between px-5 pt-6 pb-8">
@@ -93,6 +112,7 @@ export default function PartenaireSidebar() {
                 {visibleNavItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = item.href === activeHref;
+                  const isNotif = item.href === "/partenaire/notifications";
                   return (
                     <Link
                       key={item.label}
@@ -106,6 +126,11 @@ export default function PartenaireSidebar() {
                     >
                       <Icon size={20} strokeWidth={isActive ? 2.2 : 1.8} />
                       {item.label}
+                      {isNotif && notifCount > 0 && (
+                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+                          {notifCount > 99 ? "99+" : notifCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
@@ -128,7 +153,7 @@ export default function PartenaireSidebar() {
       )}
 
       {/* ── Sidebar desktop ── */}
-      <aside className="hidden w-64 shrink-0 flex-col justify-between  border-gray-200 bg-white lg:flex h-screen overflow-y-auto">
+      <aside className="hidden w-72 shrink-0 flex-col justify-between  border-gray-200 bg-white lg:flex h-screen overflow-y-auto">
         <div>
           <div className="mb-10 mt-7 px-5">
             <Link href="/partenaire/dashboard" aria-label="Accueil">
@@ -140,6 +165,7 @@ export default function PartenaireSidebar() {
             {visibleNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = item.href === activeHref;
+              const isNotif = item.href === "/partenaire/notifications";
               return (
                 <Link
                   key={item.label}
@@ -152,6 +178,11 @@ export default function PartenaireSidebar() {
                 >
                   <Icon size={20} strokeWidth={isActive ? 2.2 : 1.8} />
                   {item.label}
+                  {isNotif && notifCount > 0 && (
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+                      {notifCount > 99 ? "99+" : notifCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}

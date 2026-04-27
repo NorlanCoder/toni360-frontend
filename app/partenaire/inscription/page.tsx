@@ -22,6 +22,8 @@ export default function DevenirPartenairePage() {
 
   const [formData, setFormData] = useState({
     nomPharmacie: "",
+    titulairePrenom: "",
+    titulaireNom: "",
     adresseComplete: "",
     telephone: undefined as string | undefined,
     jourOuverture: "",
@@ -41,6 +43,8 @@ export default function DevenirPartenairePage() {
 
     if (
       !formData.nomPharmacie.trim() ||
+      !formData.titulairePrenom.trim() ||
+      !formData.titulaireNom.trim() ||
       !formData.adresseComplete.trim() ||
       !formData.telephone?.trim() ||
       !formData.email.trim() ||
@@ -68,7 +72,12 @@ export default function DevenirPartenairePage() {
       return;
     }
 
-    if (formData.licence && formData.licence.size > 5 * 1024 * 1024) {
+    if (!formData.licence) {
+      toast.warning("Veuillez soumettre votre licence pharmaceutique.");
+      return;
+    }
+
+    if (formData.licence.size > 5 * 1024 * 1024) {
       toast.warning("La licence ne doit pas depasser 5 Mo.");
       return;
     }
@@ -91,8 +100,8 @@ export default function DevenirPartenairePage() {
         ville: formData.villeExercice.trim() || undefined,
         telephone,
         email: formData.email.trim(),
-        titulaire_nom: formData.nomPharmacie.trim(),
-        titulaire_prenom: "Titulaire",
+        titulaire_nom: formData.titulaireNom.trim(),
+        titulaire_prenom: formData.titulairePrenom.trim(),
         password: formData.heureOuvrables,
         password_confirmation: formData.confirmPassword,
         licence_pharmaceutique: formData.licence ?? undefined,
@@ -144,8 +153,7 @@ export default function DevenirPartenairePage() {
 
         {/* Titre */}
         <h1
-          className="text-4xl font-bold text-center mb-10"
-          style={{ color: "#137551" }}
+          className="text-4xl font-bold text-black text-center mb-10"
         >
           Inscription
         </h1>
@@ -154,6 +162,33 @@ export default function DevenirPartenairePage() {
         <form onSubmit={handleSubmit} className="w-full bg-white">
           {/* Grille deux colonnes */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+
+            {/* Nom du titulaire */}
+            <div>
+              <input
+                type="text"
+                placeholder="Nom du titulaire"
+                value={formData.titulaireNom}
+                onChange={(e) =>
+                  setFormData({ ...formData, titulaireNom: e.target.value })
+                }
+                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+              />
+            </div>
+
+            {/* Prénom du titulaire */}
+            <div>
+              <input
+                type="text"
+                placeholder="Prénom du titulaire"
+                value={formData.titulairePrenom}
+                onChange={(e) =>
+                  setFormData({ ...formData, titulairePrenom: e.target.value })
+                }
+                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+              />
+            </div>
+
             {/* Nom officiel de la pharmacie */}
             <div>
               <input
@@ -166,6 +201,7 @@ export default function DevenirPartenairePage() {
                 className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
+
 
             {/* Adresse complète */}
             <div>
@@ -219,7 +255,7 @@ export default function DevenirPartenairePage() {
             </div>
 
             {/* Mot de pass */}
-            <div>
+            <div className="relative flex items-center">
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Mot de passe"
@@ -227,21 +263,128 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, heureOuvrables: e.target.value })
                 }
-                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className="w-full bg-white px-4 py-3.5 pr-12 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
 
             {/* Ville d'exercice */}
             <div>
-              <input
-                type="text"
-                placeholder="Ville d&#39;exercice"
+              <select
                 value={formData.villeExercice}
                 onChange={(e) =>
                   setFormData({ ...formData, villeExercice: e.target.value })
                 }
-                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
-              />
+                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm"
+              >
+                <option value="">Ville d&apos;exercice</option>
+                <optgroup label="Alibori">
+                  <option value="Banikoara">Banikoara</option>
+                  <option value="Gogounou">Gogounou</option>
+                  <option value="Kandi">Kandi</option>
+                  <option value="Karimama">Karimama</option>
+                  <option value="Malanville">Malanville</option>
+                  <option value="Ségbana">Ségbana</option>
+                </optgroup>
+                <optgroup label="Atacora">
+                  <option value="Boukoumbé">Boukoumbé</option>
+                  <option value="Cobly">Cobly</option>
+                  <option value="Kérou">Kérou</option>
+                  <option value="Kouandé">Kouandé</option>
+                  <option value="Matéri">Matéri</option>
+                  <option value="Natitingou">Natitingou</option>
+                  <option value="Péhunco">Péhunco</option>
+                  <option value="Tanguiéta">Tanguiéta</option>
+                  <option value="Toucountouna">Toucountouna</option>
+                </optgroup>
+                <optgroup label="Atlantique">
+                  <option value="Abomey-Calavi">Abomey-Calavi</option>
+                  <option value="Allada">Allada</option>
+                  <option value="Kpomassè">Kpomassè</option>
+                  <option value="Ouidah">Ouidah</option>
+                  <option value="Sô-Ava">Sô-Ava</option>
+                  <option value="Toffo">Toffo</option>
+                  <option value="Tori-Bossito">Tori-Bossito</option>
+                  <option value="Zè">Zè</option>
+                </optgroup>
+                <optgroup label="Borgou">
+                  <option value="Bembèrèkè">Bembèrèkè</option>
+                  <option value="Kalalé">Kalalé</option>
+                  <option value="N'Dali">N&apos;Dali</option>
+                  <option value="Nikki">Nikki</option>
+                  <option value="Parakou">Parakou</option>
+                  <option value="Pèrèrè">Pèrèrè</option>
+                  <option value="Sinendé">Sinendé</option>
+                  <option value="Tchaourou">Tchaourou</option>
+                </optgroup>
+                <optgroup label="Collines">
+                  <option value="Bantè">Bantè</option>
+                  <option value="Dassa-Zoumè">Dassa-Zoumè</option>
+                  <option value="Glazoué">Glazoué</option>
+                  <option value="Ouèssè">Ouèssè</option>
+                  <option value="Savalou">Savalou</option>
+                  <option value="Savè">Savè</option>
+                </optgroup>
+                <optgroup label="Couffo">
+                  <option value="Aplahoué">Aplahoué</option>
+                  <option value="Djakotomey">Djakotomey</option>
+                  <option value="Dogbo">Dogbo</option>
+                  <option value="Klouékanmè">Klouékanmè</option>
+                  <option value="Lalo">Lalo</option>
+                  <option value="Toviklin">Toviklin</option>
+                </optgroup>
+                <optgroup label="Donga">
+                  <option value="Bassila">Bassila</option>
+                  <option value="Copargo">Copargo</option>
+                  <option value="Djougou">Djougou</option>
+                  <option value="Ouaké">Ouaké</option>
+                </optgroup>
+                <optgroup label="Littoral">
+                  <option value="Cotonou">Cotonou</option>
+                </optgroup>
+                <optgroup label="Mono">
+                  <option value="Athiémé">Athiémé</option>
+                  <option value="Bopa">Bopa</option>
+                  <option value="Comè">Comè</option>
+                  <option value="Grand-Popo">Grand-Popo</option>
+                  <option value="Houéyogbé">Houéyogbé</option>
+                  <option value="Lokossa">Lokossa</option>
+                </optgroup>
+                <optgroup label="Ouémé">
+                  <option value="Adjarra">Adjarra</option>
+                  <option value="Adjohoun">Adjohoun</option>
+                  <option value="Akpro-Missérété">Akpro-Missérété</option>
+                  <option value="Avrankou">Avrankou</option>
+                  <option value="Bonou">Bonou</option>
+                  <option value="Dangbo">Dangbo</option>
+                  <option value="Porto-Novo">Porto-Novo</option>
+                  <option value="Sèmè-Kpodji">Sèmè-Kpodji</option>
+                </optgroup>
+                <optgroup label="Plateau">
+                  <option value="Adja-Ouèrè">Adja-Ouèrè</option>
+                  <option value="Ifangni">Ifangni</option>
+                  <option value="Kétou">Kétou</option>
+                  <option value="Pobè">Pobè</option>
+                  <option value="Sakété">Sakété</option>
+                </optgroup>
+                <optgroup label="Zou">
+                  <option value="Abomey">Abomey</option>
+                  <option value="Agbangnizoun">Agbangnizoun</option>
+                  <option value="Bohicon">Bohicon</option>
+                  <option value="Covè">Covè</option>
+                  <option value="Djidja">Djidja</option>
+                  <option value="Ouinhi">Ouinhi</option>
+                  <option value="Za-Kpota">Za-Kpota</option>
+                  <option value="Zagnanado">Zagnanado</option>
+                  <option value="Zogbodomey">Zogbodomey</option>
+                </optgroup>
+              </select>
             </div>
 
             {/* Confirmer le mot de passe */}
@@ -269,6 +412,7 @@ export default function DevenirPartenairePage() {
           <div className="mt-8 flex items-center justify-start gap-4">
             <span className="text-lg font-semibold" style={{ color: "#137551" }}>
               Soumission de votre licence pharmaceutique
+              <span className="text-red-500 ml-1">*</span>
             </span>
             <button
               type="button"
@@ -287,8 +431,10 @@ export default function DevenirPartenairePage() {
               className="hidden"
             />
           </div>
-          {fileName && (
-            <p className="text-center text-xs text-gray-500 mt-1">{fileName}</p>
+          {fileName ? (
+            <p className="text-xs text-gray-500 mt-1">{fileName}</p>
+          ) : (
+            <p className="text-xs text-gray-400 mt-1">PDF, JPG ou PNG — max 5 Mo</p>
           )}
 
           {/* Case à cocher CGU */}
