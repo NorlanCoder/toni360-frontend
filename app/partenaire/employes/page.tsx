@@ -141,7 +141,7 @@ export default function PartenaireEmployesPage() {
           </div>
 
           {/* Filter tabs */}
-          <div className="mb-6 flex flex-wrap gap-2 sm:gap-x-4 lg:gap-x-8 gap-y-2 sm:gap-y-3">
+          {/* <div className="mb-6 flex flex-wrap gap-2 sm:gap-x-4 lg:gap-x-8 gap-y-2 sm:gap-y-3">
             {filters.map((filter) => {
               const isActive = activeFilter === filter.key;
               return (
@@ -159,7 +159,7 @@ export default function PartenaireEmployesPage() {
                 </button>
               );
             })}
-          </div>
+          </div> */}
 
           {/* Table */}
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">

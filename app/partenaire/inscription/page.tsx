@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Download } from "lucide-react";
+import { Eye, EyeOff, Download, Check, X } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import PhoneInput from "react-phone-number-input";
@@ -19,6 +19,7 @@ export default function DevenirPartenairePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [acceptedCGU, setAcceptedCGU] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
 
   const [formData, setFormData] = useState({
     nomPharmacie: "",
@@ -33,6 +34,13 @@ export default function DevenirPartenairePage() {
     confirmPassword: "",
     licence: null as File | null,
   });
+
+  const passwordRules = [
+    { id: "length", label: "Au moins 8 caractères", valid: formData.heureOuvrables.length >= 8 },
+    { id: "uppercase", label: "Au moins une majuscule", valid: /[A-Z]/.test(formData.heureOuvrables) },
+    { id: "lowercase", label: "Au moins une minuscule", valid: /[a-z]/.test(formData.heureOuvrables) },
+  ];
+  const passwordValid = passwordRules.every((rule) => rule.valid);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,8 +68,9 @@ export default function DevenirPartenairePage() {
       return;
     }
 
-    if (formData.heureOuvrables.length < 8) {
-      toast.warning("Le mot de passe doit contenir au moins 8 caracteres.");
+    if (!passwordValid) {
+      setPasswordTouched(true);
+      toast.warning("Le mot de passe doit contenir au moins 8 caractères, une majuscule et une minuscule.");
       return;
     }
 
@@ -255,23 +264,39 @@ export default function DevenirPartenairePage() {
             </div>
 
             {/* Mot de pass */}
-            <div className="relative flex items-center">
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Mot de passe"
-                value={formData.heureOuvrables}
-                onChange={(e) =>
-                  setFormData({ ...formData, heureOuvrables: e.target.value })
-                }
-                className="w-full bg-white px-4 py-3.5 pr-12 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
+            <div className="space-y-1">
+              <div className="relative flex items-center">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Mot de passe"
+                  value={formData.heureOuvrables}
+                  onChange={(e) =>
+                    setFormData({ ...formData, heureOuvrables: e.target.value })
+                  }
+                  onBlur={() => setPasswordTouched(true)}
+                  className="w-full bg-white px-4 py-3.5 pr-12 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              {(passwordTouched || formData.heureOuvrables.length > 0) && (
+                <ul className="space-y-0.5">
+                  {passwordRules.map((rule) => (
+                    <li
+                      key={rule.id}
+                      className={`flex items-center gap-1.5 text-[11px] leading-tight ${rule.valid ? "text-emerald-600" : "text-red-500"}`}
+                    >
+                      {rule.valid ? <Check size={12} className="shrink-0" /> : <X size={12} className="shrink-0" />}
+                      {rule.label}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* Ville d'exercice */}
@@ -446,7 +471,7 @@ export default function DevenirPartenairePage() {
               sans réserve. Il est donc conseillé aux Utilisateurs de lire
               attentivement les{" "}
               <Link
-                href="/terms-of-use"
+                href="/partenaire/cgu"
                 className="font-semibold hover:underline"
                 style={{ color: "#137551" }}
               >
@@ -463,7 +488,7 @@ export default function DevenirPartenairePage() {
               <span>
                 Je reconnais avoir lu et accepté les{" "}
                 <Link
-                  href="/terms-of-use"
+                  href="/partenaire/cgu"
                   className="font-semibold hover:underline"
                   style={{ color: "#137551" }}
                 >

@@ -17,6 +17,7 @@ interface Medicine {
   id: string;
   nom: string;
   prix: string;
+  quantite: number;
   statut: "Disponible" | "Au seuil" | "Indisponible" | "Désactivé";
 }
 
@@ -95,6 +96,7 @@ export default function PartenaireMedicamentsPage() {
               id: stock.produit_id,
               nom: stock.produit?.nom ?? "—",
               prix: moneyFormat.format(stock.prix_unitaire ?? 0),
+              quantite: stock.quantite ?? 0,
               statut,
             };
           }),
@@ -137,16 +139,16 @@ export default function PartenaireMedicamentsPage() {
             
             <Link
               href="/partenaire/medicaments/incoherences"
-              aria-label="Incohérences"
-              className="flex items-center justify-center rounded-lg border border-gray-300 p-2 sm:p-3 text-emerald-700 transition-colors hover:bg-gray-50"
+              aria-label="Normalisation des médicaments"
+              className="flex items-center justify-center rounded-lg  p-2 sm:p-3 text-emerald-700 transition-colors hover:bg-gray-50"
             >
-              <Image src="/images/dossier.svg" alt="Incohérences" width={24} height={24} />
+              <Image src="/images/dossier.svg" alt="Normalisation des médicaments" width={24} height={24} />
             </Link>
             <button
               type="button"
               aria-label="Importer"
               onClick={() => setShowImportModal(true)}
-              className="flex items-center justify-center rounded-lg border border-gray-300 p-2 sm:p-3 text-emerald-700 transition-colors hover:bg-gray-50"
+              className="flex items-center justify-center rounded-lg  p-2 sm:p-3 text-emerald-700 transition-colors hover:bg-gray-50"
             >
               <Upload className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
@@ -187,6 +189,9 @@ export default function PartenaireMedicamentsPage() {
                   <th className="px-3 sm:px-8 py-3 sm:py-5 text-left text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
                     Prix unitaire
                   </th>
+                  <th className="px-3 sm:px-8 py-3 sm:py-5 text-left text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
+                    Quantité
+                  </th>
                   <th className="px-3 sm:px-8 py-3 sm:py-5 text-right text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
                     Statut
                   </th>
@@ -203,6 +208,9 @@ export default function PartenaireMedicamentsPage() {
                     </td>
                     <td className="px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
                       {med.prix}
+                    </td>
+                    <td className="px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
+                      {med.quantite}
                     </td>
                     <td className="px-3 sm:px-8 py-3 sm:py-6 text-right">
                       <span

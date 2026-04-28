@@ -77,6 +77,7 @@ export function canAccessPartnerRoute(session: AuthSession | null, pathname: str
     pathname.startsWith("/partenaire/connexion") ||
     pathname.startsWith("/partenaire/inscription") ||
     pathname.startsWith("/partenaire/deconnexion") ||
+    pathname.startsWith("/partenaire/cgu") ||
     pathname.startsWith("/partenaire/dashboard")
   ) {
     return true;

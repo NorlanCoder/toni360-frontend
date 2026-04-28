@@ -164,6 +164,16 @@ export async function logoutPartner(token: string): Promise<LogoutResponse> {
   });
 }
 
+export async function deletePartnerAccount(token: string, password: string): Promise<LogoutResponse> {
+  const json = buildJsonRequest({ password });
+  return apiRequest<LogoutResponse>("/pharmacie/account", {
+    method: "DELETE",
+    token,
+    body: json.body,
+    headers: json.headers,
+  });
+}
+
 export interface PasswordResetResponse {
   success: boolean;
   message: string;

@@ -10,6 +10,8 @@ import { ApiError } from "@/lib/api/errors";
 import { createPartnerUser, getPartnerRoles, PartnerRole } from "@/lib/api/partner";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
 const ASSIGNABLE_ROLE_CODES = [
   "GESTIONNAIRE_OPERATIONNEL",
@@ -42,7 +44,7 @@ export default function PartenaireAjouterEmployePage() {
   /* ── Form state ── */
   const [nom, setNom] = useState("");
   const [email, setEmail] = useState("");
-  const [telephone, setTelephone] = useState("");
+  const [telephone, setTelephone] = useState<string | undefined>(undefined);
   const [role, setRole] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
 
@@ -62,9 +64,6 @@ export default function PartenaireAjouterEmployePage() {
           .filter((item): item is PartnerRole => Boolean(item));
 
         setRoles(availableRoles);
-        if (availableRoles.length > 0) {
-          setRole(availableRoles[0].id);
-        }
       } catch (err: unknown) {
         toast.error(err instanceof ApiError ? err.message : "Impossible de charger les rôles.");
       }
@@ -94,7 +93,7 @@ export default function PartenaireAjouterEmployePage() {
 
     const [nomPart, ...prenomParts] = nom.trim().split(" ");
     const prenomPart = prenomParts.join(" ") || nomPart;
-    const numero = telephone.replace(/\D/g, "");
+    const numero = (telephone ?? "").trim();
 
     if (!nomPart || !prenomPart || !email || !numero || !role || motDePasse.length < 8) {
       toast.warning("Veuillez remplir correctement tous les champs.");
@@ -107,7 +106,7 @@ export default function PartenaireAjouterEmployePage() {
         nom: nomPart,
         prenom: prenomPart,
         email,
-        telephone: numero.startsWith("229") ? `+${numero}` : `+229${numero}`,
+        telephone: numero,
         password: motDePasse,
         password_confirmation: motDePasse,
         role_id: role,
@@ -163,16 +162,13 @@ export default function PartenaireAjouterEmployePage() {
                 <label className="mb-1 block text-base font-medium text-gray-600">
                   Téléphone
                 </label>
-                <div className="flex items-center rounded-md border border-gray-300 bg-white overflow-hidden focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
-                  <span className="flex items-center gap-1 border-r border-gray-300 bg-gray-50 px-3 py-2.5 text-sm text-gray-600">
-                    +229
-                  </span>
-                  <input
-                    type="tel"
-                    placeholder="0165456565"
+                <div className="rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 focus-within:border-emerald-500 focus-within:outline-none focus-within:ring-1 focus-within:ring-emerald-500">
+                  <PhoneInput
+                    international
+                    defaultCountry="BJ"
+                    placeholder="Numéro de téléphone"
                     value={telephone}
-                    onChange={(e) => setTelephone(e.target.value)}
-                    className="w-full border-0 bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none"
+                    onChange={setTelephone}
                   />
                 </div>
               </div>
@@ -185,6 +181,7 @@ export default function PartenaireAjouterEmployePage() {
                   onChange={(e) => setRole(e.target.value)}
                   className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 >
+                  <option value="">Sélectionnez un rôle</option>
                   {roles.map((item) => (
                     <option key={item.id} value={item.id}>{getRoleDisplayLabel(item)}</option>
                   ))}

@@ -108,10 +108,10 @@ export default function PartenaireEnAttentePage() {
   const [toMonth, setToMonth] = useState<string>(() => String(new Date().getMonth() + 1).padStart(2, "0"));
   const [toYear, setToYear] = useState<string>(() => String(new Date().getFullYear()));
 
-  const tabs: { key: TabKey; label: string; icon: React.ElementType; href: string }[] = [
-    { key: "a-preparer", label: "A préparer", icon: Package, href: "/partenaire/commandes" },
-    { key: "en-attente", label: "En attente", icon: Clock, href: "/partenaire/commandes/en-attente" },
-    { key: "recuperees", label: "Récupérées", icon: CheckCircle, href: "/partenaire/commandes/recuperees" },
+  const tabs: { key: TabKey; label: string; img: string; href: string }[] = [
+    { key: "a-preparer", label: "A préparer", img: "/preparer_vert.svg", href: "/partenaire/commandes" },
+    { key: "en-attente", label: "En attente", img: "/images/localiser.svg", href: "/partenaire/commandes/en-attente" },
+    { key: "recuperees", label: "Récupérées", img: "/images/terminee.svg", href: "/partenaire/commandes/recuperees" },
   ];
 
   const moneyFormat = useMemo(
@@ -223,7 +223,6 @@ export default function PartenaireEnAttentePage() {
           <div className="mb-6 border-b border-gray-200 overflow-x-auto max-w-full">
             <div className="flex w-max sm:w-full">
             {tabs.map((tab) => {
-              const Icon = tab.icon;
               const isActive = activeTab === tab.key;
               return (
                 <Link
@@ -239,7 +238,7 @@ export default function PartenaireEnAttentePage() {
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  <Icon className="h-6 w-6 sm:h-7 sm:w-7" />
+                  <img src={tab.img} alt={tab.label} className="h-5 w-5 sm:h-6 sm:w-6" />
                   <span>{tab.label}</span>
                 </Link>
               );
@@ -248,10 +247,19 @@ export default function PartenaireEnAttentePage() {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-            {isLoading ? (
+          {isLoading ? (
+            <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
               <div className="px-8 py-8 text-sm text-gray-500">Chargement des commandes...</div>
-            ) : (
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="flex items-center justify-center min-h-[calc(100vh-320px)]">
+              <div className="flex flex-col items-center justify-center">
+                <Clock size={120} className="text-gray-400 mb-8" />
+                <p className="text-2xl text-gray-500 text-center">Aucune commande en attente</p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             <table className="min-w-[520px] w-full table-auto text-sm lg:text-base">
               <thead>
                 <tr className="bg-gray-50">
@@ -294,8 +302,8 @@ export default function PartenaireEnAttentePage() {
                 ))}
               </tbody>
             </table>
-            )}
-          </div>
+            </div>
+          )}
         </main>
     </>
   );

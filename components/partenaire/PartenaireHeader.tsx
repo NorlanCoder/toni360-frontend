@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Bell, Menu, User } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 import { useEffect, useMemo, useState } from "react";
 import { getAuthSession } from "@/lib/api/session";
@@ -9,9 +10,11 @@ import { getPartnerNotificationCount } from "@/lib/api/partner";
 
 export default function PartenaireHeader() {
   const { setOpen } = useSidebarContext();
+  const pathname = usePathname();
   const session = useMemo(() => getAuthSession(), []);
   const profile = session?.profile as { prenom?: string; nom?: string } | null;
   const displayName = profile?.prenom || profile?.nom || "";
+  const showWelcome = pathname === "/partenaire/dashboard";
   const [notifCount, setNotifCount] = useState(0);
 
   useEffect(() => {
@@ -46,9 +49,11 @@ export default function PartenaireHeader() {
 
       {/* Welcome */}
       <div className="min-w-0 flex-1">
-        <p className="text-base sm:text-xl font-semibold text-gray-800 truncate">
-          Bienvenu{displayName ? `, ${displayName}` : ""}
-        </p>
+        {showWelcome && (
+          <p className="text-base sm:text-xl font-semibold text-gray-800 truncate">
+            Bienvenu{displayName ? `, ${displayName}` : ""}
+          </p>
+        )}
       </div>
 
       {/* Actions */}

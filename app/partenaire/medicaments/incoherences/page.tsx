@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import {
@@ -29,12 +30,13 @@ function scorePercent(score: number): string {
 
 /* ═══════════════════════ PAGE ═══════════════════════ */
 export default function PartenaireIncoherencesPage() {
+  const router = useRouter();
   const [incoherences, setIncoherences] = useState<PartnerIncoherence[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   /* Detail modal (ouvert directement depuis la liste) */
   const [selected, setSelected] = useState<PartnerIncoherence | null>(null);
-  const [isFusing, setIsFusing] = useState(false);
+  const [fusingId, setFusingId] = useState<string | null>(null);
 
   /* ── Load list ── */
   const loadData = useCallback(async () => {
@@ -64,16 +66,16 @@ export default function PartenaireIncoherencesPage() {
     const session = getAuthSession();
     if (!session?.token) return;
 
-    setIsFusing(true);
+    setFusingId(produitId);
     try {
       await fusionnerPartnerIncoherence(session.token, incoherenceId, produitId);
       toast.success("Incohérence fusionnée avec succès !");
       setSelected(null);
-      void loadData();
+      router.push("/partenaire/medicaments");
     } catch (err: unknown) {
       toast.error(err instanceof ApiError ? err.message : "Erreur lors de la fusion.");
     } finally {
-      setIsFusing(false);
+      setFusingId(null);
     }
   };
 
@@ -82,7 +84,7 @@ export default function PartenaireIncoherencesPage() {
       <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
         {/* Header */}
         <h1 className="mb-6 text-xl sm:text-2xl font-bold text-gray-900">
-          Gestion des incohérences
+          Normalisation des médicaments
         </h1>
 
         {/* Table */}
@@ -165,7 +167,7 @@ export default function PartenaireIncoherencesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
             className="absolute inset-0 bg-black/40"
-            onClick={() => !isFusing && setSelected(null)}
+            onClick={() => !fusingId && setSelected(null)}
           />
 
           <div className="relative z-10 mx-4 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white shadow-xl">
@@ -265,11 +267,11 @@ export default function PartenaireIncoherencesPage() {
                           {selected.statut === "EN_ATTENTE" && s.produit_id && (
                             <button
                               type="button"
-                              disabled={isFusing}
+                              disabled={fusingId !== null}
                               onClick={() => handleFusionner(selected.id, s.produit_id!)}
                               className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
                             >
-                              {isFusing ? "..." : "Fusionner"}
+                              {fusingId === s.produit_id ? "..." : "Fusionner"}
                             </button>
                           )}
                         </div>

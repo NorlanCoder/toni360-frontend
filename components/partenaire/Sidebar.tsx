@@ -32,7 +32,7 @@ const navItems = [
   // { label: "Incohérences", icon: AlertTriangle, href: "/partednaire/medicaments/incoherences" },
   { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
   { label: "Notifications", icon: Bell, href: "/partenaire/notifications" },
-  { label: "Assistance et support", icon: HelpCircle, href: "/about" },
+  { label: "Centre d'aide", icon: HelpCircle, href: "/about" },
 ];
 
 /* Finds the most specific matching nav item for the current path */
@@ -134,18 +134,28 @@ export default function PartenaireSidebar() {
                     </Link>
                   );
                 })}
+                <div className="mx-4 my-1 border-t border-gray-100" />
+                <Link
+                  href="/partenaire/deconnexion"
+                  onClick={onClose}
+                  className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
+                >
+                  <LogOut size={20} strokeWidth={1.8} />
+                  Déconnexion
+                </Link>
               </nav>
             </div>
 
             {/* Footer drawer */}
-            <div className="px-5 pb-6 text-xs text-toni-green-dark-2 leading-relaxed">
-              <Link
-                href="/partenaire/deconnexion"
-                className="hover:underline flex items-center gap-1.5"
-                onClick={onClose}
-              >
-                <LogOut size={13} />
-                Déconnexion
+            <div className="px-5 pb-6 flex flex-col gap-1.5 text-xs text-gray-400 leading-relaxed">
+              <Link href="/partenaire/cgu" className="hover:underline hover:text-gray-600 transition-colors" onClick={onClose}>
+                Conditions générales d&apos;utilisation
+              </Link>
+              <Link href="/politique-de-confidentialite" className="hover:underline hover:text-gray-600 transition-colors" onClick={onClose}>
+                Politique de confidentialité
+              </Link>
+              <Link href="/contact" className="hover:underline hover:text-gray-600 transition-colors" onClick={onClose}>
+                Contactez-nous
               </Link>
             </div>
           </aside>
@@ -186,13 +196,26 @@ export default function PartenaireSidebar() {
                 </Link>
               );
             })}
+            <div className="mx-4 my-1 border-t border-gray-100" />
+            <Link
+              href="/partenaire/deconnexion"
+              className="flex items-center gap-3 px-4 py-2 text-base font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
+            >
+              <LogOut size={20} strokeWidth={1.8} />
+              Déconnexion
+            </Link>
           </nav>
         </div>
 
-        <div className="px-5 pb-6 text-xs text-toni-green-dark-2 leading-relaxed">
-          <Link href="/partenaire/deconnexion" className="hover:underline flex items-center gap-1.5">
-            <LogOut size={13} />
-            Déconnexion
+        <div className="px-5 pb-6 flex flex-col gap-1.5 text-xs text-gray-400 leading-relaxed">
+          <Link href="/partenaire/cgu" className="hover:underline hover:text-gray-600 transition-colors">
+            Conditions générales d&apos;utilisation
+          </Link>
+          <Link href="/politique-de-confidentialite" className="hover:underline hover:text-gray-600 transition-colors">
+            Politique de confidentialité
+          </Link>
+          <Link href="/contact" className="hover:underline hover:text-gray-600 transition-colors">
+            Contactez-nous
           </Link>
         </div>
       </aside>

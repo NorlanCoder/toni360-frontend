@@ -3,17 +3,27 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React from 'react';
+import { getAuthSession } from '@/lib/api/session';
 
-const navLinks = [
+const BASE_NAV_LINKS = [
     { label: "A propos", href: "/about" },
     { label: "Contacts", href: "/contacts" },
     { label: "FAQ", href: "/faq" },
-    { label: "Conditions générales d'utilisation", href: "/terms-of-use" },
+    { label: "Conditions générales d'utilisation", href: "/terms-of-use", cguControlled: true },
     { label: "Politiques de confidentialité", href: "/privacy" },
 ];
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+
+    const session = getAuthSession();
+    const isPartenaire = session?.userType === "user";
+
+    const navLinks = BASE_NAV_LINKS.map((link) =>
+        link.cguControlled
+            ? { ...link, href: isPartenaire ? "/partenaire/cgu" : "/terms-of-use" }
+            : link
+    );
 
     return (
         <div>

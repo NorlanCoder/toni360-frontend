@@ -7,13 +7,21 @@
 import Link from "next/link";
 import { useState } from "react";
 import { FaLocationArrow } from "react-icons/fa6";
-import { Users, X } from "lucide-react";
+import { Users, X, LayoutDashboard } from "lucide-react";
+import { getAuthSession } from "@/lib/api/session";
 
 type ModalMode = "connexion" | "inscription" | null;
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
+
+  const session = getAuthSession();
+  const dashboardHref = session?.userType === "user"
+    ? "/partenaire/dashboard"
+    : session?.userType === "patient"
+    ? "/client/accueil"
+    : null;
 
   const openModal = (mode: ModalMode) => {
     setIsMenuOpen(false);
@@ -36,20 +44,32 @@ export default function Header() {
 
           {/* Boutons d'authentification à droite - cachés sur mobile */}
           <div className="hidden md:flex items-center gap-4">
-            {/* Bouton Se connecter - outline vert */}
-            <button
-              onClick={() => openModal("connexion")}
-              className="px-6 py-2 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold rounded-full hover:bg-toni-green-dark-2 hover:text-white transition"
-            >
-              Se connecter
-            </button>
-            {/* Bouton S'inscrire - fond vert (toni-green) */}
-            <button
-              onClick={() => openModal("inscription")}
-              className="px-6 py-2 bg-toni-green-dark-2 text-white rounded-full hover:bg-toni-green-dark transition"
-            >
-              S&apos;inscrire
-            </button>
+            {dashboardHref ? (
+              <Link
+                href={dashboardHref}
+                className="flex items-center gap-2 px-6 py-2 bg-toni-green-dark-2 text-white font-bold rounded-full hover:bg-toni-green-dark transition"
+              >
+                <LayoutDashboard size={18} />
+                Mon espace
+              </Link>
+            ) : (
+              <>
+                {/* Bouton Se connecter - outline vert */}
+                <button
+                  onClick={() => openModal("connexion")}
+                  className="px-6 py-2 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold rounded-full hover:bg-toni-green-dark-2 hover:text-white transition"
+                >
+                  Se connecter
+                </button>
+                {/* Bouton S'inscrire - fond vert (toni-green) */}
+                <button
+                  onClick={() => openModal("inscription")}
+                  className="px-6 py-2 bg-toni-green-dark-2 text-white rounded-full hover:bg-toni-green-dark transition"
+                >
+                  S&apos;inscrire
+                </button>
+              </>
+            )}
           </div>
 
           {/* Bouton hamburger - visible uniquement sur mobile */}
@@ -77,18 +97,31 @@ export default function Header() {
         {isMenuOpen && (
           <div className="md:hidden mt-4 px-6 py-4 bg-white/95 rounded-lg backdrop-blur-sm shadow-lg">
             <div className="flex flex-col gap-3">
-              <button
-                onClick={() => openModal("connexion")}
-                className="w-full px-6 py-3 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold rounded-full hover:bg-toni-green-dark-2 hover:text-white transition text-center"
-              >
-                Se connecter
-              </button>
-              <button
-                onClick={() => openModal("inscription")}
-                className="w-full px-6 py-3 bg-toni-green text-white rounded-full hover:bg-toni-green-dark transition text-center"
-              >
-                S&apos;inscrire
-              </button>
+              {dashboardHref ? (
+                <Link
+                  href={dashboardHref}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-toni-green-dark-2 text-white font-bold rounded-full hover:bg-toni-green-dark transition text-center"
+                >
+                  <LayoutDashboard size={18} />
+                  Mon espace
+                </Link>
+              ) : (
+                <>
+                  <button
+                    onClick={() => openModal("connexion")}
+                    className="w-full px-6 py-3 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold rounded-full hover:bg-toni-green-dark-2 hover:text-white transition text-center"
+                  >
+                    Se connecter
+                  </button>
+                  <button
+                    onClick={() => openModal("inscription")}
+                    className="w-full px-6 py-3 bg-toni-green text-white rounded-full hover:bg-toni-green-dark transition text-center"
+                  >
+                    S&apos;inscrire
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
