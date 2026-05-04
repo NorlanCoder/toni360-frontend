@@ -8,6 +8,9 @@ import { Pencil } from "lucide-react";
 import { getPartnerProfile } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
+import type { Value as E164Number } from "react-phone-number-input";
 
 import { getPartnerNotificationCount, getPartnerPharmacieProfile, updatePartnerPharmacieProfile } from "@/lib/api/partner";
 import { hasPermission } from "@/lib/auth/authorization";
@@ -20,7 +23,7 @@ export default function PartenaireProfil() {
 
   const [nom, setNom] = useState("");
   const [adresse, setAdresse] = useState("");
-  const [telephone, setTelephone] = useState("");
+  const [telephone, setTelephone] = useState<E164Number | undefined>(undefined);
   const [email, setEmail] = useState("");
   const [licence, setLicence] = useState("");
   const [horaires, setHoraires] = useState("");
@@ -61,7 +64,7 @@ export default function PartenaireProfil() {
           const profile = pharmacieProfile.data;
           setNom(profile.nom ?? "");
           setAdresse(profile.adresse ?? "");
-          setTelephone(profile.telephone ?? "");
+          setTelephone((profile.telephone ?? "") as E164Number);
           setEmail(profile.email ?? "");
           setLicence(profile.numero_agrement ?? "");
           setHoraires("Voir paramétrage horaires");
@@ -93,7 +96,7 @@ export default function PartenaireProfil() {
       await updatePartnerPharmacieProfile(session.token, {
         nom,
         adresse,
-        telephone,
+        telephone: telephone ?? "",
         email,
         numero_agrement: licence,
       });
@@ -113,7 +116,7 @@ export default function PartenaireProfil() {
     <div className="flex flex-1 flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-10 py-6 lg:py-8">
 
-          <div className="mb-8 flex items-center gap-5 sm:gap-8">
+          <div className="mb-8 flex items-center justify-center gap-5 sm:gap-8">
             <Link
               href="/partenaire/profil"
               className="relative pb-2 sm:pb-3 text-sm sm:text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap"
@@ -159,14 +162,15 @@ export default function PartenaireProfil() {
 
               <div>
                 <label className="block text-[15px] text-gray-500 mb-[8px]">Téléphone</label>
-                <div className="relative">
-                  <input
-                    type="text"
+                <div className="flex items-center border bg-gray-50 text-black border-gray-200 rounded-[8px] overflow-hidden px-3 py-[14px] transition-colors focus-within:border-emerald-500">
+                  <PhoneInput
+                    international
+                    defaultCountry="BJ"
+                    placeholder="numéro de téléphone"
                     value={telephone}
-                    onChange={(e) => setTelephone(e.target.value)}
-                    className="w-full pl-4 pr-10 py-[14px] bg-gray-50 border border-gray-200 rounded-[8px] text-[17px] text-gray-700 outline-none focus:border-emerald-500"
+                    onChange={(value) => setTelephone(value)}
+                    className="bg-gray-50"
                   />
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 w-[14px] h-[14px] text-gray-400" strokeWidth={1.8} />
                 </div>
               </div>
 
@@ -215,7 +219,7 @@ export default function PartenaireProfil() {
                 type="button"
                 onClick={() => void handleSave()}
                 disabled={isSaving}
-                className="w-1/2 py-[14px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[18px] rounded-full transition-colors cursor-pointer disabled:opacity-60"
+                className="w-full py-[14px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[18px] rounded-full transition-colors cursor-pointer disabled:opacity-60"
               >
                 {isSaving ? "Enregistrement..." : "Enregistrer les modifications"}
               </button>

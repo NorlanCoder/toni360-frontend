@@ -61,6 +61,7 @@ export default function PartenaireAjouterMedicamentPage() {
   const [prix, setPrix] = useState("");
   const [stockInitial, setStockInitial] = useState("");
   const [seuil, setSeuil] = useState("");
+  const [ordonnance, setOrdonnance] = useState(false);
 
   /* ── Autocomplete state ── */
   const [suggestions, setSuggestions] = useState<{ id: string; nom: string; dci?: string | null; forme?: string | null; dosage?: string | null }[]>([]);
@@ -139,7 +140,7 @@ export default function PartenaireAjouterMedicamentPage() {
       return;
     }
 
-    const prixVente = Number(prix.replace(/\s|[^\d.]/g, ""));
+    const prixVente = Number(prix);
     const quantite = Number(stockInitial);
     const seuilAlerte = Number(seuil);
 
@@ -175,12 +176,12 @@ export default function PartenaireAjouterMedicamentPage() {
     }
   };
 
-  const today = new Date().toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-  const timeNow = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  // const today = new Date().toLocaleDateString("fr-FR", {
+  //   day: "2-digit",
+  //   month: "2-digit",
+  //   year: "numeric",
+  // });
+  // const timeNow = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <>
@@ -281,16 +282,17 @@ export default function PartenaireAjouterMedicamentPage() {
           </div>
 
           {/* Row 3 — Prix + Stock */}
-          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="mt-6 ">
             <div>
               <label className="mb-1 block text-sm text-gray-500">
-                Prix unitaire
+                Prix unitaire (XOF)
               </label>
               <input
-                type="text"
+                type="number"
+                min="0"
                 value={prix}
                 onChange={(e) => setPrix(e.target.value)}
-                placeholder="Ex: 700 XOF CFA"
+                placeholder="Ex: 700"
                 className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
             </div>
@@ -301,7 +303,7 @@ export default function PartenaireAjouterMedicamentPage() {
           <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm text-gray-500">
-                Stock actuel
+                Quantité à ajouter
               </label>
               <input
                 type="text"
@@ -310,7 +312,7 @@ export default function PartenaireAjouterMedicamentPage() {
                 placeholder="Ex: 100"
                 className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
-              <p className="mt-1.5 text-xs text-emerald-600">Ajouté le {today} à {timeNow}</p>
+              {/* <p className="mt-1.5 text-xs text-emerald-600">Ajouté le {today} à {timeNow}</p> */}
             </div>
 
             <div>
@@ -324,7 +326,31 @@ export default function PartenaireAjouterMedicamentPage() {
                 placeholder="Ex: 100"
                 className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
-              <p className="mt-1.5 text-xs text-emerald-600">Mis à jour le {today} à {timeNow}</p>
+              {/* <p className="mt-1.5 text-xs text-emerald-600">Mis à jour le {today} à {timeNow}</p> */}
+            </div>
+          </div>
+
+          {/* Ordonnance toggle */}
+          <div className="mt-6 flex items-center gap-4">
+            <span className="text-sm text-gray-500">Médicament soumis à ordonnance ?</span>
+            <div className="flex items-center gap-2">
+              <span className={`text-sm font-medium ${!ordonnance ? "text-gray-800" : "text-gray-400"}`}>Non</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={ordonnance}
+                onClick={() => setOrdonnance((v) => !v)}
+                className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${
+                  ordonnance ? "bg-emerald-500" : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-200 ${
+                    ordonnance ? "translate-x-6" : "translate-x-1"
+                  } mt-1`}
+                />
+              </button>
+              <span className={`text-sm font-medium ${ordonnance ? "text-gray-800" : "text-gray-400"}`}>Oui</span>
             </div>
           </div>
 

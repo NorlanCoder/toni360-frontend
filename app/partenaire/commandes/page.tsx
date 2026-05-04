@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Package, Clock, CheckCircle, ChevronDown } from "lucide-react";
+import { Package, ChevronDown } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
 import { extractCollection, getPartnerCommandes, PartnerCommande } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
@@ -16,6 +17,7 @@ interface Order {
   id: string;
   patient: { nom: string; prenom: string };
   date: string;
+  montant: string;
   statut: string;
 }
 
@@ -39,15 +41,21 @@ const years = Array.from({ length: 10 }, (_, i) => String(2020 + i));
 function DateSelect({
   label,
   className = "",
-  defaultDay = "",
-  defaultMonth = "",
-  defaultYear = "",
+  day = "",
+  month = "",
+  year = "",
+  onDayChange,
+  onMonthChange,
+  onYearChange,
 }: {
   label: string;
   className?: string;
-  defaultDay?: string;
-  defaultMonth?: string;
-  defaultYear?: string;
+  day?: string;
+  month?: string;
+  year?: string;
+  onDayChange?: (v: string) => void;
+  onMonthChange?: (v: string) => void;
+  onYearChange?: (v: string) => void;
 }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
@@ -57,8 +65,9 @@ function DateSelect({
       <div className="relative">
         <select
           aria-label="Jour"
-          className="appearance-none w-[68px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          defaultValue={defaultDay}
+          className="appearance-none w-[68px] rounded-xl border border-[#282828] bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          value={day}
+          onChange={(e) => onDayChange?.(e.target.value)}
         >
           <option value="" disabled>JJ</option>
           {days.map((d) => (
@@ -72,8 +81,9 @@ function DateSelect({
       <div className="relative">
         <select
           aria-label="Mois"
-          className="appearance-none w-[72px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          defaultValue={defaultMonth}
+          className="appearance-none w-[72px] rounded-xl border border-[#282828] bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          value={month}
+          onChange={(e) => onMonthChange?.(e.target.value)}
         >
           <option value="" disabled>MM</option>
           {months.map((m) => (
@@ -87,8 +97,9 @@ function DateSelect({
       <div className="relative">
         <select
           aria-label="Année"
-          className="appearance-none w-[88px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          defaultValue={defaultYear}
+          className="appearance-none w-[88px] rounded-xl border border-[#282828] bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          value={year}
+          onChange={(e) => onYearChange?.(e.target.value)}
         >
           <option value="" disabled>AAAA</option>
           {years.map((y) => (
@@ -108,10 +119,29 @@ export default function PartenaireDashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const tabs: { key: TabKey; label: string; icon: React.ElementType; href: string }[] = [
-    { key: "a-preparer", label: "A préparer", icon: Package, href: "/partenaire/commandes" },
-    { key: "en-attente", label: "En attente", icon: Clock, href: "/partenaire/commandes/en-attente" },
-    { key: "recuperees", label: "Récupérées", icon: CheckCircle, href: "/partenaire/commandes/recuperees" },
+  const [fromDay, setFromDay] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 6);
+    return String(d.getDate()).padStart(2, "0");
+  });
+  const [fromMonth, setFromMonth] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 6);
+    return String(d.getMonth() + 1).padStart(2, "0");
+  });
+  const [fromYear, setFromYear] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 6);
+    return String(d.getFullYear());
+  });
+  const [toDay, setToDay] = useState<string>(() => String(new Date().getDate()).padStart(2, "0"));
+  const [toMonth, setToMonth] = useState<string>(() => String(new Date().getMonth() + 1).padStart(2, "0"));
+  const [toYear, setToYear] = useState<string>(() => String(new Date().getFullYear()));
+
+  const tabs: { key: TabKey; label: string; img: string; href: string }[] = [
+    { key: "a-preparer", label: "A préparer", img: "/preparer_vert.svg", href: "/partenaire/commandes" },
+    { key: "en-attente", label: "En attente", img: "/images/localiser.svg", href: "/partenaire/commandes/en-attente" },
+    { key: "recuperees", label: "Récupérées", img: "/images/terminee.svg", href: "/partenaire/commandes/recuperees" },
   ];
 
   const formatDate = useMemo(
@@ -120,6 +150,16 @@ export default function PartenaireDashboardPage() {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
+      }),
+    [],
+  );
+
+  const moneyFormat = useMemo(
+    () =>
+      new Intl.NumberFormat("fr-FR", {
+        style: "currency",
+        currency: "XOF",
+        maximumFractionDigits: 0,
       }),
     [],
   );
@@ -151,6 +191,7 @@ export default function PartenaireDashboardPage() {
             date: commande.created_at
               ? formatDate.format(new Date(commande.created_at))
               : "-",
+            montant: moneyFormat.format(commande.montant_total || 0),
             statut: commande.statut_label || "À préparer",
           })),
         );
@@ -168,43 +209,61 @@ export default function PartenaireDashboardPage() {
     }, 30000);
 
     return () => clearInterval(intervalId);
-  }, [formatDate]);
+  }, [formatDate, moneyFormat]);
+
+  const filteredOrders = useMemo(
+    () =>
+      orders.filter((order) => {
+        if (order.date === "-") return true;
+        const parts = order.date.split("/");
+        if (parts.length !== 3) return true;
+        const [dd, mm, yyyy] = parts;
+        const orderDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
+        if (fromDay && fromMonth && fromYear) {
+          const fromDate = new Date(`${fromYear}-${fromMonth}-${fromDay}T00:00:00`);
+          if (orderDate < fromDate) return false;
+        }
+        if (toDay && toMonth && toYear) {
+          const toDate = new Date(`${toYear}-${toMonth}-${toDay}T23:59:59`);
+          if (orderDate > toDate) return false;
+        }
+        return true;
+      }),
+    [orders, fromDay, fromMonth, fromYear, toDay, toMonth, toYear],
+  );
 
   return (
     <>
       {/* ─── CONTENT ─── */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-8 lg:px-24 py-6 lg:py-10">
         {/* Date filters */}
-        {(() => {
-          const today = new Date();
-          const from = new Date(today);
-          from.setMonth(from.getMonth() - 6);
-          const pad = (n: number) => String(n).padStart(2, "0");
-          return (
-            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <DateSelect
-                label="Du"
-                defaultDay={pad(from.getDate())}
-                defaultMonth={pad(from.getMonth() + 1)}
-                defaultYear={String(from.getFullYear())}
-                className="w-full sm:w-auto"
-              />
-              <DateSelect
-                label="Au"
-                defaultDay={pad(today.getDate())}
-                defaultMonth={pad(today.getMonth() + 1)}
-                defaultYear={String(today.getFullYear())}
-                className="w-full sm:w-auto"
-              />
-            </div>
-          );
-        })()}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <DateSelect
+            label="Du"
+            day={fromDay}
+            month={fromMonth}
+            year={fromYear}
+            onDayChange={setFromDay}
+            onMonthChange={setFromMonth}
+            onYearChange={setFromYear}
+            className="w-full sm:w-auto"
+          />
+          <DateSelect
+            label="Au"
+            day={toDay}
+            month={toMonth}
+            year={toYear}
+            onDayChange={setToDay}
+            onMonthChange={setToMonth}
+            onYearChange={setToYear}
+            className="w-full sm:w-auto"
+          />
+        </div>
 
         {/* Tabs */}
         <div className="mb-6 border-b border-gray-200 overflow-x-auto max-w-full">
           <div className="flex w-max sm:w-full">
             {tabs.map((tab) => {
-              const Icon = tab.icon;
               const isActive = activeTab === tab.key;
               return (
                 <Link
@@ -219,7 +278,7 @@ export default function PartenaireDashboardPage() {
                       : "text-gray-500 hover:text-gray-700"
                     }`}
                 >
-                  <Icon className="h-6 w-6 sm:h-7 sm:w-7" />
+                  <Image src={tab.img} alt={tab.label} width={24} height={24} className="h-5 w-5 sm:h-6 sm:w-6" />
                   <span>{tab.label}</span>
                 </Link>
               );
@@ -228,12 +287,19 @@ export default function PartenaireDashboardPage() {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-          {isLoading ? (
+        {isLoading ? (
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             <div className="px-8 py-8 text-sm text-gray-500">Chargement des commandes...</div>
-          ) : orders.length === 0 ? (
-            <div className="px-8 py-8 text-sm text-gray-500">Aucune commande à préparer.</div>
-          ) : (
+          </div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="flex items-center justify-center min-h-[calc(100vh-320px)]">
+            <div className="flex flex-col items-center justify-center">
+              <Package size={120} className="text-gray-400 mb-8" />
+              <p className="text-2xl text-gray-500 text-center">Aucune commande à préparer</p>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             <table className="min-w-[520px] w-full table-auto text-sm lg:text-base">
               <thead>
                 <tr className="bg-gray-50">
@@ -244,7 +310,7 @@ export default function PartenaireDashboardPage() {
                     Patient
                   </th>
                   <th className="px-8 py-5 text-left text-sm font-bold uppercase tracking-wider text-gray-600">
-                    Date
+                    Montant
                   </th>
                   <th className="px-8 py-5 text-left text-sm font-bold uppercase tracking-wider text-gray-600">
                     Statut
@@ -252,7 +318,7 @@ export default function PartenaireDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
+                {filteredOrders.map((order) => (
                   <tr
                     key={order.id}
                     className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60 transition-all cursor-pointer"
@@ -265,7 +331,7 @@ export default function PartenaireDashboardPage() {
                       {order.patient.nom} {order.patient.prenom}
                     </td>
                     <td className="px-8 py-6 text-base text-gray-600">
-                      {order.date}
+                      {order.montant}
                     </td>
                     <td className="px-8 py-6">
                       <span className="inline-block rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
@@ -276,8 +342,8 @@ export default function PartenaireDashboardPage() {
                 ))}
               </tbody>
             </table>
-          )}
-        </div>
+          </div>
+        )}
 
       </main>
     </>

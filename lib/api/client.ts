@@ -259,6 +259,7 @@ export interface PatientOrderQrCodeResponse {
       nom?: string;
       adresse?: string;
       telephone?: string;
+      email?: string;
     } | null;
     instructions?: string[];
   };
@@ -537,6 +538,31 @@ export interface VerifierDisponibiliteCommandeResponse {
 export async function verifierDisponibiliteCommande(token: string, commandeId: string): Promise<VerifierDisponibiliteCommandeResponse> {
   return apiRequest<VerifierDisponibiliteCommandeResponse>(`/patient/commandes/${commandeId}/verifier-disponibilite`, {
     method: "POST",
+    token,
+  });
+}
+
+export async function modifierProduitCommande(
+  token: string,
+  commandeId: string,
+  produitCommandeId: string,
+  quantite: number,
+): Promise<{ success: boolean; message?: string; data?: { quantite?: number; prix_total?: number; montant_total_commande?: number } }> {
+  return apiRequest(`/patient/commandes/${commandeId}/produits/${produitCommandeId}`, {
+    method: "PUT",
+    token,
+    body: JSON.stringify({ quantite }),
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+export async function supprimerProduitCommande(
+  token: string,
+  commandeId: string,
+  produitCommandeId: string,
+): Promise<{ success: boolean; message?: string; data?: { montant_total_commande?: number } }> {
+  return apiRequest(`/patient/commandes/${commandeId}/produits/${produitCommandeId}`, {
+    method: "DELETE",
     token,
   });
 }

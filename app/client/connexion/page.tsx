@@ -134,13 +134,14 @@ export default function ConnexionPage() {
           <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             {/* Téléphone ou Email selon l'onglet actif */}
             {loginMethod === "phone" ? (
-              <div className="flex rounded-md border border-black px-3 py-2.5 text-black transition-colors focus-within:border-toni-green-dark-2 sm:py-3">
+              <div className="flex rounded-md border bg-white border-black px-3 py-2.5 text-black transition-colors focus-within:border-toni-green-dark-2 sm:py-3">
                 <PhoneInput
                   international
                   defaultCountry="BJ"
                   placeholder="Numéro de téléphone"
                   value={formData.telephone}
                   onChange={(value) => setFormData({ ...formData, telephone: value })}
+                  className=" bg-white"
                 />
               </div>
             ) : (
@@ -152,7 +153,7 @@ export default function ConnexionPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full rounded-md border border-black px-4 py-2.5 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
+                  className="w-full rounded-md border border-black bg-white px-4 py-2.5 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
                 />
               </div>
             )}
@@ -167,7 +168,7 @@ export default function ConnexionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full rounded-md border border-black py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
+                className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
               <button
                 type="button"

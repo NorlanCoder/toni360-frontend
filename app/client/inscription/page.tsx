@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { User, Lock, Eye, EyeOff } from "lucide-react";
+import { User, Lock, Eye, EyeOff, Mail, AtSign } from "lucide-react";
 import Link from "next/link";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
@@ -16,6 +16,7 @@ export default function InscriptionPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [acceptedCGU, setAcceptedCGU] = useState(false);
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
@@ -44,6 +45,11 @@ export default function InscriptionPage() {
 
     if (formData.password.length < 8) {
       toast.warning("Le mot de passe doit contenir au moins 8 caracteres.");
+      return;
+    }
+
+    if (!acceptedCGU) {
+      toast.warning("Vous devez accepter les Conditions Générales d'Utilisation.");
       return;
     }
 
@@ -113,7 +119,7 @@ export default function InscriptionPage() {
                 width={192}
                 height={96}
                 priority
-                className="mx-auto h-20 w-auto sm:h-24"
+                className="mx-auto h-20 w-auto "
               />
             </Link>
           </div>
@@ -126,7 +132,10 @@ export default function InscriptionPage() {
           {/* Formulaire */}
           <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             {/* Nom complet */}
-            <div>
+
+           <div className="relative flex items-center">
+              <User className="absolute left-4 text-gray-400" size={18} />
+
               <input
                 type="text"
                 placeholder="Nom complet"
@@ -134,13 +143,13 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, nom: e.target.value })
                 }
-                className="w-full rounded-md border border-black px-4 py-2.5 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
+                className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-4 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
             </div>
 
             {/* Email */}
             <div className="relative flex items-center">
-              <User className="absolute left-4 text-gray-400" size={18} />
+              <AtSign className="absolute left-4 text-gray-400" size={18} />
               <input
                 type="email"
                 placeholder="Adresse email"
@@ -148,18 +157,19 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full rounded-md border border-black py-2.5 pl-12 pr-4 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
+                className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-4 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
             </div>
 
             {/* Téléphone avec indicatif */}
-            <div className="flex rounded-md border border-black px-3 py-2.5 text-black transition-colors focus-within:border-toni-green-dark-2 sm:py-3">
+            <div className="flex rounded-md border bg-white border-black px-3 py-2.5 text-black transition-colors focus-within:border-toni-green-dark-2 sm:py-3">
               <PhoneInput
                 international
                 defaultCountry="BJ"
                 placeholder="Numéro de téléphone"
                 value={formData.telephone}
                 onChange={(value) => setFormData({ ...formData, telephone: value })}
+                className="bg-white"
               />
             </div>
 
@@ -173,7 +183,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full rounded-md border border-black py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
+                className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
               <button
                 type="button"
@@ -195,8 +205,36 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, confirmPassword: e.target.value })
                 }
-                className="w-full rounded-md border border-black py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
+                className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
+            </div>
+
+            {/* Case à cocher CGU */}
+            <div className="rounded-md border border-gray-200 bg-white p-4 text-xs text-gray-600 sm:text-sm">
+              <p className="mb-3">
+                <span className="font-bold">Attention !! </span>
+                Si vous cochez la case ci-dessous, vous confirmez avoir pris
+                connaissance des présentes CGU et acceptez de vous y soumettre
+                sans réserve. Il est donc conseillé aux Utilisateurs de lire
+                attentivement les{" "}
+                <Link href="/terms-of-use" className="text-toni-green-dark-2 font-semibold hover:underline">
+                  Conditions Générales d&apos;Utilisation
+                </Link>.
+              </p>
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={acceptedCGU}
+                  onChange={(e) => setAcceptedCGU(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-toni-green-dark-2"
+                />
+                <span>
+                  Je reconnais avoir lu et accepté les{" "}
+                  <Link href="/terms-of-use" className="text-toni-green-dark-2 font-semibold hover:underline">
+                    Conditions Générales d&apos;Utilisation
+                  </Link>.
+                </span>
+              </label>
             </div>
 
             {/* Bouton S'inscrire */}
@@ -214,18 +252,6 @@ export default function InscriptionPage() {
             Déjà inscrit ?{" "}
             <Link href="/client/connexion" className="text-toni-green-dark-2 font-semibold hover:underline">
               Connectez-vous.
-            </Link>
-          </p>
-
-          {/* Texte légal */}
-          <p className="mt-3 text-center text-xs text-gray-500 sm:mt-4 sm:text-sm">
-            En vous inscrivant, vous acceptez nos{" "}
-            <Link href="#" className="text-toni-green-dark-2 hover:underline">
-              Conditions d&apos;utilisation
-            </Link>{" "}
-            et la{" "}
-            <Link href="#" className="text-toni-green-dark-2 hover:underline">
-              Politique de confidentialité.
             </Link>
           </p>
         </div>

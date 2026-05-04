@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { FileText, MapPin, Minus, Plus, Trash2 } from "lucide-react";
+import { Eye, FileText, MapPin, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   annulerCommande,
@@ -50,11 +50,14 @@ function CartPageContent() {
   const [pendingItems, setPendingItems] = useState(false);
   const anyPending = pendingCancel || pendingHold || pendingCheckout || pendingItems;
   const [ordonnanceFile, setOrdonnanceFile] = useState<File | null>(null);
+  const [ordonnancePreviewUrl, setOrdonnancePreviewUrl] = useState<string | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [uploadRetryCandidateId, setUploadRetryCandidateId] = useState<string | null>(null);
   const [uploadRetryCandidateNumero, setUploadRetryCandidateNumero] = useState<string | null>(null);
   const [pharmacyName, setPharmacyName] = useState(pharmacyNameFromUrl);
   const [pharmacyAdresse, setPharmacyAdresse] = useState("");
   const [pharmacyTelephone, setPharmacyTelephone] = useState("");
+  const [pharmacyEmail, setPharmacyEmail] = useState("");
   const [prescriptionCount, setPrescriptionCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { clearLocalCart } = useCart();
@@ -92,6 +95,7 @@ function CartPageContent() {
       setPharmacyName(firstPharmacie?.nom ?? pharmacyNameFromUrl);
       setPharmacyAdresse([firstPharmacie?.adresse, firstPharmacie?.ville].filter(Boolean).join(", "));
       setPharmacyTelephone(firstPharmacie?.telephone ?? "");
+      setPharmacyEmail(firstPharmacie?.email ?? "");
 
       const mappedItems = panier.pharmacies.flatMap((pharmacieBloc) =>
         pharmacieBloc.produits.map((item) => ({
@@ -129,6 +133,7 @@ function CartPageContent() {
       setPharmacyName(commande.pharmacie?.nom ?? pharmacyNameFromUrl);
       setPharmacyAdresse(commande.pharmacie?.adresse ?? "");
       setPharmacyTelephone(commande.pharmacie?.telephone ?? "");
+      setPharmacyEmail((commande.pharmacie as { email?: string })?.email ?? "");
 
       const mappedItems: CartItem[] = commande.produits.map((item) => ({
         id: item.id,
@@ -312,7 +317,7 @@ function CartPageContent() {
 
         await validerCommande(token, commandeIdFromUrl);
 
-        router.push("/client/orders?tab=en_cours");
+        router.push(`/client/orders/${commandeIdFromUrl}/qrcode`);
       } catch (error) {
         if (error instanceof ApiError) {
           toast.error(error.message);
@@ -368,7 +373,7 @@ function CartPageContent() {
       if (!creation.data.necessite_ordonnance) {
         await validerCommande(token, commandeId);
         clearLocalCart();
-        router.push("/client/orders?tab=en_cours");
+        router.push(`/client/orders/${commandeId}/qrcode`);
         return;
       }
 
@@ -388,7 +393,7 @@ function CartPageContent() {
 
       await validerCommande(token, commandeId);
       clearLocalCart();
-      router.push("/client/orders?tab=en_cours");
+      router.push(`/client/orders/${commandeId}/qrcode`);
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.message);
@@ -446,29 +451,54 @@ function CartPageContent() {
     <section className="mx-auto w-full max-w-6xl px-3 pb-6 sm:px-6 sm:pb-8">
 
       {/* ── Header pharmacie ── */}
-      <div className="rounded-2xl bg-gradient-to-r from-[#004B2F] to-[#00B16F] px-6 py-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex-1">
-          <h2 className="text-xl font-bold text-white sm:text-2xl leading-snug">{pharmacyName}</h2>
+      <div className="rounded-2xl bg-gradient-to-r from-[#004B2F] to-[#00B16F] px-6 py-6 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-center">
+        {/* Colonne 1 : nom + adresse */}
+        <div>
+          <h2 className="text-xl font-bold text-white sm:text-2xl leading-snug">
+            <span className="block">{pharmacyName.split(' ')[0]}</span>
+            <span className="block">
+              {pharmacyName.split(' ').slice(1).join(' ')}
+            </span>
+          </h2>
           {pharmacyAdresse && (
             <p className="mt-1 text-sm text-green-100 leading-snug">{pharmacyAdresse}</p>
           )}
         </div>
-        <div className="flex flex-col gap-1 sm:text-right">
+
+        {/* Colonne 2 : email + téléphone (centré) */}
+        <div className="flex flex-col gap-3 sm:items-center sm:text-center">
+          {pharmacyEmail && (
+            <a
+              href={`mailto:${pharmacyEmail}`}
+              className="text-white text-sm font-medium hover:underline"
+            >
+              {pharmacyEmail}
+            </a>
+          )}
           {pharmacyTelephone && (
-            <p className="text-white text-sm font-medium">{pharmacyTelephone}</p>
+            <a
+              href={`tel:${pharmacyTelephone}`}
+              className="text-white text-sm font-medium hover:underline"
+            >
+              {pharmacyTelephone}
+            </a>
           )}
         </div>
-        {pharmacyAdresse && (
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 self-start sm:self-auto rounded-full bg-white px-5 py-2.5 text-sm font-bold text-toni-green-dark-2 hover:bg-gray-50 transition shrink-0"
-          >
-            <MapPin size={16} />
-            Itinéraire
-          </a>
-        )}
+
+        {/* Colonne 3 : bouton itinéraire (aligné à droite) */}
+        <div className="flex sm:justify-end">
+          {pharmacyAdresse && (
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-toni-green-dark-2 hover:bg-gray-50 transition shrink-0"
+            >
+              <MapPin size={16} />
+              Itinéraire
+            </a>
+          )}
+        </div>
       </div>
 
       {/* ── Table produits ── */}
@@ -486,9 +516,8 @@ function CartPageContent() {
         {items.map((item, idx) => (
           <div
             key={item.id}
-            className={`flex flex-col gap-3 px-6 py-4 sm:grid sm:grid-cols-[1fr_180px_150px_150px_44px] sm:gap-2 sm:items-center ${
-              idx < items.length - 1 ? "border-b border-[#66666680]" : ""
-            }`}
+            className={`flex flex-col gap-3 px-6 py-4 sm:grid sm:grid-cols-[1fr_180px_150px_150px_44px] sm:gap-2 sm:items-center ${idx < items.length - 1 ? "border-b border-[#66666680]" : ""
+              }`}
           >
             {/* Nom */}
             <div>
@@ -497,7 +526,7 @@ function CartPageContent() {
                 {item.requiresPrescription && (
                   <span className="relative group/ordo shrink-0">
                     <FileText size={15} className="text-red-500" />
-                    <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white z-10">
+                    <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-red-500 px-2 py-1 text-xs text-white z-10">
                       Ordonnance requise
                     </span>
                   </span>
@@ -575,19 +604,77 @@ function CartPageContent() {
           <p className="text-sm text-gray-600 mb-1">
             {prescriptionCount} médicament(s) de cette commande nécessitent une ordonnance.
           </p>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-3 text-sm font-medium text-gray-700 hover:text-toni-green-dark-2 transition"
-          >
-            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-toni-green-dark-2 text-white shrink-0">
-              <Plus size={18} />
-            </span>
-            {ordonnanceFile
-              ? <span className="text-toni-green-dark-2 truncate max-w-[240px]">{ordonnanceFile.name}</span>
-              : "Ajouter une ordonnance"
-            }
-          </button>
+
+          {/* Fichier sélectionné : prévisualisation */}
+          {ordonnanceFile ? (
+            <div className="flex items-center gap-3 rounded-xl border border-toni-green-dark-2/30 bg-green-50 px-4 py-3">
+              {/* Miniature ou icône PDF */}
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(true)}
+                className="shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-gray-200 bg-white flex items-center justify-center hover:opacity-80 transition"
+                title="Prévisualiser"
+              >
+                {ordonnancePreviewUrl && ordonnanceFile.type.startsWith("image/") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={ordonnancePreviewUrl} alt="aperçu" className="w-full h-full object-cover" />
+                ) : (
+                  <FileText size={22} className="text-toni-green-dark-2" />
+                )}
+              </button>
+
+              {/* Nom du fichier */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 truncate">{ordonnanceFile.name}</p>
+                <p className="text-xs text-gray-400">{(ordonnanceFile.size / 1024).toFixed(0)} Ko</p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowPreviewModal(true)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition"
+                  title="Prévisualiser"
+                >
+                  <Eye size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition"
+                  title="Remplacer"
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrdonnanceFile(null);
+                    if (ordonnancePreviewUrl) URL.revokeObjectURL(ordonnancePreviewUrl);
+                    setOrdonnancePreviewUrl(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-red-500 transition"
+                  title="Supprimer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-3 text-sm font-medium text-gray-700 hover:text-toni-green-dark-2 transition"
+            >
+              <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-toni-green-dark-2 text-white shrink-0">
+                <Plus size={18} />
+              </span>
+              Ajouter une ordonnance
+            </button>
+          )}
+
           <input
             ref={fileInputRef}
             type="file"
@@ -596,9 +683,13 @@ function CartPageContent() {
             onChange={(e) => {
               const file = e.target.files?.[0] ?? null;
               if (!file) return;
-              const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+              const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+              const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".pdf"];
               const MAX_SIZE = 5 * 1024 * 1024; // 5 Mo
-              if (!ALLOWED_TYPES.includes(file.type)) {
+              const ext = "." + (file.name.split(".").pop() ?? "").toLowerCase();
+              const mimeOk = file.type ? ALLOWED_TYPES.includes(file.type) : false;
+              const extOk = ALLOWED_EXTENSIONS.includes(ext);
+              if (!mimeOk && !extOk) {
                 toast.error("Format non supporté. Seuls les fichiers JPG, PNG et PDF sont acceptés.");
                 e.target.value = "";
                 return;
@@ -608,12 +699,68 @@ function CartPageContent() {
                 e.target.value = "";
                 return;
               }
+              if (ordonnancePreviewUrl) URL.revokeObjectURL(ordonnancePreviewUrl);
+              setOrdonnancePreviewUrl(URL.createObjectURL(file));
               setOrdonnanceFile(file);
             }}
           />
           <p className="text-xs text-gray-400 mt-1">
             Formats acceptés : JPG, PNG, PDF — Taille max : 5 Mo
           </p>
+
+          {/* Modal de prévisualisation */}
+          {showPreviewModal && ordonnancePreviewUrl && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+              onClick={() => setShowPreviewModal(false)}
+            >
+              <div
+                className="relative max-w-2xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-semibold text-gray-800 truncate max-w-[80%]">{ordonnanceFile?.name}</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowPreviewModal(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="p-4 flex justify-center">
+                  {ordonnanceFile?.type.startsWith("image/") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={ordonnancePreviewUrl} alt="Ordonnance" className="max-h-[70vh] w-auto rounded-lg object-contain" />
+                  ) : (
+                    <iframe src={ordonnancePreviewUrl} title="Ordonnance PDF" className="w-full h-[70vh] rounded-lg" />
+                  )}
+                </div>
+                <div className="flex gap-2 px-4 pb-4 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => { setShowPreviewModal(false); fileInputRef.current?.click(); }}
+                    className="flex items-center gap-2 rounded-full border border-toni-green-dark-2 px-4 py-2 text-sm font-medium text-toni-green-dark-2 hover:bg-green-50 transition"
+                  >
+                    <Pencil size={14} /> Remplacer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPreviewModal(false);
+                      setOrdonnanceFile(null);
+                      URL.revokeObjectURL(ordonnancePreviewUrl);
+                      setOrdonnancePreviewUrl(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="flex items-center gap-2 rounded-full border border-red-400 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50 transition"
+                  >
+                    <Trash2 size={14} /> Supprimer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

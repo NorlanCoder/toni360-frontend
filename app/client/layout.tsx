@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import { getClientNotificationCount } from "@/lib/api/client";
 import { PiListChecks } from "react-icons/pi";
 import { SearchProvider, useSearch } from "@/lib/search-context";
 import { CartProvider, useCart } from "@/lib/cart-context";
@@ -56,7 +57,25 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const { query, setQuery, triggerSearch } = useSearch();
   const { cartCount } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const session = getAuthSession();
+    if (!session?.token) return;
+    const token = session.token;
+    const fetchNotifCount = async () => {
+      try {
+        const res = await getClientNotificationCount(token);
+        setNotifCount(res.data.non_lues ?? res.data.total_non_lues ?? 0);
+      } catch {
+        // silently ignore
+      }
+    };
+    void fetchNotifCount();
+    const id = setInterval(() => void fetchNotifCount(), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     const session = getAuthSession();
@@ -65,6 +84,14 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
       router.replace("/client/connexion");
     }
   }, [router]);
+
+  // Vider la barre de recherche quand on quitte la page d'accueil
+  useEffect(() => {
+    if (pathname !== "/client/accueil") {
+      setQuery("");
+      triggerSearch("");
+    }
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearchInput = (value: string) => {
     setQuery(value);
@@ -149,6 +176,11 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
                           {cartCount > 99 ? "99+" : cartCount}
                         </span>
                       )}
+                      {href === "/client/notifications" && notifCount > 0 && (
+                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+                          {notifCount > 99 ? "99+" : notifCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
@@ -200,6 +232,11 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
                       {cartCount > 99 ? "99+" : cartCount}
                     </span>
                   )}
+                  {href === "/client/notifications" && notifCount > 0 && (
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+                      {notifCount > 99 ? "99+" : notifCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -234,8 +271,13 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
             </Link>
 
             <div className="flex items-center gap-3">
-              <Link href="/client/notifications" aria-label="Notifications" className="text-toni-green-dark-2">
+              <Link href="/client/notifications" aria-label="Notifications" className="relative text-toni-green-dark-2">
                 <Bell size={22} />
+                {notifCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {notifCount > 99 ? "99+" : notifCount}
+                  </span>
+                )}
               </Link>
               <Link href="/client/dashboard/cart" aria-label="Panier" className="relative text-toni-green-dark-2">
                 <ShoppingCart size={22} />
@@ -251,7 +293,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           {/* Barre desktop : recherche + boutons */}
           <div className="hidden lg:flex lg:flex-row lg:items-center lg:justify-between gap-3">
             <form
-              className="relative w-full lg:max-w-xs"
+              className="relative w-full lg:max-w-lg"
               onSubmit={handleSearchSubmit}
             >
               <input
@@ -276,6 +318,11 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
               >
                 <Bell size={16} />
                 Notifications
+                {notifCount > 0 && (
+                  <span className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+                    {notifCount > 99 ? "99+" : notifCount}
+                  </span>
+                )}
               </Link>
               <Link
                 href="/client/dashboard/cart"
