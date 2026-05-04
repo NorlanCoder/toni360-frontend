@@ -27,7 +27,6 @@ export default function DevenirPartenairePage() {
     titulaireNom: "",
     adresseComplete: "",
     telephone: undefined as string | undefined,
-    jourOuverture: "",
     email: "",
     heureOuvrables: "",
     villeExercice: "",
@@ -199,7 +198,7 @@ export default function DevenirPartenairePage() {
             </div>
 
             {/* Nom officiel de la pharmacie */}
-            <div>
+            <div className="col-span-2">
               <input
                 type="text"
                 placeholder="Nom officiel de la pharmacie"
@@ -234,19 +233,6 @@ export default function DevenirPartenairePage() {
                 value={formData.telephone}
                 onChange={(value) => setFormData({ ...formData, telephone: value })}
                 className="bg-white"
-              />
-            </div>
-
-            {/* Jour d'ouverture */}
-            <div>
-              <input
-                type="text"
-                placeholder="Jour d'ouverture"
-                value={formData.jourOuverture}
-                onChange={(e) =>
-                  setFormData({ ...formData, jourOuverture: e.target.value })
-                }
-                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
 
