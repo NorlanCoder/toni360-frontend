@@ -246,7 +246,7 @@ export default function PartenaireIncoherencesPage() {
               {selected.suggestions && selected.suggestions.length > 0 ? (
                 <div>
                   <h3 className="mb-3 text-sm font-bold text-gray-700">
-                    Suggestions de produits ({selected.suggestions.length})
+                    Choisir le produit avec lequel fusionner ({selected.suggestions.length}) :
                   </h3>
                   <div className="space-y-2">
                     {selected.suggestions.map((s: ProduitSuggestion, idx: number) => (

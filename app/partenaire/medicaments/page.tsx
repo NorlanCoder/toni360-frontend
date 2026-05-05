@@ -155,7 +155,7 @@ export default function PartenaireMedicamentsPage() {
           </div>
 
           {/* Filter tabs */}
-          <div className="mb-6 flex flex-wrap gap-x-2  gap-y-3">
+          <div className="mb-6 flex flex-wrap justify-between gap-x-2  gap-y-3">
             {filters.map((filter) => {
               const isActive = activeFilter === filter.key;
               return (

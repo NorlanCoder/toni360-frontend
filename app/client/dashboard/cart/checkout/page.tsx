@@ -24,6 +24,7 @@ interface CartItem {
   name: string;
   type: string;
   qty: number;
+  maxQty: number;
   price: number;
   requiresPrescription: boolean;
 }
@@ -60,6 +61,7 @@ function CartPageContent() {
   const [pharmacyEmail, setPharmacyEmail] = useState("");
   const [prescriptionCount, setPrescriptionCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const maxQtyByIdRef = useRef<Record<string, number>>({});
   const { clearLocalCart } = useCart();
 
   const resolvePaymentPhone = (): string => {
@@ -98,14 +100,20 @@ function CartPageContent() {
       setPharmacyEmail(firstPharmacie?.email ?? "");
 
       const mappedItems = panier.pharmacies.flatMap((pharmacieBloc) =>
-        pharmacieBloc.produits.map((item) => ({
-          id: item.id,
-          name: item.produit.nom,
-          type: [item.produit.forme, item.produit.dosage].filter(Boolean).join(" ") || "Produit",
-          qty: item.quantite,
-          price: Number(item.prix_unitaire ?? 0),
-          requiresPrescription: Boolean(item.produit.necessite_ordonnance),
-        })),
+        pharmacieBloc.produits.map((item) => {
+          if (!(item.id in maxQtyByIdRef.current)) {
+            maxQtyByIdRef.current[item.id] = item.quantite;
+          }
+          return {
+            id: item.id,
+            name: item.produit.nom,
+            type: [item.produit.forme, item.produit.dosage].filter(Boolean).join(" ") || "Produit",
+            qty: item.quantite,
+            maxQty: maxQtyByIdRef.current[item.id],
+            price: Number(item.prix_unitaire ?? 0),
+            requiresPrescription: Boolean(item.produit.necessite_ordonnance),
+          };
+        }),
       );
 
       setItems(mappedItems);
@@ -135,14 +143,20 @@ function CartPageContent() {
       setPharmacyTelephone(commande.pharmacie?.telephone ?? "");
       setPharmacyEmail((commande.pharmacie as { email?: string })?.email ?? "");
 
-      const mappedItems: CartItem[] = commande.produits.map((item) => ({
-        id: item.id,
-        name: item.produit?.nom ?? "Produit",
-        type: "Produit",
-        qty: Number(item.quantite ?? 1),
-        price: Number(item.prix_unitaire ?? 0),
-        requiresPrescription: Boolean(item.ordonnance_requise),
-      }));
+      const mappedItems: CartItem[] = commande.produits.map((item) => {
+        if (!(item.id in maxQtyByIdRef.current)) {
+          maxQtyByIdRef.current[item.id] = Number(item.quantite ?? 1);
+        }
+        return {
+          id: item.id,
+          name: item.produit?.nom ?? "Produit",
+          type: "Produit",
+          qty: Number(item.quantite ?? 1),
+          maxQty: maxQtyByIdRef.current[item.id],
+          price: Number(item.prix_unitaire ?? 0),
+          requiresPrescription: Boolean(item.ordonnance_requise),
+        };
+      });
 
       setItems(mappedItems);
       const missingPrescriptionCount = commande.produits.filter(
@@ -214,6 +228,11 @@ function CartPageContent() {
 
     const item = items.find((entry) => entry.id === id);
     if (!item) {
+      return;
+    }
+
+    if (delta > 0 && item.qty >= item.maxQty) {
+      toast.warning("Vous ne pouvez pas dépasser la quantité initiale.");
       return;
     }
 
@@ -551,7 +570,11 @@ function CartPageContent() {
                   type="button"
                   onClick={() => updateQty(item.id, 1)}
                   disabled={anyPending || isCommandeValidationMode}
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-toni-green-dark-2 hover:bg-toni-green-light"
+                  className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                    item.qty >= item.maxQty
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-toni-green-dark-2 hover:bg-toni-green-light"
+                  }`}
                 >
                   <Plus size={13} />
                 </button>

@@ -56,6 +56,7 @@ function OrderDetailContent() {
   const [pendingValider, setPendingValider] = useState(false);
   const [pendingVerif, setPendingVerif] = useState(false);
   const [verificationDone, setVerificationDone] = useState(false);
+  const [adjustedItems, setAdjustedItems] = useState<Record<string, { oldQty: number; newQty: number }>>({});
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -133,6 +134,16 @@ function OrderDetailContent() {
       }
       if (supprimes.length === 0 && ajustes.length === 0) {
         toast.success("Tous les produits sont disponibles !");
+      }
+      // Construire la map des ajustements avant rechargement
+      if (ajustes.length > 0) {
+        const newAdjusted: Record<string, { oldQty: number; newQty: number }> = {};
+        for (const ajuste of ajustes) {
+          newAdjusted[ajuste.id] = { oldQty: ajuste.quantite_demandee, newQty: ajuste.quantite_ajustee };
+        }
+        setAdjustedItems(newAdjusted);
+      } else {
+        setAdjustedItems({});
       }
       // Recharger les données de la commande mises à jour
       await loadCommande();
@@ -335,6 +346,7 @@ function OrderDetailContent() {
                         try {
                           await modifierProduitCommande(token, commandeId, item.id, newQty);
                           setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, qty: newQty } : i));
+                          setAdjustedItems((prev) => { const n = { ...prev }; delete n[item.id]; return n; });
                           setVerificationDone(false);
                         } catch (error) {
                           if (error instanceof ApiError) toast.error(error.message);
@@ -346,10 +358,20 @@ function OrderDetailContent() {
                     >
                       <Minus size={13} />
                     </button>
-                    <span className="px-3 text-sm font-semibold text-gray-800 min-w-[24px] text-center">
+                    <span className="px-3 text-sm font-semibold min-w-[24px] text-center relative group/adj">
                       {pendingItemId === item.id
                         ? <span className="inline-block w-3 h-3 rounded-full border-2 border-gray-400 border-t-transparent animate-spin" />
-                        : item.qty}
+                        : adjustedItems[item.id]
+                          ? (
+                            <span className="text-orange-500 cursor-help">
+                              {item.qty}
+                              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/adj:block whitespace-nowrap rounded-lg bg-gray-800 px-3 py-2 text-xs text-white z-10 shadow-lg">
+                                Quantité réduite&nbsp;: {adjustedItems[item.id].oldQty} demandé(s), seulement {adjustedItems[item.id].newQty} disponible(s)
+                              </span>
+                            </span>
+                          )
+                          : <span className="text-gray-800">{item.qty}</span>
+                      }
                     </span>
                     <button
                       type="button"
@@ -361,6 +383,7 @@ function OrderDetailContent() {
                         try {
                           await modifierProduitCommande(token, commandeId, item.id, newQty);
                           setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, qty: newQty } : i));
+                          setAdjustedItems((prev) => { const n = { ...prev }; delete n[item.id]; return n; });
                           setVerificationDone(false);
                         } catch (error) {
                           if (error instanceof ApiError) toast.error(error.message);
@@ -401,6 +424,7 @@ function OrderDetailContent() {
                     try {
                       await supprimerProduitCommande(token, commandeId, item.id);
                       setItems((prev) => prev.filter((i) => i.id !== item.id));
+                      setAdjustedItems((prev) => { const n = { ...prev }; delete n[item.id]; return n; });
                       setVerificationDone(false);
                     } catch (error) {
                       if (error instanceof ApiError) toast.error(error.message);

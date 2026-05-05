@@ -101,7 +101,9 @@ export default function PartenaireEmployesPage() {
 
       try {
         const response = await getPartnerUsers(session.token, { per_page: 100 });
-        const users = extractCollection(response.data);
+        const users = extractCollection(response.data).filter(
+          (user) => user.role?.code !== "PHARMACIEN_TITULAIRE",
+        );
 
         setEmployees(users.map((user) => ({
           id: user.id,

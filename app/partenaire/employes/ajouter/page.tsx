@@ -190,7 +190,7 @@ export default function PartenaireAjouterEmployePage() {
             </div>
 
             {/* Row 3 — password (half-width on desktop) */}
-            <div className="mt-4 sm:mt-6 grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2">
+            <div className="mt-4 sm:mt-6 grid grid-cols-1 gap-4">
               <div>
                 <label className="mb-1 block text-base font-medium text-gray-600">
                   Mot de passe

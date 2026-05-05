@@ -650,6 +650,75 @@ export async function deletePatientAccount(token: string, password: string): Pro
   });
 }
 
+// ─── Historique des localisations ───────────────────────────────────────────
+
+export interface LocalisationResultat {
+  id: string;
+  pharmacie_id: string;
+  produit_id: string;
+  prix: number;
+  quantite_disponible: number;
+  quantite_demandee: number;
+  distance_km: number;
+  ordre: number;
+  pharmacie?: {
+    id: string;
+    nom: string;
+    adresse?: string | null;
+    ville?: string | null;
+    telephone?: string | null;
+  } | null;
+  produit?: {
+    id: string;
+    nom: string;
+    forme?: string | null;
+    dosage?: string | null;
+  } | null;
+}
+
+export interface LocalisationSummary {
+  id: string;
+  criteres: { produits: Array<{ terme: string; quantite: number }> };
+  latitude_patient: number;
+  longitude_patient: number;
+  rayon_km: number;
+  statut: string;
+  date: string;
+  created_at: string;
+  resultats: LocalisationResultat[];
+}
+
+export interface HistoriqueLocalisationsResponse {
+  success: boolean;
+  data: {
+    data: LocalisationSummary[];
+    current_page?: number;
+    last_page?: number;
+    total?: number;
+  };
+}
+
+export interface LocalisationDetailResponse {
+  success: boolean;
+  data: {
+    recherche: LocalisationSummary;
+  };
+}
+
+export async function getHistoriqueLocalisations(token: string): Promise<HistoriqueLocalisationsResponse> {
+  return apiRequest<HistoriqueLocalisationsResponse>("/patient/recherche/historique", {
+    method: "GET",
+    token,
+  });
+}
+
+export async function getLocalisationDetail(token: string, id: string): Promise<LocalisationDetailResponse> {
+  return apiRequest<LocalisationDetailResponse>(`/patient/recherche/${id}`, {
+    method: "GET",
+    token,
+  });
+}
+
 export async function getBrowserCoordinates(): Promise<Coordinates> {
   if (typeof window === "undefined" || !("geolocation" in navigator)) {
     return { latitude: 6.3703, longitude: 2.3912 };

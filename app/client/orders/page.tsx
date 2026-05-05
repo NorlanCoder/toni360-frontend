@@ -92,6 +92,7 @@ function ClientOrdersContent() {
   const [activeTab, setActiveTab] = useState<"Terminees" | "En attente" | "Recuperees" | "En cours" | "Prete">(initTab);
   const [loadingQrOrderId] = useState<string | null>(null);
   const [validatingOrderId, setValidatingOrderId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -151,6 +152,8 @@ function ClientOrdersContent() {
         if (error instanceof ApiError) {
           toast.error(error.message);
         }
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -288,6 +291,17 @@ function ClientOrdersContent() {
 
     router.push(`/client/orders/${order.id}/qrcode`);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-4 border-[#00955F] border-t-transparent animate-spin" />
+          <p className="text-sm text-gray-500">Chargement des commandes…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
