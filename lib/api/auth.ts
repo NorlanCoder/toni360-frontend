@@ -49,6 +49,7 @@ export interface PatientProfileResponse {
       nom_complet?: string;
       email: string;
       telephone: string;
+      ville?: string | null;
       is_active?: boolean;
     };
   };

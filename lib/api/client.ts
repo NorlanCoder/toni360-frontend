@@ -63,6 +63,7 @@ export interface PatientPanierResponse {
           adresse?: string | null;
           ville?: string | null;
           telephone?: string | null;
+          email?: string | null;
         };
         produits: Array<{
           id: string;
@@ -96,7 +97,9 @@ export interface CommandeSummary {
   pharmacie?: {
     nom?: string;
     adresse?: string;
+    ville?: string;
     telephone?: string;
+    email?: string;
   } | null;
   created_at?: string;
 }
@@ -175,7 +178,9 @@ export interface CommandeDetailResponse {
       pharmacie?: {
         nom?: string;
         adresse?: string;
+        ville?: string;
         telephone?: string;
+        email?: string;
       } | null;
     };
   };
