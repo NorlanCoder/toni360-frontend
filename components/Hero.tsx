@@ -2,12 +2,25 @@
  * Composant Hero - Section principale avec image de fond
  * Affiche le titre et les deux boutons d'action principaux
  */
+
+"use client";
+
+import { getAuthSession } from "@/lib/api/session";
 import { Search, Users } from "lucide-react";
 import Link from "next/link";
 import { FaLocationArrow } from "react-icons/fa6";
 
 
 export default function Hero() {
+  const session = getAuthSession();
+  const isPartner = session?.userType === "user";
+  const isPatient = session?.userType === "patient";
+
+  const patientHref = isPatient ? "/client/accueil" : "/client/connexion";
+  const partnerHref = isPartner ? "/partenaire/dashboard" : "/partenaire/inscription";
+  const patientLabel = isPatient ? "Mon espace patient" : "Trouvez vos médicaments";
+  const partnerLabel = isPartner ? "Mon tableau de bord" : "Devenez partenaire";
+
   return (
     // Section pleine hauteur (min-h-screen) avec contenu centré
     <section className="relative min-h-screen flex flex-col items-center justify-center">
@@ -35,32 +48,32 @@ export default function Hero() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
           {/* Bouton Patient - fond blanc */}
           <Link
-            href="/client/connexion"
+              href={patientHref}
             className="px-8 py-4 bg-white text-toni-green font-bold rounded-full hover:bg-gray-100 transition flex items-center justify-center gap-2 min-w-[260px]"
           >
             <FaLocationArrow size={20} />
-            Trouvez vos médicaments
+              {patientLabel}
           </Link>
           
           {/* Bouton Pharmacie - fond vert */}
-          <Link href="/partenaire/inscription" className="px-8 py-4 bg-toni-green-dark text-white font-bold rounded-full hover:bg-toni-green-dark-2 transition flex items-center justify-center gap-2 min-w-[260px]">
+            <Link href={partnerHref} className="px-8 py-4 bg-toni-green-dark text-white font-bold rounded-full hover:bg-toni-green-dark-2 transition flex items-center justify-center gap-2 min-w-[260px]">
             <Users size={20} />
-            Devenez partenaire
+              {partnerLabel}
           </Link>
         </div>
         {/* Liens légaux */}
         <div className="flex flex-wrap items-center justify-center gap-4 text-white text-sm">
-          <a href="#" className="hover:text-white/80 transition underline">
+          <Link href="/terms-of-use" className="hover:text-white/80 transition underline">
             Conditions générales d&apos;utilisation
-          </a>
+          </Link>
           <span className="hidden sm:inline">•</span>
-          <a href="#" className="hover:text-white/80 transition underline">
+          <Link href="/privacy" className="hover:text-white/80 transition underline">
             Politiques de confidentialité
-          </a>
+          </Link>
           <span className="hidden sm:inline">•</span>
-          <a href="#" className="hover:text-white/80 transition underline">
+          <Link href="/contacts" className="hover:text-white/80 transition underline">
             Contactez-nous
-          </a>
+          </Link>
         </div>      </div>
     </section>
   );

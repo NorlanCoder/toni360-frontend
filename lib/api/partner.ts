@@ -193,7 +193,7 @@ export interface PartnerPharmacieProfile {
   ville?: string | null;
   telephone?: string | null;
   email?: string | null;
-  numero_agrement?: string | null;
+  licence_pharmaceutique_url?: string | null;
 }
 
 export interface PartnerPharmacieProfileResponse {
@@ -629,11 +629,73 @@ export async function updatePartnerPharmacieProfile(
     adresse: string;
     telephone: string;
     email: string;
-    numero_agrement: string;
   }>,
 ): Promise<PartnerPharmacieProfileResponse> {
   const json = buildJsonRequest(payload);
   return apiRequest<PartnerPharmacieProfileResponse>("/pharmacie/parametrage", {
+    method: "PUT",
+    token,
+    body: json.body,
+    headers: json.headers,
+  });
+}
+
+export async function uploadPartnerLicence(
+  token: string,
+  file: File,
+): Promise<{ success: boolean }> {
+  const formData = new FormData();
+  formData.append("licence", file);
+  return apiRequest<{ success: boolean }>("/pharmacie/parametrage/licence", {
+    method: "POST",
+    token,
+    body: formData,
+  });
+}
+
+export async function downloadPartnerLicence(token: string): Promise<void> {
+  const res = await fetch(`${(await import("./config")).API_BASE_URL}/pharmacie/parametrage/licence`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Impossible de charger la licence.");
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+export interface HoraireOuvertureItem {
+  id?: string;
+  jour: number;
+  jour_label?: string;
+  heure_ouverture: string | null;
+  heure_fermeture: string | null;
+  est_ferme: boolean;
+}
+
+export interface PartnerHorairesResponse {
+  success: boolean;
+  data: HoraireOuvertureItem[];
+}
+
+export async function getPartnerHoraires(token: string): Promise<PartnerHorairesResponse> {
+  return apiRequest<PartnerHorairesResponse>("/pharmacie/parametrage/horaires", {
+    method: "GET",
+    token,
+  });
+}
+
+export async function updatePartnerHoraires(
+  token: string,
+  horaires: Array<{
+    jour: number;
+    heure_ouverture: string | null;
+    heure_fermeture: string | null;
+    est_ferme: boolean;
+  }>,
+): Promise<{ success: boolean; message?: string }> {
+  const json = buildJsonRequest({ horaires });
+  return apiRequest<{ success: boolean; message?: string }>("/pharmacie/parametrage/horaires", {
     method: "PUT",
     token,
     body: json.body,

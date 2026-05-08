@@ -121,6 +121,21 @@ export default function PartenaireNotificationsPage() {
         </div>
       ) : (
         <div className="max-w-5xl mx-auto space-y-6">
+          <div className="flex flex-wrap justify-end gap-2 pb-2">
+            <button
+              onClick={() => void handleDeleteAll()}
+              className="px-4 py-1.5 bg-red-600 text-white font-semibold text-sm rounded-full hover:bg-red-700 transition"
+            >
+              Tout supprimer
+            </button>
+            <button
+              onClick={() => void handleMarkAllAsRead()}
+              className="px-4 py-1.5 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-semibold text-sm rounded-full hover:bg-toni-green-dark-2 hover:text-white transition"
+            >
+              Tout marquer comme lu
+            </button>
+          </div>
+
           <div className="space-y-4">
             {notifications.map((notification) => (
               <NotificationCard
@@ -136,21 +151,6 @@ export default function PartenaireNotificationsPage() {
                 onDelete={() => void handleDelete(notification.id)}
               />
             ))}
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-3 md:gap-4 pt-6">
-            <button
-              onClick={() => void handleDeleteAll()}
-              className="px-6 md:px-12 py-2.5 md:py-3 bg-red-600 text-white font-bold text-sm md:text-lg rounded-full hover:bg-red-700 transition"
-            >
-              Tout supprimer
-            </button>
-            <button
-              onClick={() => void handleMarkAllAsRead()}
-              className="px-6 md:px-12 py-2.5 md:py-3 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold text-sm md:text-lg rounded-full hover:bg-toni-green-dark-2 hover:text-white transition"
-            >
-              Tout marquer comme lu
-            </button>
           </div>
         </div>
       )}

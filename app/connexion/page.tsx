@@ -139,7 +139,7 @@ export default function ConnexionPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, telephone: e.target.value })
                   }
-                  className="flex-1 px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                  className="flex-1 bg-white px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
                 />
               </div>
             ) : (
@@ -151,7 +151,7 @@ export default function ConnexionPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                  className="w-full bg-white px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
                 />
               </div>
             )}
@@ -166,7 +166,7 @@ export default function ConnexionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full bg-white pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
               <button
                 type="button"
