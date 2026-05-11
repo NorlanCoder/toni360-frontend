@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock } from "lucide-react";
+import { Eye, EyeOff, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { getPatientProfile } from "@/lib/api/auth";
 import { updatePatientProfile, deletePatientAccount } from "@/lib/api/client";
@@ -20,6 +20,7 @@ export default function ProfilPage() {
     ville: "",
   });
   const [deletePassword, setDeletePassword] = useState("");
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
 
   const router = useRouter();
   const session = useMemo(() => getAuthSession(), []);
@@ -187,16 +188,106 @@ export default function ProfilPage() {
                       className="w-full px-4 py-3 border-2 font-bold border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
                     >
                       <option value="">— Sélectionner une ville —</option>
-                      <option value="Cotonou">Cotonou</option>
-                      <option value="Porto-Novo">Porto-Novo</option>
-                      <option value="Parakou">Parakou</option>
-                      <option value="Abomey-Calavi">Abomey-Calavi</option>
-                      <option value="Djougou">Djougou</option>
-                      <option value="Bohicon">Bohicon</option>
-                      <option value="Natitingou">Natitingou</option>
-                      <option value="Kandi">Kandi</option>
-                      <option value="Ouidah">Ouidah</option>
-                      <option value="Lokossa">Lokossa</option>
+                      <optgroup label="Alibori">
+                        <option value="Banikoara">Banikoara</option>
+                        <option value="Gogounou">Gogounou</option>
+                        <option value="Kandi">Kandi</option>
+                        <option value="Karimama">Karimama</option>
+                        <option value="Malanville">Malanville</option>
+                        <option value="Ségbana">Ségbana</option>
+                      </optgroup>
+                      <optgroup label="Atacora">
+                        <option value="Boukoumbé">Boukoumbé</option>
+                        <option value="Cobly">Cobly</option>
+                        <option value="Kérou">Kérou</option>
+                        <option value="Kouandé">Kouandé</option>
+                        <option value="Matéri">Matéri</option>
+                        <option value="Natitingou">Natitingou</option>
+                        <option value="Péhunco">Péhunco</option>
+                        <option value="Tanguiéta">Tanguiéta</option>
+                        <option value="Toucountouna">Toucountouna</option>
+                      </optgroup>
+                      <optgroup label="Atlantique">
+                        <option value="Abomey-Calavi">Abomey-Calavi</option>
+                        <option value="Allada">Allada</option>
+                        <option value="Kpomassè">Kpomassè</option>
+                        <option value="Ouidah">Ouidah</option>
+                        <option value="Sô-Ava">Sô-Ava</option>
+                        <option value="Toffo">Toffo</option>
+                        <option value="Tori-Bossito">Tori-Bossito</option>
+                        <option value="Zè">Zè</option>
+                      </optgroup>
+                      <optgroup label="Borgou">
+                        <option value="Bembèrèkè">Bembèrèkè</option>
+                        <option value="Kalalé">Kalalé</option>
+                        <option value="N'Dali">N&apos;Dali</option>
+                        <option value="Nikki">Nikki</option>
+                        <option value="Parakou">Parakou</option>
+                        <option value="Pèrèrè">Pèrèrè</option>
+                        <option value="Sinendé">Sinendé</option>
+                        <option value="Tchaourou">Tchaourou</option>
+                      </optgroup>
+                      <optgroup label="Collines">
+                        <option value="Bantè">Bantè</option>
+                        <option value="Dassa-Zoumè">Dassa-Zoumè</option>
+                        <option value="Glazoué">Glazoué</option>
+                        <option value="Ouèssè">Ouèssè</option>
+                        <option value="Savalou">Savalou</option>
+                        <option value="Savè">Savè</option>
+                      </optgroup>
+                      <optgroup label="Couffo">
+                        <option value="Aplahoué">Aplahoué</option>
+                        <option value="Djakotomey">Djakotomey</option>
+                        <option value="Dogbo">Dogbo</option>
+                        <option value="Klouékanmè">Klouékanmè</option>
+                        <option value="Lalo">Lalo</option>
+                        <option value="Toviklin">Toviklin</option>
+                      </optgroup>
+                      <optgroup label="Donga">
+                        <option value="Bassila">Bassila</option>
+                        <option value="Copargo">Copargo</option>
+                        <option value="Djougou">Djougou</option>
+                        <option value="Ouaké">Ouaké</option>
+                      </optgroup>
+                      <optgroup label="Littoral">
+                        <option value="Cotonou">Cotonou</option>
+                      </optgroup>
+                      <optgroup label="Mono">
+                        <option value="Athiémé">Athiémé</option>
+                        <option value="Bopa">Bopa</option>
+                        <option value="Comè">Comè</option>
+                        <option value="Grand-Popo">Grand-Popo</option>
+                        <option value="Houéyogbé">Houéyogbé</option>
+                        <option value="Lokossa">Lokossa</option>
+                      </optgroup>
+                      <optgroup label="Ouémé">
+                        <option value="Adjarra">Adjarra</option>
+                        <option value="Adjohoun">Adjohoun</option>
+                        <option value="Akpro-Missérété">Akpro-Missérété</option>
+                        <option value="Avrankou">Avrankou</option>
+                        <option value="Bonou">Bonou</option>
+                        <option value="Dangbo">Dangbo</option>
+                        <option value="Porto-Novo">Porto-Novo</option>
+                        <option value="Sèmè-Kpodji">Sèmè-Kpodji</option>
+                      </optgroup>
+                      <optgroup label="Plateau">
+                        <option value="Adja-Ouèrè">Adja-Ouèrè</option>
+                        <option value="Ifangni">Ifangni</option>
+                        <option value="Kétou">Kétou</option>
+                        <option value="Pobè">Pobè</option>
+                        <option value="Sakété">Sakété</option>
+                      </optgroup>
+                      <optgroup label="Zou">
+                        <option value="Abomey">Abomey</option>
+                        <option value="Agbangnizoun">Agbangnizoun</option>
+                        <option value="Bohicon">Bohicon</option>
+                        <option value="Covè">Covè</option>
+                        <option value="Djidja">Djidja</option>
+                        <option value="Ouinhi">Ouinhi</option>
+                        <option value="Za-Kpota">Za-Kpota</option>
+                        <option value="Zagnanado">Zagnanado</option>
+                        <option value="Zogbodomey">Zogbodomey</option>
+                      </optgroup>
                     </select>
                   </div>
                 </div>
@@ -225,12 +316,19 @@ export default function ProfilPage() {
                   <div className="relative max-w-md mx-auto flex items-center">
                     <Lock className="absolute left-4 text-gray-400" size={18} />
                     <input
-                      type="password"
+                      type={showDeletePassword ? "text" : "password"}
                       placeholder="Entrez votre mot de passe"
                       value={deletePassword}
                       onChange={(e) => setDeletePassword(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 border-2 border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                      className="w-full pl-12 pr-12 py-4 border-2 border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowDeletePassword((v) => !v)}
+                      className="absolute right-4 text-gray-400 hover:text-gray-600"
+                    >
+                      {showDeletePassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
                   </div>
 
                   {/* Buttons */}

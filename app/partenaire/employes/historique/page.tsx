@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ClockArrowUp } from "lucide-react";
+import { ChevronDown, ClockArrowUp, X } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import {
@@ -44,6 +44,7 @@ export default function PartenaireHistoriquePage() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedEntry, setSelectedEntry] = useState<ActionLogEntry | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -171,7 +172,8 @@ export default function PartenaireHistoriquePage() {
             return (
               <div
                 key={entry.id}
-                className="rounded-2xl px-4 py-3 flex items-center gap-4 bg-[#E6F6F0]"
+                onClick={() => setSelectedEntry(entry)}
+                className="rounded-2xl px-4 py-3 flex items-center gap-4 bg-[#E6F6F0] cursor-pointer hover:bg-emerald-100 transition-colors"
               >
                 {/* Icône */}
                 <div className="flex-shrink-0">
@@ -213,6 +215,73 @@ export default function PartenaireHistoriquePage() {
           })}
         </div>
       )}
+
+      {/* ═══════════════ DETAIL MODAL ═══════════════ */}
+      {selectedEntry && (() => {
+        const e = selectedEntry;
+        const created = e.created_at ? new Date(e.created_at) : null;
+        const date = created ? created.toLocaleDateString("fr-FR") : "-";
+        const heure = created
+          ? created.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+          : "-";
+        const employeNom = e.user ? `${e.user.prenom} ${e.user.nom}` : null;
+        const moduleLabel = MODULE_LABELS[e.module] ?? e.module;
+        const actionLabel = ACTION_LABELS[e.action] ?? e.action;
+        const actionColor = ACTION_COLORS[e.action] ?? "bg-gray-100 text-gray-600";
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setSelectedEntry(null)}
+            />
+            <div className="relative z-10 mx-4 w-full max-w-md rounded-2xl bg-white shadow-xl">
+              {/* Header */}
+              <div className="flex items-start justify-between border-b border-gray-200 px-5 py-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-900">{moduleLabel}</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${actionColor}`}>
+                      {actionLabel}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-gray-400">{date} à {heure}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedEntry(null)}
+                  className="ml-4 rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="divide-y divide-gray-100 px-5 py-2">
+                {e.description && (
+                  <Row label="Description" value={e.description} />
+                )}
+                {employeNom && (
+                  <Row label="Employé" value={employeNom} />
+                )}
+                {e.user?.role?.libelle && (
+                  <Row label="Rôle" value={e.user.role.libelle} />
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-start gap-3 py-2.5">
+      <span className="w-28 shrink-0 text-xs font-medium text-gray-400">{label}</span>
+      <span className={`flex-1 text-sm text-gray-800 break-all ${mono ? "font-mono text-xs" : ""}`}>
+        {value}
+      </span>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const sideMenuSections = [
   "Objet de l'Application",
   "Utilisation de l'Application",
@@ -13,6 +15,18 @@ const sideMenuSections = [
 export default function ReturnPolicyPage() {
   return (
     <main className="max-w-7xl mx-auto px-4 py-10 w-full">
+      {/* Onglets CGU */}
+      <div className="mb-8 flex gap-2">
+        <span className="rounded-full bg-green-600 px-5 py-2 text-sm font-bold text-white">
+          Client
+        </span>
+        <Link
+          href="/partenaire/cgu"
+          className="rounded-full border border-gray-300 px-5 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+        >
+          Pharmacie
+        </Link>
+      </div>
         <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-8 md:gap-12">
           {/* ── SIDEBAR GAUCHE ── */}
           <aside className="border-r border-gray-200 pr-6">

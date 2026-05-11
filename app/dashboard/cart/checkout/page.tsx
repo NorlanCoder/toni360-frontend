@@ -79,7 +79,7 @@ export default function CartPage() {
           <Link href="/privacy" className="text-base text-[#0fa37f] hover:underline">
             Politiques de confidentialité,
           </Link>
-          <Link href="/return-policy" className="text-base text-[#0fa37f] hover:underline">
+          <Link href="/terms-of-use" className="text-base text-[#0fa37f] hover:underline">
             Conditions générales de retour,
           </Link>
           <Link href="/contact" className="text-base text-[#0fa37f] hover:underline">

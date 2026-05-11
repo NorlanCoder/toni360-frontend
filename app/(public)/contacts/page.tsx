@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function ContactsPage() {
   return (
     <main className="max-w-7xl mx-auto px-1 py-12 text-[15px] text-gray-700 space-y-8">
@@ -15,15 +17,16 @@ export default function ContactsPage() {
           <span className="text-gray-400">•</span>
           <span className="w-24 font-medium">Email</span>
           <span className="text-gray-400">:</span>
-          <a href="mailto:support@votresite.com" className="text-green-600 underline hover:text-green-700">
-            support@votresite.com
+          <a href="mailto:contact@toni360.com" className="text-green-600 underline hover:text-green-700">
+            contact@toni360.com
           </a>
         </li>
         <li className="flex items-center gap-2">
           <span className="text-gray-400">•</span>
           <span className="w-24 font-medium">Téléphone</span>
           <span className="text-gray-400">:</span>
-          <span>+229 12 34 56 78.</span>
+          <span><Link href={"tel:+2290129111487"}> +229 01 29 11 14 87</Link> .</span>
+
         </li>
       </ul>
 
@@ -37,32 +40,32 @@ export default function ContactsPage() {
           {/* Facebook */}
           <a href="#" aria-label="Facebook" className="hover:opacity-80 transition">
             <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="20" cy="20" r="20" fill="#1877F2"/>
-              <path d="M26 13h-3c-1.1 0-2 .9-2 2v3h5l-.7 5H21v12h-5V23h-3v-5h3v-3c0-3.3 2.7-6 6-6h3v4z" fill="white"/>
+              <circle cx="20" cy="20" r="20" fill="#1877F2" />
+              <path d="M26 13h-3c-1.1 0-2 .9-2 2v3h5l-.7 5H21v12h-5V23h-3v-5h3v-3c0-3.3 2.7-6 6-6h3v4z" fill="white" />
             </svg>
           </a>
           {/* Instagram */}
           <a href="#" aria-label="Instagram" className="hover:opacity-80 transition">
             <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="20" cy="20" r="20" fill="url(#ig)"/>
+              <circle cx="20" cy="20" r="20" fill="url(#ig)" />
               <defs>
                 <radialGradient id="ig" cx="30%" cy="100%" r="120%">
-                  <stop offset="0%" stopColor="#FFDC80"/>
-                  <stop offset="30%" stopColor="#F56040"/>
-                  <stop offset="65%" stopColor="#C13584"/>
-                  <stop offset="100%" stopColor="#3051F1"/>
+                  <stop offset="0%" stopColor="#FFDC80" />
+                  <stop offset="30%" stopColor="#F56040" />
+                  <stop offset="65%" stopColor="#C13584" />
+                  <stop offset="100%" stopColor="#3051F1" />
                 </radialGradient>
               </defs>
-              <rect x="11" y="11" width="18" height="18" rx="5" stroke="white" strokeWidth="2" fill="none"/>
-              <circle cx="20" cy="20" r="4.5" stroke="white" strokeWidth="2" fill="none"/>
-              <circle cx="25.5" cy="14.5" r="1" fill="white"/>
+              <rect x="11" y="11" width="18" height="18" rx="5" stroke="white" strokeWidth="2" fill="none" />
+              <circle cx="20" cy="20" r="4.5" stroke="white" strokeWidth="2" fill="none" />
+              <circle cx="25.5" cy="14.5" r="1" fill="white" />
             </svg>
           </a>
           {/* X (Twitter) */}
           <a href="#" aria-label="X" className="hover:opacity-80 transition">
             <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="20" cy="20" r="20" fill="black"/>
-              <path d="M22.3 18.5L28.6 11h-1.5l-5.5 6.4L17 11h-5l6.6 9.6L11.4 29h1.5l5.8-6.7 4.6 6.7H28l-5.7-10.5zm-2 2.3l-.7-1L13.5 12h2.3l4.3 6.2.7 1 5.7 8.2h-2.3l-4.9-7.6z" fill="white"/>
+              <circle cx="20" cy="20" r="20" fill="black" />
+              <path d="M22.3 18.5L28.6 11h-1.5l-5.5 6.4L17 11h-5l6.6 9.6L11.4 29h1.5l5.8-6.7 4.6 6.7H28l-5.7-10.5zm-2 2.3l-.7-1L13.5 12h2.3l4.3 6.2.7 1 5.7 8.2h-2.3l-4.9-7.6z" fill="white" />
             </svg>
           </a>
         </div>

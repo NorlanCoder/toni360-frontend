@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Download, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { getCommandeQrCode } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
@@ -33,10 +33,8 @@ function QrCodePageContent() {
     pharmacieNom?: string;
     pharmacieAdresse?: string;
     pharmacieTelephone?: string;
-    instructions?: string[];
+    pharmacieEmail?: string;
   } | null>(null);
-
-  const imgRef = useRef<HTMLImageElement | null>(null);
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -68,7 +66,7 @@ function QrCodePageContent() {
           pharmacieNom: d.pharmacie?.nom,
           pharmacieAdresse: d.pharmacie?.adresse,
           pharmacieTelephone: d.pharmacie?.telephone,
-          instructions: d.instructions,
+          pharmacieEmail: d.pharmacie?.email,
         });
       } catch (error) {
         if (error instanceof ApiError) {
@@ -84,41 +82,6 @@ function QrCodePageContent() {
   }, [token, commandeId, router]);
 
   const imageSrc = qrData?.imageDataUrl ?? qrData?.imageUrl ?? null;
-
-  const handleDownload = () => {
-    if (!imageSrc) return;
-
-    const filename = `QR-${qrData?.code ?? "commande"}.png`;
-
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-
-    img.onload = () => {
-      const size = Math.max(img.naturalWidth || 512, img.naturalHeight || 512);
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, size, size);
-      ctx.drawImage(img, 0, 0, size, size);
-      const a = document.createElement("a");
-      a.href = canvas.toDataURL("image/png");
-      a.download = filename;
-      a.click();
-    };
-
-    img.onerror = () => {
-      // Fallback direct download if canvas conversion fails
-      const a = document.createElement("a");
-      a.href = imageSrc;
-      a.download = filename;
-      a.click();
-    };
-
-    img.src = imageSrc;
-  };
 
   const mapsUrl = qrData?.pharmacieAdresse
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(qrData.pharmacieAdresse)}`
@@ -137,57 +100,63 @@ function QrCodePageContent() {
   return (
     <section className="mx-auto w-full max-w-5xl px-3 pb-10 sm:px-6">
       {/* ── Header pharmacie ── */}
-      <div className="rounded-2xl bg-gradient-to-r from-[#004B2F] to-[#00B16F] px-6 py-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="rounded-2xl bg-gradient-to-r from-[#004B2F] to-[#00B16F] px-6 py-5 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-center">
+        {/* Colonne 1 : nom + adresse */}
         <div className="flex-1 min-w-0">
           {qrData.pharmacieNom && (
-            <h2 className="text-xl font-bold text-white sm:text-2xl leading-snug">{qrData.pharmacieNom}</h2>
+            <h2 className="text-xl font-bold text-white sm:text-2xl leading-snug">
+              <span className="block">{qrData.pharmacieNom.split(' ')[0]}</span>
+              <span className="block">{qrData.pharmacieNom.split(' ').slice(1).join(' ')}</span>
+            </h2>
           )}
           {qrData.pharmacieAdresse && (
             <p className="mt-1 text-sm text-green-100 leading-snug">{qrData.pharmacieAdresse}</p>
           )}
         </div>
-        <div className="flex flex-col gap-1 min-w-0">
-          {qrData.pharmacieTelephone && (
-            <p className="text-white text-sm font-medium">{qrData.pharmacieTelephone}</p>
+
+        {/* Colonne 2 : email + téléphone + expiration (centré) */}
+        <div className="flex flex-col gap-1 sm:items-center sm:text-center">
+          {qrData.pharmacieEmail && (
+            <a href={`mailto:${qrData.pharmacieEmail}`} className="text-white text-sm font-medium hover:underline">
+              {qrData.pharmacieEmail}
+            </a>
           )}
-          {qrData.tempsRestant && (
-            <p className="text-green-200 text-xs">Expire dans {qrData.tempsRestant}</p>
+          {qrData.pharmacieTelephone && (
+            <a href={`tel:${qrData.pharmacieTelephone}`} className="text-white text-sm font-medium hover:underline">
+              {qrData.pharmacieTelephone}
+            </a>
+          )}
+          {/* {qrData.tempsRestant && (
+            <p className="text-green-200 text-xs mt-1">Expire dans {qrData.tempsRestant}</p>
+          )} */}
+        </div>
+
+        {/* Colonne 3 : bouton itinéraire (aligné à droite) */}
+        <div className="flex sm:justify-end">
+          {mapsUrl && (
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 shrink-0 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-toni-green-dark-2 hover:bg-gray-50 transition"
+            >
+              <MapPin size={16} />
+              Itinéraire
+            </a>
           )}
         </div>
-        {mapsUrl && (
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 self-start sm:self-auto shrink-0 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-toni-green-dark-2 hover:bg-gray-50 transition"
-          >
-            <MapPin size={16} />
-            Itinéraire
-          </a>
-        )}
       </div>
 
       {/* ── Corps : instructions + QR ── */}
       <div className="mt-8 flex flex-col gap-8 sm:flex-row sm:items-start sm:gap-12">
         {/* Instructions */}
         <div className="flex-1 space-y-4 text-base text-gray-700">
-          {(qrData.instructions ?? [
-            "Présentez ce QR code à la pharmacie pour récupérer votre commande.",
-            "Si des médicaments nécessitent une ordonnance, assurez-vous de l'avoir lors du retrait.",
-          ]).map((line, i) => {
-            const isOrdonnance = /ordonnance/i.test(line);
-            if (isOrdonnance) {
-              const parts = line.split(/ordonnance/i);
-              return (
-                <p key={i}>
-                  {parts[0]}
-                  <strong className="text-toni-green-dark-2 underline">ordonnance</strong>
-                  {parts.slice(1).join("ordonnance")}
-                </p>
-              );
-            }
-            return <p key={i}>{line}</p>;
-          })}
+          <p>Présentez ce QR code à la pharmacie pour récupérer votre commande.</p>
+          <p>
+            Si des médicaments nécessitent une{" "}
+            <strong className="text-toni-green-dark-2">ordonnance</strong>
+            , assurez-vous de l&apos;avoir lors du retrait.
+          </p>
         </div>
 
         {/* QR code */}
@@ -195,7 +164,6 @@ function QrCodePageContent() {
           {imageSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              ref={imgRef}
               src={imageSrc}
               alt={`QR code commande ${qrData.commandeNumero ?? ""}`}
               className="h-52 w-52 object-contain sm:h-60 sm:w-60"
@@ -205,30 +173,7 @@ function QrCodePageContent() {
               QR indisponible
             </div>
           )}
-          <p className="text-xs text-gray-400 font-mono">{qrData.code}</p>
         </div>
-      </div>
-
-      {/* ── Boutons ── */}
-      <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="flex items-center justify-center gap-2 flex-1 rounded-full border-2 border-toni-green-dark-2 py-3 text-base font-bold text-toni-green-dark-2 transition hover:bg-toni-green-light"
-        >
-          <ArrowLeft size={18} />
-          Retour
-        </button>
-        {imageSrc && (
-          <button
-            type="button"
-            onClick={handleDownload}
-            className="flex items-center justify-center gap-2 flex-1 rounded-full bg-toni-green-dark-2 py-3 text-base font-bold text-white transition hover:bg-toni-green-dark"
-          >
-            <Download size={18} />
-            Télécharger
-          </button>
-        )}
       </div>
     </section>
   );

@@ -63,6 +63,7 @@ export interface PatientPanierResponse {
           adresse?: string | null;
           ville?: string | null;
           telephone?: string | null;
+          email?: string | null;
         };
         produits: Array<{
           id: string;
@@ -96,7 +97,9 @@ export interface CommandeSummary {
   pharmacie?: {
     nom?: string;
     adresse?: string;
+    ville?: string;
     telephone?: string;
+    email?: string;
   } | null;
   created_at?: string;
 }
@@ -175,7 +178,9 @@ export interface CommandeDetailResponse {
       pharmacie?: {
         nom?: string;
         adresse?: string;
+        ville?: string;
         telephone?: string;
+        email?: string;
       } | null;
     };
   };
@@ -259,6 +264,7 @@ export interface PatientOrderQrCodeResponse {
       nom?: string;
       adresse?: string;
       telephone?: string;
+      email?: string;
     } | null;
     instructions?: string[];
   };
@@ -541,6 +547,31 @@ export async function verifierDisponibiliteCommande(token: string, commandeId: s
   });
 }
 
+export async function modifierProduitCommande(
+  token: string,
+  commandeId: string,
+  produitCommandeId: string,
+  quantite: number,
+): Promise<{ success: boolean; message?: string; data?: { quantite?: number; prix_total?: number; montant_total_commande?: number } }> {
+  return apiRequest(`/patient/commandes/${commandeId}/produits/${produitCommandeId}`, {
+    method: "PUT",
+    token,
+    body: JSON.stringify({ quantite }),
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+export async function supprimerProduitCommande(
+  token: string,
+  commandeId: string,
+  produitCommandeId: string,
+): Promise<{ success: boolean; message?: string; data?: { montant_total_commande?: number } }> {
+  return apiRequest(`/patient/commandes/${commandeId}/produits/${produitCommandeId}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
 export async function uploadOrdonnanceForProduitCommande(
   token: string,
   produitCommandeId: string,
@@ -621,6 +652,75 @@ export async function deletePatientAccount(token: string, password: string): Pro
     token,
     body: json.body,
     headers: json.headers,
+  });
+}
+
+// ─── Historique des localisations ───────────────────────────────────────────
+
+export interface LocalisationResultat {
+  id: string;
+  pharmacie_id: string;
+  produit_id: string;
+  prix: number;
+  quantite_disponible: number;
+  quantite_demandee: number;
+  distance_km: number;
+  ordre: number;
+  pharmacie?: {
+    id: string;
+    nom: string;
+    adresse?: string | null;
+    ville?: string | null;
+    telephone?: string | null;
+  } | null;
+  produit?: {
+    id: string;
+    nom: string;
+    forme?: string | null;
+    dosage?: string | null;
+  } | null;
+}
+
+export interface LocalisationSummary {
+  id: string;
+  criteres: { produits: Array<{ terme: string; quantite: number }> };
+  latitude_patient: number;
+  longitude_patient: number;
+  rayon_km: number;
+  statut: string;
+  date: string;
+  created_at: string;
+  resultats: LocalisationResultat[];
+}
+
+export interface HistoriqueLocalisationsResponse {
+  success: boolean;
+  data: {
+    data: LocalisationSummary[];
+    current_page?: number;
+    last_page?: number;
+    total?: number;
+  };
+}
+
+export interface LocalisationDetailResponse {
+  success: boolean;
+  data: {
+    recherche: LocalisationSummary;
+  };
+}
+
+export async function getHistoriqueLocalisations(token: string): Promise<HistoriqueLocalisationsResponse> {
+  return apiRequest<HistoriqueLocalisationsResponse>("/patient/recherche/historique", {
+    method: "GET",
+    token,
+  });
+}
+
+export async function getLocalisationDetail(token: string, id: string): Promise<LocalisationDetailResponse> {
+  return apiRequest<LocalisationDetailResponse>(`/patient/recherche/${id}`, {
+    method: "GET",
+    token,
   });
 }
 

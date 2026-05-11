@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Eye, Loader2, PackageCheck, Trash2 } from "lucide-react";
+import { ChevronDown, Eye, Loader2, PackageCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   annulerCommande,
@@ -92,6 +92,7 @@ function ClientOrdersContent() {
   const [activeTab, setActiveTab] = useState<"Terminees" | "En attente" | "Recuperees" | "En cours" | "Prete">(initTab);
   const [loadingQrOrderId] = useState<string | null>(null);
   const [validatingOrderId, setValidatingOrderId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -151,6 +152,8 @@ function ClientOrdersContent() {
         if (error instanceof ApiError) {
           toast.error(error.message);
         }
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -289,6 +292,17 @@ function ClientOrdersContent() {
     router.push(`/client/orders/${order.id}/qrcode`);
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-4 border-[#00955F] border-t-transparent animate-spin" />
+          <p className="text-sm text-gray-500">Chargement des commandes…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       <div className="mx-auto w-full max-w-5xl rounded-3xl px-3 py-4 sm:px-4 sm:py-6">
@@ -336,63 +350,97 @@ function ClientOrdersContent() {
           </div>
 
           {/* Filters */}
-          <div className="mb-8 flex justify-between gap-3 text-sm text-gray-600 sm:mb-10 sm:gap-4 sm:text-base">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <span className="text-sm md:text-xl">Du</span>
-              <div className="flex flex-wrap items-center gap-2">
-                <select value={fromDay} onChange={(e) => setFromDay(e.target.value)} className=" rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {/* Du */}
+            <div className="flex items-center gap-2">
+              <span className="text-base text-gray-700 font-medium">Du</span>
+              <div className="relative">
+                <select
+                  aria-label="Jour"
+                  value={fromDay}
+                  onChange={(e) => setFromDay(e.target.value)}
+                  className="appearance-none w-[68px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
                   <option value="">JJ</option>
                   {Array.from({ length: 31 }, (_, i) => (
-                    <option key={`du-j-${i + 1}`} value={i + 1}>
-                      {String(i + 1).padStart(2, "0")}
-                    </option>
+                    <option key={`du-j-${i + 1}`} value={i + 1}>{String(i + 1).padStart(2, "0")}</option>
                   ))}
                 </select>
-                <select value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} className=" rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              </div>
+              <div className="relative">
+                <select
+                  aria-label="Mois"
+                  value={fromMonth}
+                  onChange={(e) => setFromMonth(e.target.value)}
+                  className="appearance-none w-[72px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
                   <option value="">MM</option>
                   {Array.from({ length: 12 }, (_, i) => (
-                    <option key={`du-m-${i + 1}`} value={i + 1}>
-                      {String(i + 1).padStart(2, "0")}
-                    </option>
+                    <option key={`du-m-${i + 1}`} value={i + 1}>{String(i + 1).padStart(2, "0")}</option>
                   ))}
                 </select>
-                <select value={fromYear} onChange={(e) => setFromYear(e.target.value)} className=" rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              </div>
+              <div className="relative">
+                <select
+                  aria-label="Année"
+                  value={fromYear}
+                  onChange={(e) => setFromYear(e.target.value)}
+                  className="appearance-none w-[88px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
                   <option value="">AAAA</option>
                   {[2024, 2025, 2026].map((year) => (
-                    <option key={`du-y-${year}`} value={year}>
-                      {year}
-                    </option>
+                    <option key={`du-y-${year}`} value={year}>{year}</option>
                   ))}
                 </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
               </div>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <span>Au</span>
-              <div className="flex flex-wrap items-center gap-2">
-                <select value={toDay} onChange={(e) => setToDay(e.target.value)} className="rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
+            {/* Au */}
+            <div className="flex items-center gap-2">
+              <span className="text-base text-gray-700 font-medium">Au</span>
+              <div className="relative">
+                <select
+                  aria-label="Jour"
+                  value={toDay}
+                  onChange={(e) => setToDay(e.target.value)}
+                  className="appearance-none w-[68px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
                   <option value="">JJ</option>
                   {Array.from({ length: 31 }, (_, i) => (
-                    <option key={`au-j-${i + 1}`} value={i + 1}>
-                      {String(i + 1).padStart(2, "0")}
-                    </option>
+                    <option key={`au-j-${i + 1}`} value={i + 1}>{String(i + 1).padStart(2, "0")}</option>
                   ))}
                 </select>
-                <select value={toMonth} onChange={(e) => setToMonth(e.target.value)} className="rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              </div>
+              <div className="relative">
+                <select
+                  aria-label="Mois"
+                  value={toMonth}
+                  onChange={(e) => setToMonth(e.target.value)}
+                  className="appearance-none w-[72px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
                   <option value="">MM</option>
                   {Array.from({ length: 12 }, (_, i) => (
-                    <option key={`au-m-${i + 1}`} value={i + 1}>
-                      {String(i + 1).padStart(2, "0")}
-                    </option>
+                    <option key={`au-m-${i + 1}`} value={i + 1}>{String(i + 1).padStart(2, "0")}</option>
                   ))}
                 </select>
-                <select value={toYear} onChange={(e) => setToYear(e.target.value)} className="rounded-full border border-black bg-white px-1 py-1 text-center text-sm md:text-xl focus:outline-none ">
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              </div>
+              <div className="relative">
+                <select
+                  aria-label="Année"
+                  value={toYear}
+                  onChange={(e) => setToYear(e.target.value)}
+                  className="appearance-none w-[88px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
                   <option value="">AAAA</option>
                   {[2024, 2025, 2026].map((year) => (
-                    <option key={`au-y-${year}`} value={year}>
-                      {year}
-                    </option>
+                    <option key={`au-y-${year}`} value={year}>{year}</option>
                   ))}
                 </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
               </div>
             </div>
           </div>

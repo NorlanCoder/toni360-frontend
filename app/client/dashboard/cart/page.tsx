@@ -6,6 +6,7 @@ import {
   FileText,
   Minus,
   Plus,
+  ShoppingCart,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -325,6 +326,19 @@ function ClientCartPageContent() {
     <section className="mx-auto w-full max-w-6xl px-3 pb-6 sm:px-6 sm:pb-8">
 
       {/* ── Vue Panier ── */}
+      {items.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-200px)]">
+          <div className="flex flex-col items-center justify-center">
+            <ShoppingCart size={120} className="text-gray-400 mb-8" />
+            <div className="text-2xl text-gray-500 text-center">
+              Votre panier est vide
+            </div>
+            <p className="mt-3 text-sm text-gray-400 text-center">
+              Recherchez un médicament pour commencer
+            </p>
+          </div>
+        </div>
+      ) : (
       <>
       {/* Supprimer tout */}
       <div className="mb-6">
@@ -347,12 +361,12 @@ function ClientCartPageContent() {
             {item.requiresPrescription && (
               <span className="absolute right-4 top-4 group/ordo">
                 <FileText size={18} className="text-red-500" />
-                <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white z-10">
+                <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-red-500 px-2 py-1 text-xs text-white z-10">
                   Ordonnance requise
                 </span>
               </span>
             )}
-            <div className="mb-5 sm:mb-6">
+            <div className="mb-5 sm:mb-6 pr-8">
               <h3 className="text-base md:text-xl font-semibold text-gray-900">{item.name}</h3>
               <p className="text-sm md:text-base text-black">{item.type}</p>
             </div>
@@ -435,7 +449,7 @@ function ClientCartPageContent() {
                         {produit.ordonnance && (
                           <span className="relative group/ordo shrink-0">
                             <FileText size={14} className="text-red-500" />
-                            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white z-10">
+                            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-red-500 px-2 py-1 text-xs text-white z-10">
                               Ordonnance requise
                             </span>
                           </span>
@@ -468,6 +482,7 @@ function ClientCartPageContent() {
         )}
       </div>
       </>
+      )}
     </section>
   );
 }

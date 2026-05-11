@@ -8,6 +8,8 @@ import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { getPartnerUser, togglePartnerUserActive, updatePartnerUser } from "@/lib/api/partner";
 import { toast } from "sonner";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 interface Permission {
@@ -104,7 +106,7 @@ export default function PartenaireEmployeDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editableName, setEditableName] = useState("");
-  const [editablePhone, setEditablePhone] = useState("");
+  const [editablePhone, setEditablePhone] = useState<string | undefined>(undefined);
 
   /* ── Modal state ── */
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -164,13 +166,14 @@ export default function PartenaireEmployeDetailPage() {
 
     const [nomPart, ...prenomParts] = editableName.trim().split(" ");
     const prenomPart = prenomParts.join(" ") || nomPart;
+    const numero = (editablePhone ?? "").trim();
 
     setIsSubmitting(true);
     try {
       const response = await updatePartnerUser(session.token, id, {
         nom: nomPart,
         prenom: prenomPart,
-        telephone: editablePhone,
+        telephone: numero,
       });
       const user = response.data.user;
       setEmployee((prev) => ({
@@ -259,7 +262,7 @@ export default function PartenaireEmployeDetailPage() {
               {/* Info row */}
               <div className="mt-5 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-gray-600">
                 <span>{employee.email}</span>
-                <span>{isEditing ? editablePhone : employee.telephone}</span>
+                <span>{isEditing ? (editablePhone ?? "") : employee.telephone}</span>
                 <span>{employee.dateAjout}</span>
               </div>
 
@@ -271,12 +274,15 @@ export default function PartenaireEmployeDetailPage() {
                     onChange={(e) => setEditableName(e.target.value)}
                     className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800"
                   />
-                  <input
-                    type="text"
-                    value={editablePhone}
-                    onChange={(e) => setEditablePhone(e.target.value)}
-                    className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800"
-                  />
+                  <div className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus-within:border-emerald-500 focus-within:outline-none focus-within:ring-1 focus-within:ring-emerald-500">
+                    <PhoneInput
+                      international
+                      defaultCountry="BJ"
+                      placeholder="Numéro de téléphone"
+                      value={editablePhone}
+                      onChange={setEditablePhone}
+                    />
+                  </div>
                 </div>
               )}
 

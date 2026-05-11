@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Lock, Eye, EyeOff } from "lucide-react";
+import { User, Lock, Eye, EyeOff, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
@@ -14,6 +14,7 @@ export default function InscriptionPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
@@ -21,6 +22,13 @@ export default function InscriptionPage() {
     telephone: "",
     password: "",
   });
+
+  const passwordRules = [
+    { id: "length",    label: "Au moins 8 caractères",  valid: formData.password.length >= 8 },
+    { id: "uppercase", label: "Au moins une majuscule", valid: /[A-Z]/.test(formData.password) },
+    { id: "lowercase", label: "Au moins une minuscule", valid: /[a-z]/.test(formData.password) },
+  ];
+  const passwordValid = passwordRules.every((r) => r.valid);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +40,12 @@ export default function InscriptionPage() {
     const fullName = formData.nom.trim();
     if (!fullName || !formData.email.trim() || !formData.telephone.trim() || !formData.password) {
       toast.warning("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    if (!passwordValid) {
+      setPasswordTouched(true);
+      toast.warning("Le mot de passe ne respecte pas les critères requis.");
       return;
     }
 
@@ -105,7 +119,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, nom: e.target.value })
                 }
-                className="w-full px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full bg-white px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
@@ -119,7 +133,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full pl-12 pr-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full bg-white pl-12 pr-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
@@ -144,30 +158,46 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, telephone: e.target.value })
                 }
-                className="flex-1 px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="flex-1 bg-white px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
             {/* Mot de passe */}
-            <div className="relative flex items-center">
-              <Lock className="absolute left-4 text-gray-400" size={18} />
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Créer un mot de passe"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-                className="w-full pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 text-gray-400 hover:text-gray-600"
-                style={{ marginTop: '1px' }}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+            <div className="space-y-1">
+              <div className="relative flex items-center">
+                <Lock className="absolute left-4 text-gray-400" size={18} />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Créer un mot de passe"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  onBlur={() => setPasswordTouched(true)}
+                  className="w-full bg-white pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 text-gray-400 hover:text-gray-600"
+                  style={{ marginTop: '1px' }}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+
+              {(passwordTouched || formData.password.length > 0) && (
+                <ul className="space-y-0.5 pl-1">
+                  {passwordRules.map((rule) => (
+                    <li key={rule.id} className={`flex items-center gap-1.5 text-xs leading-tight transition-colors ${rule.valid ? "text-emerald-600" : "text-red-500"}`}>
+                      {rule.valid
+                        ? <Check size={12} className="shrink-0" />
+                        : <X size={12} className="shrink-0" />}
+                      {rule.label}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* Bouton S'inscrire */}
