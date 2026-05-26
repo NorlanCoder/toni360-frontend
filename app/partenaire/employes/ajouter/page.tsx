@@ -8,8 +8,9 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { createPartnerUser, getPartnerRoles, PartnerRole } from "@/lib/api/partner";
+import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@/lib/passwordPolicy";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
+import { Check, Eye, EyeOff, X } from "lucide-react";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 
@@ -39,6 +40,7 @@ export default function PartenaireAjouterEmployePage() {
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
   const [roles, setRoles] = useState<PartnerRole[]>([]);
 
   /* ── Form state ── */
@@ -47,6 +49,10 @@ export default function PartenaireAjouterEmployePage() {
   const [telephone, setTelephone] = useState<string | undefined>(undefined);
   const [role, setRole] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
+
+  const passwordRules = getPasswordRuleResults(motDePasse);
+  const passwordStrength = getPasswordStrength(motDePasse);
+  const passwordStrong = isPasswordStrong(motDePasse);
 
   useEffect(() => {
     const loadRoles = async () => {
@@ -95,8 +101,14 @@ export default function PartenaireAjouterEmployePage() {
     const prenomPart = prenomParts.join(" ") || nomPart;
     const numero = (telephone ?? "").trim();
 
-    if (!nomPart || !prenomPart || !email || !numero || !role || motDePasse.length < 8) {
+    if (!nomPart || !prenomPart || !email || !numero || !role || !motDePasse) {
       toast.warning("Veuillez remplir correctement tous les champs.");
+      return;
+    }
+
+    if (!passwordStrong) {
+      setPasswordTouched(true);
+      toast.warning("Le mot de passe doit contenir au moins 8 caracteres, une majuscule, une minuscule, un chiffre et un caractere special.");
       return;
     }
 
@@ -201,6 +213,7 @@ export default function PartenaireAjouterEmployePage() {
                     placeholder="***************"
                     value={motDePasse}
                     onChange={(e) => setMotDePasse(e.target.value)}
+                    onBlur={() => setPasswordTouched(true)}
                     className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 pr-10 text-base text-gray-800 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                   <button
@@ -216,6 +229,34 @@ export default function PartenaireAjouterEmployePage() {
                     )}
                   </button>
                 </div>
+
+                {(passwordTouched || motDePasse.length > 0) && (
+                  <div className="mt-2 space-y-2 rounded-md border border-gray-200 bg-white p-2.5">
+                    <div>
+                      <div className="mb-1 flex items-center justify-between text-xs">
+                        <span className="text-gray-600">Robustesse</span>
+                        <span className="font-semibold text-gray-700">{passwordStrength.label}</span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                        <div
+                          className={`h-full ${passwordStrength.colorClass} transition-all duration-200`}
+                          style={{ width: `${passwordStrength.percent}%` }}
+                        />
+                      </div>
+                    </div>
+                    <ul className="space-y-0.5">
+                      {passwordRules.map((rule) => (
+                        <li
+                          key={rule.id}
+                          className={`flex items-center gap-1.5 text-[11px] leading-tight ${rule.valid ? "text-emerald-600" : "text-red-500"}`}
+                        >
+                          {rule.valid ? <Check size={12} className="shrink-0" /> : <X size={12} className="shrink-0" />}
+                          {rule.label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -223,7 +264,7 @@ export default function PartenaireAjouterEmployePage() {
             <div className="mt-6 sm:mt-10 flex justify-end">
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !passwordStrong}
                 className="w-full sm:w-auto rounded-full bg-emerald-700 px-4 sm:px-10 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white transition-colors hover:bg-emerald-800"
               >
                 {isSubmitting ? "Ajout en cours..." : "Ajouter cet employé"}

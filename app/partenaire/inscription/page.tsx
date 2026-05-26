@@ -10,6 +10,7 @@ import "react-phone-number-input/style.css";
 import { registerPartner } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
+import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@/lib/passwordPolicy";
 import { toast } from "sonner";
 
 export default function DevenirPartenairePage() {
@@ -34,12 +35,9 @@ export default function DevenirPartenairePage() {
     licence: null as File | null,
   });
 
-  const passwordRules = [
-    { id: "length", label: "Au moins 8 caractères", valid: formData.heureOuvrables.length >= 8 },
-    { id: "uppercase", label: "Au moins une majuscule", valid: /[A-Z]/.test(formData.heureOuvrables) },
-    { id: "lowercase", label: "Au moins une minuscule", valid: /[a-z]/.test(formData.heureOuvrables) },
-  ];
-  const passwordValid = passwordRules.every((rule) => rule.valid);
+  const passwordRules = getPasswordRuleResults(formData.heureOuvrables);
+  const passwordStrength = getPasswordStrength(formData.heureOuvrables);
+  const passwordValid = isPasswordStrong(formData.heureOuvrables);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +67,7 @@ export default function DevenirPartenairePage() {
 
     if (!passwordValid) {
       setPasswordTouched(true);
-      toast.warning("Le mot de passe doit contenir au moins 8 caractères, une majuscule et une minuscule.");
+      toast.warning("Le mot de passe doit contenir au moins 8 caracteres, une majuscule, une minuscule, un chiffre et un caractere special.");
       return;
     }
 
@@ -271,17 +269,31 @@ export default function DevenirPartenairePage() {
                 </button>
               </div>
               {(passwordTouched || formData.heureOuvrables.length > 0) && (
-                <ul className="space-y-0.5">
-                  {passwordRules.map((rule) => (
-                    <li
-                      key={rule.id}
-                      className={`flex items-center gap-1.5 text-[11px] leading-tight ${rule.valid ? "text-emerald-600" : "text-red-500"}`}
-                    >
-                      {rule.valid ? <Check size={12} className="shrink-0" /> : <X size={12} className="shrink-0" />}
-                      {rule.label}
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-2">
+                  <div>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="text-gray-600">Robustesse</span>
+                      <span className="font-semibold text-gray-700">{passwordStrength.label}</span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                      <div
+                        className={`h-full ${passwordStrength.colorClass} transition-all duration-200`}
+                        style={{ width: `${passwordStrength.percent}%` }}
+                      />
+                    </div>
+                  </div>
+                  <ul className="space-y-0.5">
+                    {passwordRules.map((rule) => (
+                      <li
+                        key={rule.id}
+                        className={`flex items-center gap-1.5 text-[11px] leading-tight ${rule.valid ? "text-emerald-600" : "text-red-500"}`}
+                      >
+                        {rule.valid ? <Check size={12} className="shrink-0" /> : <X size={12} className="shrink-0" />}
+                        {rule.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
 
@@ -488,7 +500,7 @@ export default function DevenirPartenairePage() {
           <div className="mt-8">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || !passwordValid}
               className="w-full py-4 text-white font-bold text-base rounded-lg transition hover:opacity-90"
               style={{ backgroundColor: "#137551" }}
             >

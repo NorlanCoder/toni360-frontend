@@ -25,7 +25,9 @@ export default function ContactsPage() {
           <span className="text-gray-400">•</span>
           <span className="w-24 font-medium">Téléphone</span>
           <span className="text-gray-400">:</span>
-          <span><Link href={"tel:+2290129111487"}> +229 01 29 11 14 87</Link> .</span>
+          <a href="tel:+2290129111487" className="text-green-600 underline hover:text-green-700">
+            +229 01 29 11 14 87
+          </a>.
 
         </li>
       </ul>

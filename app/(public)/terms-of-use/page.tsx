@@ -18,7 +18,7 @@ export default function ReturnPolicyPage() {
       {/* Onglets CGU */}
       <div className="mb-8 flex gap-2">
         <span className="rounded-full bg-green-600 px-5 py-2 text-sm font-bold text-white">
-          Client
+          Patient
         </span>
         <Link
           href="/partenaire/cgu"

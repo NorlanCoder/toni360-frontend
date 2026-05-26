@@ -9,6 +9,7 @@ import { COUNTRY_CODES } from "@/lib/countryCodes";
 import { registerPatient } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
+import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@/lib/passwordPolicy";
 
 export default function InscriptionPage() {
   const router = useRouter();
@@ -23,12 +24,9 @@ export default function InscriptionPage() {
     password: "",
   });
 
-  const passwordRules = [
-    { id: "length",    label: "Au moins 8 caractères",  valid: formData.password.length >= 8 },
-    { id: "uppercase", label: "Au moins une majuscule", valid: /[A-Z]/.test(formData.password) },
-    { id: "lowercase", label: "Au moins une minuscule", valid: /[a-z]/.test(formData.password) },
-  ];
-  const passwordValid = passwordRules.every((r) => r.valid);
+  const passwordRules = getPasswordRuleResults(formData.password);
+  const passwordStrength = getPasswordStrength(formData.password);
+  const passwordValid = isPasswordStrong(formData.password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +43,7 @@ export default function InscriptionPage() {
 
     if (!passwordValid) {
       setPasswordTouched(true);
-      toast.warning("Le mot de passe ne respecte pas les critères requis.");
+      toast.warning("Le mot de passe doit contenir au moins 8 caracteres, une majuscule, une minuscule, un chiffre et un caractere special.");
       return;
     }
 
@@ -187,23 +185,37 @@ export default function InscriptionPage() {
               </div>
 
               {(passwordTouched || formData.password.length > 0) && (
-                <ul className="space-y-0.5 pl-1">
-                  {passwordRules.map((rule) => (
-                    <li key={rule.id} className={`flex items-center gap-1.5 text-xs leading-tight transition-colors ${rule.valid ? "text-emerald-600" : "text-red-500"}`}>
-                      {rule.valid
-                        ? <Check size={12} className="shrink-0" />
-                        : <X size={12} className="shrink-0" />}
-                      {rule.label}
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-2 pl-1">
+                  <div>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="text-gray-600">Robustesse</span>
+                      <span className="font-semibold text-gray-700">{passwordStrength.label}</span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                      <div
+                        className={`h-full ${passwordStrength.colorClass} transition-all duration-200`}
+                        style={{ width: `${passwordStrength.percent}%` }}
+                      />
+                    </div>
+                  </div>
+                  <ul className="space-y-0.5">
+                    {passwordRules.map((rule) => (
+                      <li key={rule.id} className={`flex items-center gap-1.5 text-xs leading-tight transition-colors ${rule.valid ? "text-emerald-600" : "text-red-500"}`}>
+                        {rule.valid
+                          ? <Check size={12} className="shrink-0" />
+                          : <X size={12} className="shrink-0" />}
+                        {rule.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
 
             {/* Bouton S'inscrire */}
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || !passwordValid}
               className="w-full bg-toni-green-dark-2 text-white font-bold py-3 rounded-md hover:bg-toni-green-dark transition"
             >
               {submitting ? "Inscription..." : "S\'inscrire"}

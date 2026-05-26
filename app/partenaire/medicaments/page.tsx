@@ -9,6 +9,7 @@ import { ApiError } from "@/lib/api/errors";
 import { extractCollection, getPartnerStocks } from "@/lib/api/partner";
 import { toast } from "sonner";
 import ImportModal from "./components/ImportModal";
+import { useHeaderSearch } from "@/app/partenaire/_header-search-context";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type FilterKey = "tous" | "disponible" | "au-seuil" | "indisponible" | "desactives";
@@ -44,6 +45,16 @@ export default function PartenaireMedicamentsPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
+  const { searchQuery, setShowSearch, setSearchPlaceholder, setSearchQuery } = useHeaderSearch();
+
+  useEffect(() => {
+    setShowSearch(true);
+    setSearchPlaceholder("Rechercher un médicament");
+    return () => {
+      setShowSearch(false);
+      setSearchQuery("");
+    };
+  }, [setShowSearch, setSearchPlaceholder, setSearchQuery]);
 
   const filters: { key: FilterKey; label: string }[] = [
     { key: "tous", label: "Tous" },
@@ -53,10 +64,12 @@ export default function PartenaireMedicamentsPage() {
     { key: "desactives", label: "Désactivés" },
   ];
 
-  const filteredMedicines =
-    activeFilter === "tous"
-      ? medicines
-      : medicines.filter((m) => m.statut === filterMap[activeFilter]);
+  const filteredMedicines = medicines
+    .filter((m) => activeFilter === "tous" || m.statut === filterMap[activeFilter])
+    .filter((m) =>
+      searchQuery.trim() === "" ||
+      m.nom.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   const moneyFormat = useMemo(
     () =>

@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Menu, User } from "lucide-react";
+import { Bell, Menu, Search, User } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
+import { useHeaderSearch } from "@/app/partenaire/_header-search-context";
 import { useEffect, useMemo, useState } from "react";
 import { getAuthSession } from "@/lib/api/session";
 import { getPartnerNotificationCount } from "@/lib/api/partner";
 
 export default function PartenaireHeader() {
   const { setOpen } = useSidebarContext();
+  const { showSearch, searchQuery, setSearchQuery, searchPlaceholder } = useHeaderSearch();
   const pathname = usePathname();
   const session = useMemo(() => getAuthSession(), []);
   const profile = session?.profile as { prenom?: string; nom?: string } | null;
@@ -47,12 +49,25 @@ export default function PartenaireHeader() {
         <Menu className="h-6 w-6" />
       </button>
 
-      {/* Welcome */}
+      {/* Welcome / Search slot */}
       <div className="min-w-0 flex-1">
-        {showWelcome && (
-          <p className="text-base sm:text-xl font-semibold text-gray-800 truncate">
-            Bienvenu{displayName ? `, ${displayName}` : ""}
-          </p>
+        {showSearch ? (
+          <div className="relative max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="w-full rounded-xl border border-emerald-100 bg-emerald-50/60 py-2 pl-9 pr-4 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-emerald-400 focus:bg-emerald-50 focus:ring-1 focus:ring-emerald-300"
+            />
+          </div>
+        ) : (
+          showWelcome && (
+            <p className="text-base sm:text-xl font-semibold text-gray-800 truncate">
+              Bienvenu{displayName ? `, Dr. ${displayName}` : ""}
+            </p>
+          )
         )}
       </div>
 

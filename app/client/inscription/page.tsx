@@ -10,12 +10,14 @@ import "react-phone-number-input/style.css";
 import { registerPatient } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
+import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@/lib/passwordPolicy";
 import { toast } from "sonner";
 
 export default function InscriptionPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
   const [acceptedCGU, setAcceptedCGU] = useState(false);
   const [formData, setFormData] = useState({
     nom: "",
@@ -24,6 +26,10 @@ export default function InscriptionPage() {
     password: "",
     confirmPassword: "",
   });
+
+  const passwordRules = getPasswordRuleResults(formData.password);
+  const passwordStrength = getPasswordStrength(formData.password);
+  const passwordStrong = isPasswordStrong(formData.password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,8 +49,9 @@ export default function InscriptionPage() {
       return;
     }
 
-    if (formData.password.length < 8) {
-      toast.warning("Le mot de passe doit contenir au moins 8 caracteres.");
+    if (!passwordStrong) {
+      setPasswordTouched(true);
+      toast.warning("Le mot de passe doit contenir au moins 8 caracteres, une majuscule, une minuscule, un chiffre et un caractere special.");
       return;
     }
 
@@ -183,6 +190,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
+                onBlur={() => setPasswordTouched(true)}
                 className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
               <button
@@ -194,6 +202,33 @@ export default function InscriptionPage() {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+
+            {(passwordTouched || formData.password.length > 0) && (
+              <div className="mt-2 space-y-2 rounded-md border border-gray-200 bg-white p-2.5">
+                <div>
+                  <div className="mb-1 flex items-center justify-between text-xs">
+                    <span className="text-gray-600">Robustesse</span>
+                    <span className="font-semibold text-gray-700">{passwordStrength.label}</span>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                    <div
+                      className={`h-full ${passwordStrength.colorClass} transition-all duration-200`}
+                      style={{ width: `${passwordStrength.percent}%` }}
+                    />
+                  </div>
+                </div>
+                <ul className="space-y-0.5">
+                  {passwordRules.map((rule) => (
+                    <li
+                      key={rule.id}
+                      className={`text-[11px] leading-tight ${rule.valid ? "text-emerald-600" : "text-red-500"}`}
+                    >
+                      {rule.valid ? "OK" : "KO"} - {rule.label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Mot de passe confirmé */}
             <div className="relative flex items-center">
@@ -240,7 +275,7 @@ export default function InscriptionPage() {
             {/* Bouton S'inscrire */}
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || !passwordStrong}
               className="w-full rounded-md bg-toni-green-dark-2 py-2.5 text-sm font-bold text-white transition hover:bg-toni-green-dark sm:py-3 sm:text-base"
             >
               {submitting ? "Inscription..." : "S\'inscrire"}

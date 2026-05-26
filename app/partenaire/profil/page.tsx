@@ -344,7 +344,7 @@ export default function PartenaireProfil() {
                         setHoraires(updated);
                       }}
                       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-                        h.est_ferme ? "bg-gray-300" : "bg-emerald-500"
+                        h.est_ferme ? "bg-gray-300" : "bg-toni-green-dark"
                       }`}
                     >
                       <span

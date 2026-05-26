@@ -16,7 +16,7 @@ export default function Footer() {
           
           {/* Politique de confidentialité */}
           <a href="#" className="hover:text-white transition underline">
-            Politiques de confidentialité
+            Politique de confidentialité
           </a>
           
           <span className="hidden sm:inline">•</span>

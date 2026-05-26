@@ -5,9 +5,10 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
-import { Eye, EyeOff, Lock } from "lucide-react";
+import { Check, Eye, EyeOff, Lock, X } from "lucide-react";
 import { resetPassword } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
+import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@/lib/passwordPolicy";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -15,15 +16,21 @@ function ResetPasswordForm() {
 
   const token = searchParams.get("token") ?? "";
   const email = searchParams.get("email") ?? "";
+  const from = searchParams.get("from") ?? "client";
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
   const [formData, setFormData] = useState({
     password: "",
     confirmPassword: "",
   });
   const [done, setDone] = useState(false);
+
+  const passwordRules = getPasswordRuleResults(formData.password);
+  const passwordStrength = getPasswordStrength(formData.password);
+  const passwordStrong = isPasswordStrong(formData.password);
 
   useEffect(() => {
     if (!token || !email) {
@@ -38,8 +45,9 @@ function ResetPasswordForm() {
       toast.error("Lien invalide.");
       return;
     }
-    if (formData.password.length < 8) {
-      toast.warning("Le mot de passe doit contenir au moins 8 caractères.");
+    if (!passwordStrong) {
+      setPasswordTouched(true);
+      toast.warning("Le mot de passe doit contenir au moins 8 caracteres, une majuscule, une minuscule, un chiffre et un caractere special.");
       return;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -57,7 +65,8 @@ function ResetPasswordForm() {
       });
       setDone(true);
       toast.success(res.message ?? "Mot de passe réinitialisé !");
-      setTimeout(() => router.push("/client/connexion"), 3000);
+      const redirectPath = from === "partenaire" ? "/partenaire/connexion" : "/client/connexion";
+      setTimeout(() => router.push(redirectPath), 3000);
     } catch (error: unknown) {
       if (error instanceof ApiError) {
         toast.error(error.message);
@@ -120,6 +129,7 @@ function ResetPasswordForm() {
               placeholder="Nouveau mot de passe"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              onBlur={() => setPasswordTouched(true)}
               className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               autoComplete="new-password"
             />
@@ -152,13 +162,37 @@ function ResetPasswordForm() {
             </button>
           </div>
 
-          <p className="text-xs text-gray-500">
-            Le mot de passe doit contenir au moins 8 caractères.
-          </p>
+          {(passwordTouched || formData.password.length > 0) && (
+            <div className="space-y-2 rounded-md border border-gray-200 bg-white p-2.5">
+              <div>
+                <div className="mb-1 flex items-center justify-between text-xs">
+                  <span className="text-gray-600">Robustesse</span>
+                  <span className="font-semibold text-gray-700">{passwordStrength.label}</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                  <div
+                    className={`h-full ${passwordStrength.colorClass} transition-all duration-200`}
+                    style={{ width: `${passwordStrength.percent}%` }}
+                  />
+                </div>
+              </div>
+              <ul className="space-y-0.5">
+                {passwordRules.map((rule) => (
+                  <li
+                    key={rule.id}
+                    className={`flex items-center gap-1.5 text-[11px] leading-tight ${rule.valid ? "text-emerald-600" : "text-red-500"}`}
+                  >
+                    {rule.valid ? <Check size={12} className="shrink-0" /> : <X size={12} className="shrink-0" />}
+                    {rule.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <button
             type="submit"
-            disabled={submitting || !token || !email}
+            disabled={submitting || !token || !email || !passwordStrong}
             className="w-full rounded-md py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50 sm:py-3 sm:text-base"
             style={{ backgroundColor: "#137551" }}
           >

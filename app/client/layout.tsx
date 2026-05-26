@@ -192,7 +192,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
             {/* Footer drawer */}
             <div className="px-5 pb-6 text-xs text-toni-green-dark-2 leading-relaxed">
               <Link href="/client/help/privacy" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
-                Politiques de confidentialité,
+                Politique de confidentialité,
               </Link>
               <Link href="/client/help/return-policy" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
                 Conditions générales de retour,
@@ -246,7 +246,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="px-5 pb-6 text-xs text-toni-green-dark-2 leading-relaxed">
-          <Link href="/client/help/privacy" className="hover:underline block">Politiques de confidentialité,</Link>
+          <Link href="/client/help/privacy" className="hover:underline block">Politique de confidentialité,</Link>
           <Link href="/client/help/return-policy" className="hover:underline block">Conditions générales de retour,</Link>
           <Link href="/client/contact" className="hover:underline block">Contactez-nous</Link>
         </div>

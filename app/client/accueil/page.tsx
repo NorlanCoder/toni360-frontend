@@ -59,8 +59,9 @@ export default function AccueilClientPage() {
         const response = await getPatientProfile(session.token);
         const patient = response.data.patient;
         const name = patient.nom_complet || `${patient.prenom ?? ""} ${patient.nom ?? ""}`.trim();
-        if (name) {
-          setDisplayName(name);
+        const firstName = (patient.prenom ?? name).split(" ")[0];
+        if (firstName) {
+          setDisplayName(firstName);
         }
       } catch (error: unknown) {
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {

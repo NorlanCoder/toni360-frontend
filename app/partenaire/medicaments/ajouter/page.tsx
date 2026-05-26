@@ -23,6 +23,16 @@ const FORMES_DEFAUT = [
   "Spray",
 ];
 
+/* ──────────────── Helpers numériques ────────────────────────── */
+function formatMilliers(raw: string): string {
+  if (!raw) return "";
+  return raw.replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
+}
+
+function onlyDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireAjouterMedicamentPage() {
   const router = useRouter();
@@ -288,11 +298,11 @@ export default function PartenaireAjouterMedicamentPage() {
                 Prix unitaire (XOF)
               </label>
               <input
-                type="number"
-                min="0"
-                value={prix}
-                onChange={(e) => setPrix(e.target.value)}
-                placeholder="Ex: 700"
+                type="text"
+                inputMode="numeric"
+                value={formatMilliers(prix)}
+                onChange={(e) => setPrix(onlyDigits(e.target.value))}
+                placeholder={"Ex: 1 500"}
                 className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
             </div>
@@ -307,9 +317,10 @@ export default function PartenaireAjouterMedicamentPage() {
               </label>
               <input
                 type="text"
-                value={stockInitial}
-                onChange={(e) => setStockInitial(e.target.value)}
-                placeholder="Ex: 100"
+                inputMode="numeric"
+                value={formatMilliers(stockInitial)}
+                onChange={(e) => setStockInitial(onlyDigits(e.target.value))}
+                placeholder={"Ex: 1 000"}
                 className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
               {/* <p className="mt-1.5 text-xs text-emerald-600">Ajouté le {today} à {timeNow}</p> */}
@@ -321,8 +332,9 @@ export default function PartenaireAjouterMedicamentPage() {
               </label>
               <input
                 type="text"
-                value={seuil}
-                onChange={(e) => setSeuil(e.target.value)}
+                inputMode="numeric"
+                value={formatMilliers(seuil)}
+                onChange={(e) => setSeuil(onlyDigits(e.target.value))}
                 placeholder="Ex: 100"
                 className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
@@ -341,7 +353,7 @@ export default function PartenaireAjouterMedicamentPage() {
                 aria-checked={ordonnance}
                 onClick={() => setOrdonnance((v) => !v)}
                 className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${
-                  ordonnance ? "bg-emerald-500" : "bg-gray-300"
+                  ordonnance ? "bg-toni-green-dark" : "bg-gray-300"
                 }`}
               >
                 <span

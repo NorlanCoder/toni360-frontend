@@ -10,7 +10,7 @@ const BASE_NAV_LINKS = [
     { label: "Contacts", href: "/contacts" },
     { label: "FAQ", href: "/faq" },
     { label: "Conditions générales d'utilisation", href: "/terms-of-use", cguControlled: true },
-    { label: "Politiques de confidentialité", href: "/privacy" },
+    { label: "Politique de confidentialité", href: "/privacy" },
 ];
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -56,7 +56,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                                         <Link
                                             href={link.href}
                                             className={`inline-block pb-3 transition font-medium ${isActive
-                                                ? "text-green-600 font-semibold border-b-2 border-green-500"
+                                                ? "text-toni-green-dark-2 font-semibold border-b-2 border-toni-green-dark"
                                                 : "hover:text-gray-900"
                                                 }`}
                                         >

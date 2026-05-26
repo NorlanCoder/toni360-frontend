@@ -334,7 +334,7 @@ export default function PartenaireDashboardPage() {
                       {order.montant}
                     </td>
                     <td className="px-8 py-6">
-                      <span className="inline-block rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
+                      <span className="inline-block rounded-full bg-red-100 px-4 py-2 text-sm font-semibold text-red-700">
                         {order.statut}
                       </span>
                     </td>

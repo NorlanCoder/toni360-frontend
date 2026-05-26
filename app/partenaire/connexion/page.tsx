@@ -58,7 +58,7 @@ export default function ConnexionPartenairePage() {
         profile: profileResponse.data.user ?? response.data.user ?? null,
         permissions: profileResponse.data.permissions ?? response.data.permissions ?? [],
       };
-      saveAuthSession(session);
+      saveAuthSession(session, formData.rememberMe);
 
       toast.success(response.message ?? "Connexion réussie.");
       router.push(getPartnerHomeRoute(session));
@@ -196,7 +196,7 @@ export default function ConnexionPartenairePage() {
                 />
                 <span className="text-sm text-gray-700">Se souvenir de moi</span>
               </label>
-              <Link href="/mot-de-passe-oublie" className="text-sm text-gray-700 hover:text-toni-green-dark-2 sm:text-right">
+              <Link href="/mot-de-passe-oublie?from=partenaire" className="text-sm text-gray-700 hover:text-toni-green-dark-2 sm:text-right">
                 Mot de passe oublié ?
               </Link>
             </div>

@@ -21,7 +21,7 @@ export default function PartenaireCoguPage() {
           href="/terms-of-use"
           className="rounded-full border border-gray-300 px-5 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
         >
-          Client
+          Patient
         </Link>
         <span className="rounded-full bg-green-600 px-5 py-2 text-sm font-bold text-white">
           Pharmacie
