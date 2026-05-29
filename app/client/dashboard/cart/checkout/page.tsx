@@ -444,21 +444,26 @@ function CartPageContent() {
       const holdCommandeId = creation.data.commande.id;
       const holdCommandeNumero = creation.data.commande.numero_commande;
 
+      // Mettre en attente AVANT l'upload : l'upload change le statut vers
+      // ORDONNANCE_EN_VERIFICATION, ce qui bloquerait mettreEnAttente.
+      await mettreEnAttenteCommande(token, holdCommandeId);
+
       if (creation.data.necessite_ordonnance && ordonnanceFile) {
         try {
           await uploadOrdonnances(holdCommandeId, ordonnanceFile);
         } catch (uploadError) {
+          // La commande est déjà en attente, on mémorise le retry pour l'ordonnance.
           setUploadRetryCandidateId(holdCommandeId);
           setUploadRetryCandidateNumero(holdCommandeNumero);
           setOrdonnanceFile(null);
           if (uploadError instanceof ApiError) {
-            toast.error("L'ordonnance n'a pas pu être envoyée. Veuillez sélectionner un nouveau fichier et réessayer.");
+            toast.warning("Commande mise en attente, mais l'ordonnance n'a pas pu être envoyée. Veuillez la joindre depuis « Mes commandes ».");
           }
+          clearLocalCart();
+          router.push(`/client/orders?commande=${encodeURIComponent(holdCommandeNumero)}`);
           return;
         }
       }
-
-      await mettreEnAttenteCommande(token, holdCommandeId);
 
       clearLocalCart();
       router.push(`/client/orders?commande=${encodeURIComponent(holdCommandeNumero)}`);
