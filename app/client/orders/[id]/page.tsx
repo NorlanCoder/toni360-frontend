@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Eye, FileText, MapPin, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, Eye, FileText, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   annulerCommande,
@@ -15,6 +15,7 @@ import {
 } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import PharmacieHeader from "@/components/client/PharmacieHeader";
 
 interface OrderItem {
   id: string;
@@ -109,7 +110,10 @@ function OrderDetailContent() {
   const missingPrescriptionItems = items.filter((i) => i.requiresPrescription && !i.hasOrdonnance);
   const hasMissingPrescription = missingPrescriptionItems.length > 0;
   const total = items.reduce((sum, i) => sum + i.qty * i.price, 0);
-  const formatPrice = (v: number) => Number(v).toLocaleString("fr-FR").replace(/,/g, " ");
+  const formatPrice = (v: number) =>
+    Math.round(Number(v))
+      .toString()
+      .replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
 
   const canValidate = commandeStatut === "en_attente_paiement" || commandeStatut === "en_attente_client";
   const isEnAttenteClient = commandeStatut === "en_attente_client";
@@ -221,10 +225,6 @@ function OrderDetailContent() {
     }
   };
 
-  const mapsUrl = pharmacyAdresse
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pharmacyAdresse)}`
-    : "#";
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
@@ -252,62 +252,19 @@ function OrderDetailContent() {
       </h1>
 
       {/* Header pharmacie */}
-      <div className="rounded-2xl bg-gradient-to-r from-[#004B2F] to-[#00B16F] px-6 py-6 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-center">
-        {/* Colonne 1 : nom + adresse */}
-        <div>
-          <h2 className="text-xl font-bold text-white sm:text-2xl leading-snug">
-            <span className="block">{pharmacyName.split(' ')[0]}</span>
-            <span className="block">
-              {pharmacyName.split(' ').slice(1).join(' ')}
-            </span>
-          </h2>
-          {pharmacyAdresse && (
-            <p className="mt-1 text-sm text-green-100 leading-snug">{pharmacyAdresse}</p>
-          )}
-        </div>
-
-        {/* Colonne 2 : email + téléphone (centré) */}
-        <div className="flex flex-col gap-3 sm:items-center sm:text-center">
-          {pharmacyEmail && (
-            <a
-              href={`mailto:${pharmacyEmail}`}
-              className="text-white text-sm font-medium hover:underline"
-            >
-              {pharmacyEmail}
-            </a>
-          )}
-          {pharmacyTelephone && (
-            <a
-              href={`tel:${pharmacyTelephone}`}
-              className="text-white text-sm font-medium hover:underline"
-            >
-              {pharmacyTelephone}
-            </a>
-          )}
-        </div>
-
-        {/* Colonne 3 : bouton itinéraire (aligné à droite) */}
-        <div className="flex sm:justify-end">
-          {pharmacyAdresse && (
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-toni-green-dark-2 hover:bg-gray-50 transition shrink-0"
-            >
-              <MapPin size={16} />
-              Itinéraire
-            </a>
-          )}
-        </div>
-      </div>
+      <PharmacieHeader
+        nom={pharmacyName}
+        adresse={pharmacyAdresse}
+        telephone={pharmacyTelephone}
+        email={pharmacyEmail}
+      />
 
       {/* Table produits */}
       <div className="overflow-hidden bg-white">
-        <div className={`hidden gap-2 px-6 py-3 text-base font-bold text-[#B5B5B5] border-b border-[#66666680] ${isEnAttenteClient && !verificationDone ? "sm:grid sm:grid-cols-[1fr_120px_150px_150px_40px]" : "sm:grid sm:grid-cols-[1fr_100px_150px_150px]"}`}>
+        <div className={`hidden gap-2 px-6 py-3 text-base font-bold text-[#B5B5B5] border-b border-[#66666680] ${isEnAttenteClient && !verificationDone ? "sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr_40px]" : "sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr]"}`}>
           <span>Nom du produit</span>
           <span className="text-center">Qté</span>
-          <span>Prix</span>
+          <span>P.U</span>
           <span>Total</span>
           {isEnAttenteClient && !verificationDone && <span />}
         </div>
@@ -317,7 +274,7 @@ function OrderDetailContent() {
             key={item.id}
             className={idx < items.length - 1 ? "border-b border-[#66666680]" : ""}
           >
-            <div className={`flex flex-col gap-2 px-6 py-4 sm:gap-2 sm:items-center ${isEnAttenteClient && !verificationDone ? "sm:grid sm:grid-cols-[1fr_120px_150px_150px_40px]" : "sm:grid sm:grid-cols-[1fr_100px_150px_150px]"}`}>
+            <div className={`flex flex-col gap-2 px-6 py-4 sm:gap-2 sm:items-center ${isEnAttenteClient && !verificationDone ? "sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr_40px]" : "sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr]"}`}>
               <div>
                 <p className="font-semibold text-gray-900 flex items-center gap-2">
                   {item.name}
@@ -405,13 +362,13 @@ function OrderDetailContent() {
               </div>
 
               <span className="text-sm text-gray-700 whitespace-nowrap">
-                <span className="sm:hidden text-gray-400 mr-1">Prix :</span>
-                {formatPrice(item.price)} XOF CFA
+                <span className="sm:hidden text-gray-400 mr-1">P.U :</span>
+                {formatPrice(item.price)} FCFA
               </span>
 
               <span className="text-sm text-gray-700 whitespace-nowrap">
                 <span className="sm:hidden text-gray-400 mr-1">Total :</span>
-                {formatPrice(item.qty * item.price)} XOF CFA
+                {formatPrice(item.qty * item.price)} FCFA
               </span>
 
               {isEnAttenteClient && !verificationDone && (
@@ -448,7 +405,7 @@ function OrderDetailContent() {
         <div className="flex items-center justify-between bg-[#D7EFDA] px-6 py-5">
           <span className="text-lg md:text-2xl font-bold text-gray-900">Montant total</span>
           <span className="text-lg md:text-2xl font-bold text-gray-900">
-            {formatPrice(total)} XOF CFA
+            {formatPrice(total)} FCFA
           </span>
         </div>
       </div>

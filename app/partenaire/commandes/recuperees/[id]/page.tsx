@@ -19,11 +19,11 @@ const orderInfo = {
 const orderItems = Array.from({ length: 5 }, () => ({
   medicament: "Paracétamol 500 mg",
   qte: "02",
-  pu: "100 XOF CFA",
-  total: "1000 XOF CFA",
+  pu: "100 FCFA",
+  total: "1000 FCFA",
 }));
 
-const montantTotal = "50 000 XOF";
+const montantTotal = "50 000 FCFA";
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireCommandeRecupereeDetailPage() {

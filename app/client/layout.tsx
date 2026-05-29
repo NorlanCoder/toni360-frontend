@@ -169,13 +169,16 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
               <nav className="flex flex-col gap-0.5">
                 {navItems.map(({ label, href, icon: Icon }) => {
                   const active = pathname === href || pathname.startsWith(`${href}/`);
+                  const isLogout = href === "/client/deconnexion";
                   return (
                     <Link
                       key={href}
                       href={href}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
-                        active
+                        isLogout
+                          ? "text-red-600 font-medium hover:bg-red-50 hover:text-red-700"
+                          : active
                           ? "bg-[#E6F6F0] text-toni-green-dark-2 font-bold"
                           : "text-gray-600 font-medium hover:bg-gray-50 hover:text-gray-900"
                       }`}
@@ -226,12 +229,15 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           <nav className="flex flex-col gap-0.5">
             {navItems.map(({ label, href, icon: Icon }) => {
               const active = pathname === href || pathname.startsWith(`${href}/`);
+              const isLogout = href === "/client/deconnexion";
               return (
                 <Link
                   key={href}
                   href={href}
                   className={`flex items-center gap-3 px-4 py-2 text-xl transition-colors ${
-                    active
+                    isLogout
+                      ? "text-red-600 hover:bg-red-50 hover:text-red-700"
+                      : active
                       ? "bg-[#E6F6F0] text-toni-green-dark-2 font-bold"
                       : "text-gray-600  hover:bg-gray-50 hover:text-gray-900"
                   }`}
@@ -303,24 +309,28 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
           {/* Barre desktop : recherche + boutons */}
           <div className="hidden lg:flex lg:flex-row lg:items-center lg:justify-between gap-3">
-            <form
-              className="relative flex-1"
-              onSubmit={handleSearchSubmit}
-            >
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => handleSearchInput(e.target.value)}
-                placeholder="Rechercher un médicament..."
-                className="w-full rounded-full bg-toni-green-light border-none py-3 pl-6 pr-14 text-sm font-semibold text-gray-700 placeholder:text-gray-400 placeholder:font-semibold outline-none focus:ring-2 focus:ring-toni-green-dark-2"
-              />
-              <button
-                type="submit"
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full bg-toni-green-dark-2 p-2.5 text-white transition hover:bg-toni-green-dark"
+            {pathname !== "/client/dashboard/cart/checkout" ? (
+              <form
+                className="relative flex-1"
+                onSubmit={handleSearchSubmit}
               >
-                <Search size={18} />
-              </button>
-            </form>
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => handleSearchInput(e.target.value)}
+                  placeholder="Rechercher un médicament..."
+                  className="w-full rounded-full bg-toni-green-light border-none py-3 pl-6 pr-14 text-sm font-semibold text-gray-700 placeholder:text-gray-400 placeholder:font-semibold outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full bg-toni-green-dark-2 p-2.5 text-white transition hover:bg-toni-green-dark"
+                >
+                  <Search size={18} />
+                </button>
+              </form>
+            ) : (
+              <div className="flex-1" />
+            )}
 
             <div className="flex items-center gap-3 shrink-0">
               <Link

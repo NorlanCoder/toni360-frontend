@@ -45,11 +45,11 @@ const READY_ALLOWED_STATUSES = new Set(["EN_ATTENTE_PAIEMENT", "EN_COURS", "PAYE
 
 /* ──────────────────── Format helpers ────────────────────────── */
 function formatPrice(n: number) {
-  return n.toLocaleString("fr-FR") + " XOF CFA";
+  return n.toLocaleString("fr-FR") + " FCFA";
 }
 
 function formatTotal(n: number) {
-  return n.toLocaleString("fr-FR") + " XOF";
+  return n.toLocaleString("fr-FR") + " FCFA";
 }
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
