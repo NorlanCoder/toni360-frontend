@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { forgotPassword } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
+import { AtSign } from "lucide-react";
 
 export default function MotDePasseOubliePage() {
   const [email, setEmail] = useState("");
@@ -92,13 +93,14 @@ export default function MotDePasseOubliePage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
+              <div className="relative flex items-center">
+                <AtSign className="absolute left-4 text-gray-400" size={18} />
                 <input
                   type="email"
                   placeholder="Votre adresse email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-md border border-black bg-white px-4 py-2.5 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
+                  className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-4 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
                   autoComplete="email"
                 />
               </div>

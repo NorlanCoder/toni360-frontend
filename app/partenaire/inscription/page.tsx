@@ -19,7 +19,6 @@ export default function DevenirPartenairePage() {
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [acceptedCGU, setAcceptedCGU] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -85,16 +84,6 @@ export default function DevenirPartenairePage() {
 
     if (formData.licence.size > 5 * 1024 * 1024) {
       toast.warning("La licence ne doit pas depasser 5 Mo.");
-      return;
-    }
-
-    if (!acceptedCGU) {
-      toast.warning("Vous devez accepter les Conditions Générales d'Utilisation.");
-      return;
-    }
-
-    if (!acceptedCGU) {
-      toast.warning("Vous devez accepter les Conditions Générales d'Utilisation.");
       return;
     }
 
@@ -460,41 +449,25 @@ export default function DevenirPartenairePage() {
             <p className="text-xs text-gray-400 mt-1">PDF, JPG ou PNG — max 5 Mo</p>
           )}
 
-          {/* Case à cocher CGU */}
-          <div className="mt-6 rounded-md border border-gray-200 bg-white p-4 text-sm text-gray-600">
-            <p className="mb-3">
-              <span className="font-bold">Attention !! </span>
-              Si vous cochez la case ci-dessous, vous confirmez avoir pris
-              connaissance des présentes CGU et acceptez de vous y soumettre
-              sans réserve. Il est donc conseillé aux Utilisateurs de lire
-              attentivement les{" "}
-              <Link
-                href="/partenaire/cgu"
-                className="font-semibold hover:underline"
-                style={{ color: "#137551" }}
-              >
-                Conditions Générales d&apos;Utilisation
-              </Link>.
-            </p>
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                checked={acceptedCGU}
-                onChange={(e) => setAcceptedCGU(e.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-green-700"
-              />
-              <span>
-                Je reconnais avoir lu et accepté les{" "}
-                <Link
-                  href="/partenaire/cgu"
-                  className="font-semibold hover:underline"
-                  style={{ color: "#137551" }}
-                >
-                  Conditions Générales d&apos;Utilisation
-                </Link>.
-              </span>
-            </label>
-          </div>
+          <p className="mt-6 text-center text-sm text-gray-600">
+            En vous inscrivant, vous acceptez nos{" "}
+            <Link
+              href="/partenaire/cgu"
+              className="font-semibold underline hover:underline"
+              style={{ color: "#137551" }}
+            >
+              Conditions d&apos;utilisation
+            </Link>{" "}
+            et notre{" "}
+            <Link
+              href="/privacy"
+              className="font-semibold underline hover:underline"
+              style={{ color: "#137551" }}
+            >
+              Politique de confidentialité
+            </Link>
+            .
+          </p>
 
           {/* Bouton S'inscrire */}
           <div className="mt-8">

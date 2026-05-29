@@ -18,7 +18,6 @@ export default function InscriptionPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
-  const [acceptedCGU, setAcceptedCGU] = useState(false);
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
@@ -52,11 +51,6 @@ export default function InscriptionPage() {
     if (!passwordStrong) {
       setPasswordTouched(true);
       toast.warning("Le mot de passe doit contenir au moins 8 caracteres, une majuscule, une minuscule, un chiffre et un caractere special.");
-      return;
-    }
-
-    if (!acceptedCGU) {
-      toast.warning("Vous devez accepter les Conditions Générales d'Utilisation.");
       return;
     }
 
@@ -244,33 +238,17 @@ export default function InscriptionPage() {
               />
             </div>
 
-            {/* Case à cocher CGU */}
-            <div className="rounded-md border border-gray-200 bg-white p-4 text-xs text-gray-600 sm:text-sm">
-              <p className="mb-3">
-                <span className="font-bold">Attention !! </span>
-                Si vous cochez la case ci-dessous, vous confirmez avoir pris
-                connaissance des présentes CGU et acceptez de vous y soumettre
-                sans réserve. Il est donc conseillé aux Utilisateurs de lire
-                attentivement les{" "}
-                <Link href="/terms-of-use" className="text-toni-green-dark-2 font-semibold hover:underline">
-                  Conditions Générales d&apos;Utilisation
-                </Link>.
-              </p>
-              <label className="flex cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={acceptedCGU}
-                  onChange={(e) => setAcceptedCGU(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-toni-green-dark-2"
-                />
-                <span>
-                  Je reconnais avoir lu et accepté les{" "}
-                  <Link href="/terms-of-use" className="text-toni-green-dark-2 font-semibold hover:underline">
-                    Conditions Générales d&apos;Utilisation
-                  </Link>.
-                </span>
-              </label>
-            </div>
+            <p className="text-center text-xs text-gray-600 sm:text-sm">
+              En vous inscrivant, vous acceptez nos{" "}
+              <Link href="/terms-of-use" className="font-semibold text-toni-green-dark-2 underline hover:underline">
+                Conditions d&apos;utilisation
+              </Link>{" "}
+              et notre{" "}
+              <Link href="/privacy" className="font-semibold text-toni-green-dark-2 underline hover:underline">
+                Politique de confidentialité
+              </Link>
+              .
+            </p>
 
             {/* Bouton S'inscrire */}
             <button
