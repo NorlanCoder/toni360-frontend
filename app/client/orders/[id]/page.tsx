@@ -202,8 +202,7 @@ function OrderDetailContent() {
       }
 
       await validerCommande(token, commandeId);
-      toast.success("Commande validée ! La pharmacie va prendre en charge votre commande.");
-      router.push("/client/orders?tab=en_cours");
+      router.push(`/client/orders/${commandeId}/qrcode`);
     } catch (error) {
       if (error instanceof ApiError) toast.error(error.message);
     } finally {
@@ -441,21 +440,18 @@ function OrderDetailContent() {
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   type="button"
-                  onClick={() => setShowServerPreviewModal(true)}
+                  onClick={() => {
+                    if (isPdf) {
+                      window.open(url, "_blank", "noopener,noreferrer");
+                    } else {
+                      setShowServerPreviewModal(true);
+                    }
+                  }}
                   className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition"
-                  title="Prévisualiser"
+                  title={isPdf ? "Ouvrir dans un nouvel onglet" : "Prévisualiser"}
                 >
                   <Eye size={16} />
                 </button>
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition"
-                  title="Ouvrir dans un nouvel onglet"
-                >
-                  <FileText size={15} />
-                </a>
               </div>
             </div>
 
@@ -715,6 +711,11 @@ function OrderDetailContent() {
             type="button"
             onClick={async () => {
               if (!token || anyPending) return;
+              // Si déjà EN_ATTENTE_CLIENT, pas besoin d'appel API — juste retourner.
+              if (isEnAttenteClient) {
+                router.push("/client/orders");
+                return;
+              }
               setPendingHold(true);
               try {
                 const { mettreEnAttenteCommande } = await import("@/lib/api/client");
@@ -735,7 +736,7 @@ function OrderDetailContent() {
                 <span className="w-5 h-5 rounded-full border-2 border-gray-500 border-t-transparent animate-spin" />
                 Traitement…
               </span>
-            ) : "Mettre en attente"}
+            ) : isEnAttenteClient ? "Garder en attente" : "Mettre en attente"}
           </button>
 
           <button

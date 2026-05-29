@@ -30,6 +30,10 @@ export function saveAuthSession(session: AuthSession, rememberMe = false): void 
   otherStorage.removeItem(AUTH_SESSION_KEY);
 
   storage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+
+  // Réinitialiser le timer d'inactivité pour éviter une déconnexion immédiate
+  // si l'utilisateur se reconnecte après une longue absence.
+  localStorage.setItem("toni360.last_activity", Date.now().toString());
 }
 
 export function getAuthSession(): AuthSession | null {

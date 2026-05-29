@@ -16,7 +16,7 @@ import { toast } from "sonner";
 export default function ConnexionPartenairePage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<"phone" | "email">("phone");
+  const [loginMethod, setLoginMethod] = useState<"phone" | "email">("email");
   const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
