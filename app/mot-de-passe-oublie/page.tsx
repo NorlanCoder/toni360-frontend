@@ -67,7 +67,7 @@ export default function MotDePasseOubliePage() {
 
           {/* Titre */}
           <h2 className="mb-3 text-center text-3xl text-gray-800 sm:text-4xl">
-            Mot de passe oublié
+            Mot de passe oublié ?
           </h2>
           <p className="mb-8 text-center text-sm text-gray-500 sm:text-base">
             Saisissez votre adresse email. Nous vous enverrons un lien pour réinitialiser votre mot de passe.
@@ -119,10 +119,7 @@ export default function MotDePasseOubliePage() {
           {/* Liens retour */}
           <div className="mt-6 flex flex-col items-center gap-2 text-sm text-gray-600 sm:mt-8">
             <Link href="/client/connexion" className="font-semibold hover:underline" style={{ color: "#137551" }}>
-              ← Retour à la connexion client
-            </Link>
-            <Link href="/partenaire/connexion" className="font-semibold hover:underline" style={{ color: "#137551" }}>
-              ← Retour à la connexion partenaire
+              ← Retour à la connexion patient
             </Link>
           </div>
         </div>

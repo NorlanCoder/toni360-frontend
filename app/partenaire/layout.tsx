@@ -9,10 +9,10 @@ import { SidebarProvider } from "./_sidebar-context";
 import { HeaderSearchProvider } from "./_header-search-context";
 import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import PartenaireHeader from "@/components/partenaire/PartenaireHeader";
+import { useIdleTimeout } from "@/lib/useIdleTimeout";
 
 export default function PartenaireLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
 
   const isPublicPartenairePage =
     pathname === "/partenaire" ||
@@ -20,11 +20,18 @@ export default function PartenaireLayout({ children }: { children: React.ReactNo
     pathname.startsWith("/partenaire/inscription") ||
     pathname.startsWith("/partenaire/deconnexion");
 
-  useEffect(() => {
-    if (isPublicPartenairePage) {
-      return;
-    }
+  if (isPublicPartenairePage) {
+    return <>{children}</>;
+  }
 
+  return <PartenaireLayoutInner>{children}</PartenaireLayoutInner>;
+}
+
+function PartenaireLayoutInner({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token) {
       clearAuthSession();
@@ -42,11 +49,14 @@ export default function PartenaireLayout({ children }: { children: React.ReactNo
       toast.error(`Accès refusé (${pathname}) : permission insuffisante.`);
       router.replace("/partenaire/dashboard");
     }
-  }, [isPublicPartenairePage, pathname, router]);
+  }, [pathname, router]);
 
-  if (isPublicPartenairePage) {
-    return <>{children}</>;
-  }
+  // Déconnexion automatique après 15 minutes d'inactivité
+  useIdleTimeout(() => {
+    clearAuthSession();
+    toast.warning("Session expirée. Veuillez vous reconnecter.");
+    router.replace("/partenaire/connexion");
+  });
 
   return (
     <SidebarProvider>

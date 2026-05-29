@@ -21,6 +21,8 @@ import { getClientNotificationCount } from "@/lib/api/client";
 import { PiListChecks } from "react-icons/pi";
 import { SearchProvider, useSearch } from "@/lib/search-context";
 import { CartProvider, useCart } from "@/lib/cart-context";
+import { useIdleTimeout } from "@/lib/useIdleTimeout";
+import { toast } from "sonner";
 
 
 const navItems = [
@@ -86,6 +88,13 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
       router.replace("/client/connexion");
     }
   }, [router]);
+
+  // Déconnexion automatique après 15 minutes d'inactivité
+  useIdleTimeout(() => {
+    clearAuthSession();
+    toast.warning("Session expirée. Veuillez vous reconnecter.");
+    router.replace("/client/connexion");
+  });
 
   // Vider la barre de recherche quand on quitte la page d'accueil
   useEffect(() => {
@@ -295,7 +304,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           {/* Barre desktop : recherche + boutons */}
           <div className="hidden lg:flex lg:flex-row lg:items-center lg:justify-between gap-3">
             <form
-              className="relative w-full lg:max-w-lg"
+              className="relative flex-1"
               onSubmit={handleSearchSubmit}
             >
               <input
