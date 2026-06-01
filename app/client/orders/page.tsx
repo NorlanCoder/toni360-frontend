@@ -503,7 +503,7 @@ function ClientOrdersContent() {
                         En cours
                       </span>
                     )}
-                    {activeTab === "Prete" && (
+                    {order.statusKey === "prete" && (
                       <span className="rounded-full bg-teal-100 px-3 py-1.5 text-xs font-semibold text-teal-600 sm:px-4 sm:text-sm">
                         Prête
                       </span>
@@ -513,7 +513,7 @@ function ClientOrdersContent() {
                         Récupérée
                       </span>
                     )}
-                    {activeTab === "Terminees" && (
+                    {order.statusKey === "recuperee" && activeTab !== "Recuperees" && (
                       <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500 sm:px-4 sm:text-sm">
                         Terminée
                       </span>
@@ -554,7 +554,7 @@ function ClientOrdersContent() {
                     )}
 
                     {/* Bouton voir QR — masqué pour Terminées */}
-                    {activeTab !== "Terminees" && QR_VISIBLE_PATIENT_STATUSES.has(order.statusKey) && (
+                    {order.statusKey !== "recuperee" && QR_VISIBLE_PATIENT_STATUSES.has(order.statusKey) && (
                       <button
                         onClick={() => handleShowQr(order)}
                         disabled={loadingQrOrderId === order.id}
@@ -574,7 +574,7 @@ function ClientOrdersContent() {
                     </Link>
 
                      {/* Bouton supprimer — masqué pour Terminées */}
-                    {activeTab !== "Terminees" && (
+                    {order.statusKey !== "recuperee" && (
                       <button
                         onClick={() => handleCancel(order.id)}
                         className="text-red-500 hover:text-red-600 transition"

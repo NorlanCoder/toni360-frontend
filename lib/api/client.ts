@@ -724,6 +724,20 @@ export async function getLocalisationDetail(token: string, id: string): Promise<
   });
 }
 
+export async function deleteLocalisation(token: string, id: string): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>(`/patient/recherche/${id}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export async function deleteAllLocalisations(token: string): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>("/patient/recherche/all", {
+    method: "DELETE",
+    token,
+  });
+}
+
 export async function getBrowserCoordinates(): Promise<Coordinates> {
   if (typeof window === "undefined" || !("geolocation" in navigator)) {
     return { latitude: 6.3703, longitude: 2.3912 };

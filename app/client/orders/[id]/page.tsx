@@ -411,8 +411,7 @@ function OrderDetailContent() {
 
       {/* Ordonnance déjà soumise */}
       {items.some((i) => i.ordonnanceUrl) && (() => {
-        const url = items.find((i) => i.ordonnanceUrl)!.ordonnanceUrl!;
-        const isPdf = url.toLowerCase().includes(".pdf") || url.toLowerCase().includes("pdf");
+        const url = items.find((i) => i.ordonnanceUrl)!.ordonnanceUrl!;        const isPdf = url.toLowerCase().includes(".pdf") || url.toLowerCase().includes("pdf");
         return (
           <div className="mt-5 flex flex-col gap-2">
             <p className="text-sm font-semibold text-gray-700">Ordonnance soumise :</p>
@@ -648,6 +647,14 @@ function OrderDetailContent() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Ordonnance supprimée après finalisation */}
+      {!canValidate && items.some((i) => i.requiresPrescription) && !items.some((i) => i.ordonnanceUrl) && (
+        <div className="mt-5 flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+          <FileText size={16} className="shrink-0 text-gray-400" />
+          <p className="text-sm italic text-gray-400">Ordonnance supprimée après finalisation de la commande.</p>
         </div>
       )}
 

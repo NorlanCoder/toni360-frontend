@@ -22,6 +22,7 @@ import {
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 import { useCart } from "@/lib/cart-context";
+import { useSearch } from "@/lib/search-context";
 
 type CartItem = {
   id: string;
@@ -69,6 +70,7 @@ function ClientCartPageContent() {
   const [hasLocalized, setHasLocalized] = useState(false);
   const autoSearchAttemptedRef = useRef(false);
   const { refreshCart, clearLocalCart, updateCount } = useCart();
+  const { focusSearchInput } = useSearch();
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -328,15 +330,19 @@ function ClientCartPageContent() {
       {/* ── Vue Panier ── */}
       {items.length === 0 ? (
         <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-200px)]">
-          <div className="flex flex-col items-center justify-center">
+          <button
+            type="button"
+            onClick={focusSearchInput}
+            className="flex flex-col items-center justify-center gap-0 cursor-pointer rounded-2xl p-10 transition hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-toni-green-dark-2"
+          >
             <ShoppingCart size={120} className="text-gray-400 mb-8" />
             <div className="text-2xl text-gray-500 text-center">
               Votre panier est vide
             </div>
-            <p className="mt-3 text-sm text-gray-400 text-center">
+            <p className="mt-3 text-sm text-gray-400 text-center underline underline-offset-2">
               Recherchez un médicament pour commencer
             </p>
-          </div>
+          </button>
         </div>
       ) : (
       <>

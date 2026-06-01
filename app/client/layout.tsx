@@ -58,7 +58,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { query, setQuery, triggerSearch } = useSearch();
+  const { query, setQuery, triggerSearch, registerSearchInput } = useSearch();
   const { cartCount } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
@@ -315,6 +315,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
                 onSubmit={handleSearchSubmit}
               >
                 <input
+                  ref={registerSearchInput}
                   type="text"
                   value={query}
                   onChange={(e) => handleSearchInput(e.target.value)}
@@ -366,6 +367,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
             onSubmit={handleSearchSubmit}
           >
             <input
+              ref={registerSearchInput}
               type="text"
               value={query}
               onChange={(e) => handleSearchInput(e.target.value)}
