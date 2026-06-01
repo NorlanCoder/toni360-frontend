@@ -1,5 +1,5 @@
 import AboutContent from "@/components/legal/AboutContent";
 
-export default function AboutPage() {
+export default function PartenaireAboutPage() {
   return <AboutContent />;
 }

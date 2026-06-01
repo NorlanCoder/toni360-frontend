@@ -330,19 +330,25 @@ function ClientCartPageContent() {
       {/* ── Vue Panier ── */}
       {items.length === 0 ? (
         <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-200px)]">
-          <button
-            type="button"
-            onClick={focusSearchInput}
-            className="flex flex-col items-center justify-center gap-0 cursor-pointer rounded-2xl p-10 transition hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-toni-green-dark-2"
-          >
+          <div className="flex flex-col items-center justify-center">
             <ShoppingCart size={120} className="text-gray-400 mb-8" />
             <div className="text-2xl text-gray-500 text-center">
               Votre panier est vide
             </div>
-            <p className="mt-3 text-sm text-gray-400 text-center underline underline-offset-2">
+            <p className="mt-3 text-sm text-gray-400 text-center">
               Recherchez un médicament pour commencer
             </p>
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                router.push("/client/accueil");
+                setTimeout(focusSearchInput, 300);
+              }}
+              className="mt-6 rounded-full bg-[#00955F] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#007a4e] transition"
+            >
+              Rechercher un médicament
+            </button>
+          </div>
         </div>
       ) : (
       <>

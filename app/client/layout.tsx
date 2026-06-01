@@ -203,13 +203,13 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
             {/* Footer drawer */}
             <div className="px-5 pb-6 text-xs text-toni-green-dark-2 leading-relaxed">
-              <Link href="/client/help/privacy" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/privacy" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
                 Politique de confidentialité,
               </Link>
-              <Link href="/client/help/return-policy" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
-                Conditions générales de retour,
+              <Link href="/terms-of-use" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
+                Conditions générales d&apos;utilisation,
               </Link>
-              <Link href="/client/contact" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/contacts" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
                 Contactez-nous
               </Link>
             </div>
@@ -261,9 +261,9 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="px-5 pb-6 text-xs text-toni-green-dark-2 leading-relaxed">
-          <Link href="/client/help/privacy" className="hover:underline block">Politique de confidentialité,</Link>
-          <Link href="/client/help/return-policy" className="hover:underline block">Conditions générales de retour,</Link>
-          <Link href="/client/contact" className="hover:underline block">Contactez-nous</Link>
+          <Link href="/privacy" className="hover:underline block">Politique de confidentialité,</Link>
+          <Link href="/terms-of-use" className="hover:underline block">Conditions générales d&apos;utilisation,</Link>
+          <Link href="/contacts" className="hover:underline block">Contactez-nous</Link>
         </div>
       </aside>
 

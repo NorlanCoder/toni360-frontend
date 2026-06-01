@@ -151,10 +151,10 @@ export default function PartenaireSidebar() {
               <Link href="/partenaire/cgu" className="hover:underline hover:text-gray-600 transition-colors" onClick={onClose}>
                 Conditions générales d&apos;utilisation
               </Link>
-              <Link href="/politique-de-confidentialite" className="hover:underline hover:text-gray-600 transition-colors" onClick={onClose}>
+              <Link href="/partenaire/privacy" className="hover:underline hover:text-gray-600 transition-colors" onClick={onClose}>
                 Politique de confidentialité
               </Link>
-              <Link href="/contact" className="hover:underline hover:text-gray-600 transition-colors" onClick={onClose}>
+              <Link href="/partenaire/contacts" className="hover:underline hover:text-gray-600 transition-colors" onClick={onClose}>
                 Contactez-nous
               </Link>
             </div>
@@ -211,10 +211,10 @@ export default function PartenaireSidebar() {
           <Link href="/partenaire/cgu" className="hover:underline hover:text-gray-600 transition-colors">
             Conditions générales d&apos;utilisation
           </Link>
-          <Link href="/politique-de-confidentialite" className="hover:underline hover:text-gray-600 transition-colors">
+          <Link href="/partenaire/privacy" className="hover:underline hover:text-gray-600 transition-colors">
             Politique de confidentialité
           </Link>
-          <Link href="/contact" className="hover:underline hover:text-gray-600 transition-colors">
+          <Link href="/partenaire/contacts" className="hover:underline hover:text-gray-600 transition-colors">
             Contactez-nous
           </Link>
         </div>

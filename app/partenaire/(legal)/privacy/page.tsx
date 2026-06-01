@@ -1,5 +1,5 @@
 import PrivacyContent from "@/components/legal/PrivacyContent";
 
-export default function PrivacyPage() {
+export default function PartenairePrivacyPage() {
   return <PrivacyContent />;
 }

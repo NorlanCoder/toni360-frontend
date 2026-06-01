@@ -120,16 +120,8 @@ export default function LocalisationListPage() {
             <Search size={28} className="text-gray-400" />
           </div>
           <p className="text-base font-semibold text-gray-700">Aucune localisation pour l&apos;instant</p>
-          <p className="text-sm text-gray-400 max-w-xs">
-            Rendez-vous dans votre panier et cliquez sur &quot;Localiser&quot; pour trouver des pharmacies proches.
-          </p>
-          <button
-            type="button"
-            onClick={() => router.push("/client/dashboard/cart")}
-            className="mt-2 rounded-full bg-[#00955F] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#007a4e] transition"
-          >
-            Aller au panier
-          </button>
+         
+         
         </div>
       ) : (
         <div className="flex flex-col gap-3">

@@ -1,5 +1,5 @@
 import ContactsContent from "@/components/legal/ContactsContent";
 
-export default function ContactsPage() {
+export default function PartenaireContactsPage() {
   return <ContactsContent />;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BellOff } from "lucide-react";
+import { BellOff, X } from "lucide-react";
 import { toast } from "sonner";
 import NotificationCard from "@/components/notifications/NotificationCard";
 import {
@@ -26,6 +26,7 @@ interface Notification {
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [nonReadCount, setNonReadCount] = useState(0);
+  const [selectedNotif, setSelectedNotif] = useState<Notification | null>(null);
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -131,10 +132,33 @@ export default function NotificationsPage() {
 
   return (
     <div>
-      {nonReadCount > 0 && (
-        <p className="mb-4 text-sm text-gray-600">Notifications non lues: {nonReadCount}</p>
+      {/* ── Modal détail ── */}
+      {selectedNotif && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setSelectedNotif(null)}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setSelectedNotif(null)}
+              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition"
+              aria-label="Fermer"
+            >
+              <X size={22} />
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full border-2 border-toni-green-dark-2 flex items-center justify-center bg-white shrink-0">
+                <img src="/images/icon.png" alt="Toni360" className="w-6 h-6 object-contain" />
+              </div>
+              <h2 className="font-bold text-gray-900 text-base pr-6">{selectedNotif.title}</h2>
+            </div>
+            <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{selectedNotif.description}</p>
+          </div>
+        </div>
       )}
-
       {notifications.length === 0 ? (
         <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-200px)]">
           <div className="flex flex-col items-center justify-center">
@@ -146,20 +170,29 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <div className="max-w-5xl mx-auto space-y-6">
-          {/* Action Buttons */}
-          <div className="flex flex-wrap justify-end gap-2 pb-2">
-            <button
-              onClick={handleDeleteAll}
-              className="px-4 py-1.5 bg-red-600 text-white font-semibold text-sm rounded-full hover:bg-red-700 transition"
-            >
-              Tout supprimer
-            </button>
-            <button
-              onClick={handleMarkAllAsRead}
-              className="px-4 py-1.5 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-semibold text-sm rounded-full hover:bg-toni-green-dark-2 hover:text-white transition"
-            >
-              Tout marquer comme lu
-            </button>
+          {/* Barre d'actions — une seule ligne */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
+            {nonReadCount > 0 ? (
+              <p className="text-sm text-gray-600 shrink-0">
+                {nonReadCount} notification{nonReadCount > 1 ? "s" : ""} non lue{nonReadCount > 1 ? "s" : ""}
+              </p>
+            ) : (
+              <span />
+            )}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDeleteAll}
+                className="flex items-center gap-2 rounded-full border-2 border-red-500 px-4 py-2 text-sm font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
+              >
+                Tout supprimer
+              </button>
+              <button
+                onClick={handleMarkAllAsRead}
+                className="flex items-center gap-2 rounded-full border-2 border-toni-green-dark-2 px-4 py-2 text-sm font-bold text-toni-green-dark-2 transition hover:bg-toni-green-dark-2 hover:text-white"
+              >
+                Tout marquer comme lu
+              </button>
+            </div>
           </div>
 
           {/* Notifications List */}
@@ -170,10 +203,9 @@ export default function NotificationsPage() {
                 title={notification.title}
                 description={notification.description}
                 isRead={notification.isRead}
-                onClick={() => {
-                  if (!notification.isRead) {
-                    void handleMarkAsRead(notification.id);
-                  }
+                onOpen={() => {
+                  setSelectedNotif(notification);
+                  if (!notification.isRead) void handleMarkAsRead(notification.id);
                 }}
                 onDelete={() => handleDeleteNotification(notification.id)}
               />
