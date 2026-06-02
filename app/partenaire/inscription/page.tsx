@@ -290,13 +290,13 @@ export default function DevenirPartenairePage() {
             </div>
 
             {/* Ville d'exercice */}
-            <div>
+            <div className="relative">
               <select
                 value={formData.villeExercice}
                 onChange={(e) =>
                   setFormData({ ...formData, villeExercice: e.target.value })
                 }
-                className="w-full bg-white px-4 pr-10 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm"
+                className="w-full appearance-none bg-white px-4 pr-10 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm"
               >
                 <option value="">Ville d&apos;exercice</option>
                 <optgroup label="Alibori">
@@ -400,6 +400,11 @@ export default function DevenirPartenairePage() {
                   <option value="Zogbodomey">Zogbodomey</option>
                 </optgroup>
               </select>
+              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
             </div>
 
             {/* Confirmer le mot de passe */}
