@@ -158,18 +158,6 @@ export default function DevenirPartenairePage() {
           {/* Grille deux colonnes */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
 
-            {/* Nom du titulaire */}
-            <div>
-              <input
-                type="text"
-                placeholder="Nom du titulaire"
-                value={formData.titulaireNom}
-                onChange={(e) =>
-                  setFormData({ ...formData, titulaireNom: e.target.value })
-                }
-                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
-              />
-            </div>
 
             {/* Prénom du titulaire */}
             <div>
@@ -183,6 +171,21 @@ export default function DevenirPartenairePage() {
                 className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
               />
             </div>
+
+            {/* Nom du titulaire */}
+            <div>
+              <input
+                type="text"
+                placeholder="Nom du titulaire"
+                value={formData.titulaireNom}
+                onChange={(e) =>
+                  setFormData({ ...formData, titulaireNom: e.target.value })
+                }
+                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+              />
+            </div>
+
+            
 
             {/* Nom officiel de la pharmacie */}
             <div className="col-span-2">
@@ -293,7 +296,7 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, villeExercice: e.target.value })
                 }
-                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm"
+                className="w-full bg-white px-4 pr-10 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm"
               >
                 <option value="">Ville d&apos;exercice</option>
                 <optgroup label="Alibori">

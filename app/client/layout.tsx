@@ -209,7 +209,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
               <Link href="/terms-of-use" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
                 Conditions générales d&apos;utilisation,
               </Link>
-              <Link href="/contacts" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
                 Contactez-nous
               </Link>
             </div>
