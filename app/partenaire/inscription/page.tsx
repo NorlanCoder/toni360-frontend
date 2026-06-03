@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Download, Check, X } from "lucide-react";
+import { Eye, EyeOff, Download, Check, X, Trash2, Pencil } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import PhoneInput from "react-phone-number-input";
@@ -17,6 +17,8 @@ export default function DevenirPartenairePage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [fileName, setFileName] = useState("");
+  const [licencePreviewUrl, setLicencePreviewUrl] = useState<string | null>(null);
+  const [licencePreviewOpen, setLicencePreviewOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
@@ -126,9 +128,22 @@ export default function DevenirPartenairePage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (licencePreviewUrl) URL.revokeObjectURL(licencePreviewUrl);
+      const url = URL.createObjectURL(file);
       setFileName(file.name);
+      setLicencePreviewUrl(url);
       setFormData({ ...formData, licence: file });
     }
+    // reset input so same file can be re-selected
+    e.target.value = "";
+  };
+
+  const handleDeleteLicence = () => {
+    if (licencePreviewUrl) URL.revokeObjectURL(licencePreviewUrl);
+    setLicencePreviewUrl(null);
+    setFileName("");
+    setFormData({ ...formData, licence: null });
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   return (
@@ -148,7 +163,7 @@ export default function DevenirPartenairePage() {
 
         {/* Titre */}
         <h1
-          className="text-4xl font-bold text-black text-center mb-10"
+          className="text-2xl md:text-4xl font-bold text-black text-center mb-10"
         >
           Inscription
         </h1>
@@ -188,7 +203,7 @@ export default function DevenirPartenairePage() {
             
 
             {/* Nom officiel de la pharmacie */}
-            <div className="col-span-2">
+            <div className="col-span-1 md:col-span-2">
               <input
                 type="text"
                 placeholder="Nom officiel de la pharmacie"
@@ -429,32 +444,103 @@ export default function DevenirPartenairePage() {
           </div>
 
           {/* Soumission licence pharmaceutique */}
-          <div className="mt-8 flex items-center justify-start gap-4">
-            <span className="text-lg font-semibold" style={{ color: "#137551" }}>
-              Soumission de votre licence pharmaceutique
-              <span className="text-red-500 ml-1">*</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-14 h-14 rounded-full flex items-center justify-center border-2 transition hover:opacity-80"
-              style={{ borderColor: "#137551", color: "#137551" }}
-              title="Télécharger votre licence"
-            >
-              <Download size={28} />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              onChange={handleFileChange}
-              className="hidden"
-            />
+          <div className="mt-8">
+            
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-base md:text-lg font-semibold" style={{ color: "#137551" }}>
+                Soumission de votre licence pharmaceutique
+                <span className="text-red-500 ml-1">*</span>
+              </span>
+              {!formData.licence && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-10 h-10 rounded-full p-2 flex items-center justify-center border-2 transition hover:opacity-80"
+                  style={{ borderColor: "#137551", color: "#137551" }}
+                  title="Télécharger votre licence"
+                >
+                  <Download size={28} />
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </div>
+
+            {formData.licence ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                <span className="w-full truncate text-sm text-gray-700 sm:flex-1 sm:w-auto" title={fileName}>{fileName}</span>
+                <button
+                  type="button"
+                  onClick={() => setLicencePreviewOpen(true)}
+                  className="flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-80"
+                  style={{ backgroundColor: "#137551" }}
+                  title="Visualiser"
+                >
+                  <Eye size={14} />
+                  Voir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-100"
+                  title="Modifier"
+                >
+                  <Pencil size={14} />
+                  Modifier
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteLicence}
+                  className="flex items-center gap-1 rounded-md bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100"
+                  title="Supprimer"
+                >
+                  <Trash2 size={14} />
+                  Supprimer
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 mt-1">PDF, JPG ou PNG — max 5 Mo</p>
+            )}
           </div>
-          {fileName ? (
-            <p className="text-xs text-gray-500 mt-1">{fileName}</p>
-          ) : (
-            <p className="text-xs text-gray-400 mt-1">PDF, JPG ou PNG — max 5 Mo</p>
+
+          {/* Modal prévisualisation licence */}
+          {licencePreviewOpen && licencePreviewUrl && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+              onClick={() => setLicencePreviewOpen(false)}
+            >
+              <div
+                className="relative max-h-[90vh] w-full max-w-3xl overflow-auto rounded-xl bg-white p-4 shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => setLicencePreviewOpen(false)}
+                  className="absolute right-3 top-3 rounded-full p-1 text-gray-500 hover:bg-gray-100"
+                >
+                  <X size={20} />
+                </button>
+                <p className="mb-3 truncate text-sm font-medium text-gray-700">{fileName}</p>
+                {formData.licence?.type === "application/pdf" ? (
+                  <iframe
+                    src={licencePreviewUrl}
+                    className="h-[75vh] w-full rounded border"
+                    title="Aperçu de la licence"
+                  />
+                ) : (
+                  <img
+                    src={licencePreviewUrl}
+                    alt="Aperçu de la licence"
+                    className="mx-auto max-h-[75vh] rounded object-contain"
+                  />
+                )}
+              </div>
+            </div>
           )}
 
           <p className="mt-6 text-center text-sm text-gray-600">
