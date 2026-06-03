@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Lock, Eye, EyeOff } from "lucide-react";
+import { Lock, Eye, EyeOff, AtSign } from "lucide-react";
 import Link from "next/link";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
@@ -113,22 +113,20 @@ export default function ConnexionPartenairePage() {
             <button
               type="button"
               onClick={() => setLoginMethod("phone")}
-              className={`px-1 py-2.5 text-xs font-semibold tracking-wide transition sm:py-3 sm:text-sm ${
-                loginMethod === "phone"
+              className={`px-1 py-2.5 text-xs font-semibold tracking-wide transition sm:py-3 sm:text-sm ${loginMethod === "phone"
                   ? "border-b-4 border-toni-green-dark-2 text-toni-green-dark-2"
                   : "text-gray-600"
-              }`}
+                }`}
             >
               NUMERO DE TELEPHONE
             </button>
             <button
               type="button"
               onClick={() => setLoginMethod("email")}
-              className={`px-1 py-2.5 text-xs font-semibold tracking-wide transition sm:py-3 sm:text-sm ${
-                loginMethod === "email"
+              className={`px-1 py-2.5 text-xs font-semibold tracking-wide transition sm:py-3 sm:text-sm ${loginMethod === "email"
                   ? "border-b-4 border-toni-green-dark-2 text-toni-green-dark-2"
                   : "text-gray-600"
-              }`}
+                }`}
             >
               ADDRESSE MAIL
             </button>
@@ -149,7 +147,8 @@ export default function ConnexionPartenairePage() {
                 />
               </div>
             ) : (
-              <div>
+              <div className="relative flex items-center">
+                <AtSign className="absolute left-4 text-gray-400" size={18} />
                 <input
                   type="email"
                   placeholder="Adresse email"
@@ -157,7 +156,7 @@ export default function ConnexionPartenairePage() {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full rounded-md border border-black bg-white px-4 py-2.5 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
+                  className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
                 />
               </div>
             )}

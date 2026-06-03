@@ -474,6 +474,7 @@ export async function updatePartnerUser(
   payload: Partial<{
     nom: string;
     prenom: string;
+    email: string;
     telephone: string;
     role_id: string;
     is_active: boolean;
@@ -495,6 +496,46 @@ export async function togglePartnerUserActive(
   return apiRequest<{ success: boolean; message?: string }>(`/pharmacie/users/${userId}/toggle-active`, {
     method: "PUT",
     token,
+  });
+}
+
+/* ── Permission overrides ── */
+
+export interface PartnerUserPermission {
+  id: string;
+  code: string;
+  module: string;
+  action: string;
+  nom: string;
+  is_enabled: boolean;
+}
+
+export interface PartnerUserPermissionsResponse {
+  success: boolean;
+  data: { permissions: PartnerUserPermission[] };
+}
+
+export async function getPartnerUserPermissions(
+  token: string,
+  userId: string,
+): Promise<PartnerUserPermissionsResponse> {
+  return apiRequest<PartnerUserPermissionsResponse>(`/pharmacie/users/${userId}/permissions`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function updatePartnerUserPermissions(
+  token: string,
+  userId: string,
+  permissions: Array<{ permission_id: string; is_enabled: boolean }>,
+): Promise<{ success: boolean; message?: string }> {
+  const json = buildJsonRequest({ permissions });
+  return apiRequest<{ success: boolean; message?: string }>(`/pharmacie/users/${userId}/permissions`, {
+    method: "PUT",
+    token,
+    body: json.body,
+    headers: json.headers,
   });
 }
 

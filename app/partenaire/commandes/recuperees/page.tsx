@@ -109,11 +109,10 @@ export default function PartenaireRecupereesPage() {
 
   const moneyFormat = useMemo(
     () =>
-      new Intl.NumberFormat("fr-FR", {
-        style: "currency",
-        currency: "XOF",
-        maximumFractionDigits: 0,
-      }),
+      {
+        format: (value: number) =>
+          new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value) + " FCFA",
+      },
     [],
   );
 

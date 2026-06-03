@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getAuthSession } from "@/lib/api/session";
@@ -83,6 +84,12 @@ export default function PartenaireIncoherencesPage() {
     <>
       <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
         {/* Header */}
+        <Link
+          href="/partenaire/medicaments"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-toni-green-dark-2 hover:underline mb-6"
+        >
+          ← Retour aux médicaments
+        </Link>
         <h1 className="mb-6 text-xl sm:text-2xl font-bold text-gray-900">
           Normalisation des médicaments
         </h1>
@@ -119,9 +126,6 @@ export default function PartenaireIncoherencesPage() {
                       <td className="px-4 sm:px-6 py-4">
                         <p className="font-medium text-gray-900">
                           {inc.nom_saisi}
-                          {inc.dosage_saisi && (
-                            <span className="font-bold"> {inc.dosage_saisi}</span>
-                          )}
                         </p>
                         {best && (
                           <>
@@ -142,7 +146,7 @@ export default function PartenaireIncoherencesPage() {
                       <td className="px-4 sm:px-6 py-4">
                         <p className="mb-2 text-sm text-gray-500 line-clamp-2">
                           {best
-                            ? `Correspondance avec « ${best.nom} »${best.forme ? ` (${best.forme})` : ""}`
+                            ? `Correspondance avec « ${best.nom} » ${best.forme ? ` (${best.forme})` : ""}`
                             : "Aucun produit correspondant trouvé"}
                         </p>
                         <button
@@ -176,9 +180,6 @@ export default function PartenaireIncoherencesPage() {
               <div>
                 <h2 className="text-base font-bold text-gray-800">
                   {selected.nom_saisi}
-                  {selected.dosage_saisi && (
-                    <span className="font-bold"> {selected.dosage_saisi}</span>
-                  )}
                 </h2>
                 <p className="mt-0.5 text-sm text-gray-500">
                   {selected.forme_saisie ?? "—"} · Qté : {selected.quantite} · {formatDate(selected.created_at)}

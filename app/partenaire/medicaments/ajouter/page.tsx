@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import { getAuthSession } from "@/lib/api/session";
@@ -24,13 +25,34 @@ const FORMES_DEFAUT = [
 ];
 
 /* ──────────────── Helpers numériques ────────────────────────── */
+/** Formate un entier avec séparateurs de milliers (stock, seuil). */
 function formatMilliers(raw: string): string {
   if (!raw) return "";
   return raw.replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
 }
 
+/** Formate un prix avec séparateurs de milliers + décimales (ex: "1 500,75"). */
+function formatPrix(raw: string): string {
+  if (!raw) return "";
+  const [intPart, decPart] = raw.split(",");
+  const formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
+  return decPart !== undefined ? `${formatted},${decPart}` : formatted;
+}
+
+/** N'autorise que les chiffres (entiers). */
 function onlyDigits(value: string): string {
   return value.replace(/\D/g, "");
+}
+
+/** N'autorise que les chiffres et une virgule décimale (prix). */
+function onlyPrixChars(value: string): string {
+  // Supprimer espaces insécables et espaces classiques (séparateurs de milliers affichés)
+  const cleaned = value.replace(/[\s\u00a0]/g, "");
+  // N'autoriser que chiffres + une seule virgule
+  const withoutInvalid = cleaned.replace(/[^\d,]/g, "");
+  const parts = withoutInvalid.split(",");
+  if (parts.length > 2) return parts[0] + "," + parts.slice(1).join("");
+  return withoutInvalid;
 }
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
@@ -150,7 +172,7 @@ export default function PartenaireAjouterMedicamentPage() {
       return;
     }
 
-    const prixVente = Number(prix);
+    const prixVente = Number(prix.replace(",", "."));
     const quantite = Number(stockInitial);
     const seuilAlerte = Number(seuil);
 
@@ -196,6 +218,12 @@ export default function PartenaireAjouterMedicamentPage() {
   return (
     <>
       <main className="flex-1 overflow-y-auto px-4 sm:px-12 lg:px-32 py-10 lg:py-16">
+        <Link
+          href="/partenaire/medicaments"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-toni-green-dark-2 hover:underline mb-6"
+        >
+          ← Retour aux médicaments
+        </Link>
         <form
           onSubmit={handleSubmit}
           className="mx-auto w-full max-w-[920px] rounded-xl bg-white p-6 sm:p-8"
@@ -295,16 +323,21 @@ export default function PartenaireAjouterMedicamentPage() {
           <div className="mt-6 ">
             <div>
               <label className="mb-1 block text-sm text-gray-500">
-                Prix unitaire (XOF)
+                Prix unitaire
               </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={formatMilliers(prix)}
-                onChange={(e) => setPrix(onlyDigits(e.target.value))}
-                placeholder={"Ex: 1 500"}
-                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={formatPrix(prix)}
+                  onChange={(e) => setPrix(onlyPrixChars(e.target.value))}
+                  placeholder="Ex: 1 500,50"
+                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 pr-16 text-base text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-medium text-gray-400">
+                  FCFA
+                </span>
+              </div>
             </div>
             <div />
           </div>

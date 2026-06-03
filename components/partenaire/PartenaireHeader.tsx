@@ -76,7 +76,7 @@ export default function PartenaireHeader() {
         <Link
           href="/partenaire/notifications"
           aria-label="Voir les notifications"
-          className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-5 py-2 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+          className="flex items-center gap-2 rounded-full border-2 border-toni-green-dark-2 px-3 sm:px-5 py-2 text-sm sm:text-base font-bold text-toni-green-dark-2 transition hover:bg-[#E6F6F0]"
         >
           <Bell className="h-5 w-5" />
           <span className="hidden sm:inline">Notifications</span>
@@ -89,10 +89,10 @@ export default function PartenaireHeader() {
         <Link
           href="/partenaire/profil"
           aria-label="Accéder à mon compte"
-          className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-5 py-2  text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+          className="flex items-center gap-2 rounded-full border-2 border-toni-green-dark-2 px-3 sm:px-5 py-2 text-sm sm:text-base font-bold text-toni-green-dark-2 transition hover:bg-[#E6F6F0]"
         >
-          <span className="hidden sm:inline">Mon Compte</span>
           <User className="h-5 w-5" />
+          <span className="hidden sm:inline">Mon Compte</span>
         </Link>
       </div>
     </header>
