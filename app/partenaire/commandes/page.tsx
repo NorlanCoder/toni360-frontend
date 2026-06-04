@@ -139,7 +139,7 @@ export default function PartenaireDashboardPage() {
   const [toYear, setToYear] = useState<string>(() => String(new Date().getFullYear()));
 
   const tabs: { key: TabKey; label: string; img: string; href: string }[] = [
-    { key: "a-preparer", label: "A préparer", img: "/preparer_vert.svg", href: "/partenaire/commandes" },
+    { key: "a-preparer", label: "A préparer", img: "/preparer_vert.svg", href: "/partenaire/commandes?statut=EN_COURS" },
     { key: "en-attente", label: "En attente", img: "/images/localiser.svg", href: "/partenaire/commandes/en-attente" },
     { key: "recuperees", label: "Récupérées", img: "/images/terminee.svg", href: "/partenaire/commandes/recuperees" },
   ];
@@ -173,7 +173,7 @@ export default function PartenaireDashboardPage() {
       }
 
       try {
-        const response = await getPartnerCommandes(session.token, { per_page: 200 });
+        const response = await getPartnerCommandes(session.token, { per_page: 200, statut: "EN_COURS" });
         const allCommandes = extractCollection(response.data);
         const combined: PartnerCommande[] = allCommandes.filter((commande) => A_PREPARER_STATUTS.has(commande.statut));
 

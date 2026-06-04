@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { extractCollection, getPartnerStocks } from "@/lib/api/partner";
@@ -41,6 +42,7 @@ const filterMap: Record<FilterKey, Medicine["statut"] | null> = {
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireMedicamentsPage() {
+  const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("tous");
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -220,7 +222,8 @@ export default function PartenaireMedicamentsPage() {
                 {filteredMedicines.map((med) => (
                   <tr
                     key={med.id}
-                    className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50/40 transition-colors cursor-pointer"
+                    onClick={() => router.push(`/partenaire/medicaments/${med.id}`)}
+                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60 transition-colors cursor-pointer"
                   >
                     <td className="px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
                       {med.nom}

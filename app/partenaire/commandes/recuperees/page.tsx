@@ -108,11 +108,10 @@ export default function PartenaireRecupereesPage() {
   ];
 
   const moneyFormat = useMemo(
-    () =>
-      {
-        format: (value: number) =>
-          new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value) + " FCFA",
-      },
+    () => ({
+      format: (value: number) =>
+        new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value) + " FCFA",
+    }),
     [],
   );
 

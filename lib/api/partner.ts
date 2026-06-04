@@ -138,6 +138,8 @@ export interface PartnerProduit {
   ordonnance_requise?: boolean;
   description?: string | null;
   is_active: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
   stock?: {
     quantite: number;
     seuil_alerte: number;
@@ -670,6 +672,7 @@ export async function updatePartnerPharmacieProfile(
     adresse: string;
     telephone: string;
     email: string;
+    password: string;
   }>,
 ): Promise<PartnerPharmacieProfileResponse> {
   const json = buildJsonRequest(payload);
