@@ -72,12 +72,7 @@ export default function PartenaireHeader() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  const q = (searchQuery ?? "").trim();
-                  if (!q) return;
-                  router.push(`/partenaire/commandes/${encodeURIComponent(q)}`);
-                  setSearchQuery("");
-                } else if (e.key === "Escape") {
+                if (e.key === "Escape") {
                   setSearchQuery("");
                 }
               }}

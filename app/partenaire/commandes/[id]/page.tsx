@@ -9,8 +9,6 @@ import {
   getPartnerCommande,
   livrerPartnerCommande,
   marquerPartnerCommandePrete,
-  notifierPartnerPatient,
-  preparerPartnerCommande,
   PartnerCommande,
 } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
@@ -67,8 +65,6 @@ export default function CommandeDetailPage() {
   const [backendStatus, setBackendStatus] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
 
-  // Loader indépendant par bouton
-  const [submittingNotif, setSubmittingNotif] = useState(false);
   const [submittingReady, setSubmittingReady] = useState(false);
   const [submittingRecuperer, setSubmittingRecuperer] = useState(false);
 
@@ -140,28 +136,6 @@ export default function CommandeDetailPage() {
     void loadOrder();
   }, [fromSection, id]);
 
-  /* ── Handlers ── */
-  const handleDemanderOrdonnance = async () => {
-    const session = getAuthSession();
-    if (!session || session.userType !== "user" || !session.token || !id) {
-      toast.error("Session partenaire invalide.");
-      return;
-    }
-    setSubmittingNotif(true);
-    try {
-      await notifierPartnerPatient(
-        session.token,
-        id,
-        "Votre commande nécessite une ordonnance. Merci de la fournir pour continuer."
-      );
-      toast.success("Notification envoyée au patient.");
-    } catch (err: unknown) {
-      toast.error(err instanceof ApiError ? err.message : "Impossible d'envoyer la notification.");
-    } finally {
-      setSubmittingNotif(false);
-    }
-  };
-
   const handleReady = async () => {
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token || !id) {
@@ -174,10 +148,6 @@ export default function CommandeDetailPage() {
     }
     setSubmittingReady(true);
     try {
-      if (backendStatus !== "EN_PREPARATION") {
-        const prepResponse = await preparerPartnerCommande(session.token, id);
-        setBackendStatus(prepResponse.data.commande.statut);
-      }
       const readyResponse = await marquerPartnerCommandePrete(session.token, id);
       setBackendStatus(readyResponse.data.commande.statut);
       setStatut("prete");
@@ -223,29 +193,30 @@ export default function CommandeDetailPage() {
   /* ── Computed flags ── */
   const canMarkReady = READY_ALLOWED_STATUSES.has(backendStatus);
   const canForceRecuperer = new Set(["PRETE", "PAYEE", "EN_PREPARATION", "EN_COURS"]).has(backendStatus);
-  const notifDisabled = submittingNotif;
 
   /* ═══════════════════════ RENDER ═══════════════════════ */
   return (
     <>
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-4 sm:px-6">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center justify-center rounded-full p-2 text-gray-500 hover:bg-gray-100 transition-colors"
-          aria-label="Retour"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div>
-          <h1 className="text-base font-bold text-gray-900 leading-tight">
-            Commande #{order.cmdRef}
-          </h1>
-          <p className="text-xs text-gray-500">Détail de la commande</p>
-        </div>
-      </header>
 
-      <main className="mx-auto px-4 py-6 sm:px-6 flex flex-col gap-6">
+
+      <main className="mx-auto max-w-4xl  px-4 py-6 sm:px-6 flex flex-col gap-6">
+        {/* ── Header ── */}
+        <header className="flex gap-2 ">
+          <button
+            onClick={() => router.push("/partenaire/commandes")}
+            className="flex items-center justify-center rounded-full p-2 text-gray-500 hover:bg-gray-100 transition-colors"
+            aria-label="Retour"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 leading-tight">
+              Commande #{order.cmdRef}
+            </h1>
+            <p className="text-xs text-gray-500">Détail de la commande</p>
+          </div>
+        </header>
+
         <div className="max-w-4xl w-full mx-auto flex flex-col gap-6">
 
           {/* ── Info card ── */}
@@ -316,12 +287,12 @@ export default function CommandeDetailPage() {
                     <tr key={idx} className="border-t border-gray-200">
                       <td className="px-6 py-5 text-gray-800">
                         <span className="inline-flex items-center gap-2">
+                          <span>{item.medicament}</span>
                           {item.ordonnance_requise && (
                             <span className="group relative inline-flex items-center shrink-0">
                               <FileText
-                                className={`h-4 w-4 ${
-                                  item.ordonnance_fournie ? "text-emerald-500" : "text-amber-500"
-                                }`}
+                                className={`h-4 w-4 ${item.ordonnance_fournie ? "text-emerald-500" : "text-red-500"
+                                  }`}
                               />
                               <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-800 px-2.5 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
                                 {item.ordonnance_fournie ? "Ordonnance fournie" : "Ordonnance requise"}
@@ -329,7 +300,6 @@ export default function CommandeDetailPage() {
                               </span>
                             </span>
                           )}
-                          <span>{item.medicament}</span>
                         </span>
                       </td>
                       <td className="px-6 py-5 text-gray-600">{String(item.qte).padStart(2, "0")}</td>
@@ -347,25 +317,14 @@ export default function CommandeDetailPage() {
             </div>
           </div>
 
-          {/* ── Boutons d'action ── */}
+          {/* ── Boutons lifecycle ── */}
           <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
             {statut === "recuperee" ? (
-              <button
-                type="button"
-                disabled
-                className="flex-1 rounded-full bg-emerald-600 px-6 py-3 text-base font-semibold text-white cursor-default opacity-80"
-              >
+              <div className="flex-1 flex items-center justify-center rounded-full bg-emerald-100 px-6 py-3 text-base font-semibold text-emerald-700">
                 Commande récupérée
-              </button>
+              </div>
             ) : statut === "prete" ? (
               <>
-                <button
-                  type="button"
-                  disabled
-                  className="flex-1 rounded-full bg-gray-50 border-2 border-gray-300 px-6 py-3 text-base font-semibold text-gray-400 cursor-default"
-                >
-                  En attente de récupération
-                </button>
                 <button
                   type="button"
                   onClick={handleRecuperer}
@@ -378,31 +337,15 @@ export default function CommandeDetailPage() {
               </>
             ) : (
               <>
-                {/* Demander ordonnance — gris pill */}
-                <button
-                  type="button"
-                  onClick={handleDemanderOrdonnance}
-                  disabled={notifDisabled}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold transition-colors ${
-                    notifDisabled
-                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
-                >
-                  {submittingNotif && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Demander ordonnance
-                </button>
-
                 {/* Prête — vert outline */}
                 <button
                   type="button"
                   onClick={handleReady}
                   disabled={submittingReady || !canMarkReady}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full border-2 px-6 py-3 text-base font-semibold transition-colors ${
-                    !submittingReady && canMarkReady
+                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full border-2 px-6 py-3 text-base font-semibold transition-colors ${!submittingReady && canMarkReady
                       ? "border-emerald-600 text-emerald-600 bg-white hover:bg-emerald-50"
                       : "border-gray-300 text-gray-400 bg-white cursor-not-allowed"
-                  }`}
+                    }`}
                 >
                   {submittingReady && <Loader2 className="h-4 w-4 animate-spin" />}
                   Prête
@@ -413,11 +356,10 @@ export default function CommandeDetailPage() {
                   type="button"
                   onClick={handleRecuperer}
                   disabled={!canForceRecuperer || submittingRecuperer}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold text-white transition-colors ${
-                    canForceRecuperer && !submittingRecuperer
+                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold text-white transition-colors ${canForceRecuperer && !submittingRecuperer
                       ? "bg-emerald-600 hover:bg-emerald-700"
                       : "bg-gray-300 cursor-not-allowed"
-                  }`}
+                    }`}
                 >
                   {submittingRecuperer && <Loader2 className="h-4 w-4 animate-spin" />}
                   Récupérée

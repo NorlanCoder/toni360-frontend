@@ -210,6 +210,7 @@ export interface PartnerNotificationItem {
   type: string;
   is_read: boolean;
   created_at?: string;
+  data?: Record<string, unknown>;
 }
 
 export interface PartnerNotificationsResponse {

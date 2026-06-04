@@ -8,6 +8,7 @@ import { Package, ChevronDown } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
 import { extractCollection, getPartnerCommandes, PartnerCommande } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
+import { useHeaderSearch } from "@/app/partenaire/_header-search-context";
 import { toast } from "sonner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
@@ -15,6 +16,7 @@ type TabKey = "a-preparer" | "en-attente" | "recuperees";
 
 interface Order {
   id: string;
+  numero_commande: string;
   patient: { nom: string; prenom: string };
   date: string;
   montant: string;
@@ -34,6 +36,17 @@ const A_PREPARER_STATUTS = new Set([
 
 
 /* ──────────────────────── Helpers ────────────────────────────── */
+function getStatusBadgeStyle(statut: string): React.CSSProperties {
+  const s = statut.toLowerCase();
+  if (s.includes("attente"))
+    return { backgroundColor: "#FFF4C7", color: "#B8A659" };
+  if (s.includes("préparation") || s.includes("preparation") || s.includes("cours"))
+    return { backgroundColor: "#DBEAFE", color: "#1D4ED8" };
+  if (s.includes("payée") || s.includes("payee"))
+    return { backgroundColor: "#D1FAE5", color: "#065F46" };
+  return { backgroundColor: "#FEE2E2", color: "#B91C1C" };
+}
+
 const days = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0"));
 const months = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"));
 const years = Array.from({ length: 10 }, (_, i) => String(2020 + i));
@@ -186,6 +199,7 @@ export default function PartenaireDashboardPage() {
         setOrders(
           combined.map((commande) => ({
             id: commande.id,
+            numero_commande: commande.numero_commande ?? commande.id,
             patient: { nom: commande.patient?.nom ?? "", prenom: commande.patient?.prenom ?? "" },
             date: commande.created_at
               ? formatDate.format(new Date(commande.created_at))
@@ -210,26 +224,34 @@ export default function PartenaireDashboardPage() {
     return () => clearInterval(intervalId);
   }, [formatDate, moneyFormat]);
 
-  const filteredOrders = useMemo(
-    () =>
-      orders.filter((order) => {
-        if (order.date === "-") return true;
-        const parts = order.date.split("/");
-        if (parts.length !== 3) return true;
-        const [dd, mm, yyyy] = parts;
-        const orderDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
-        if (fromDay && fromMonth && fromYear) {
-          const fromDate = new Date(`${fromYear}-${fromMonth}-${fromDay}T00:00:00`);
-          if (orderDate < fromDate) return false;
-        }
-        if (toDay && toMonth && toYear) {
-          const toDate = new Date(`${toYear}-${toMonth}-${toDay}T23:59:59`);
-          if (orderDate > toDate) return false;
-        }
-        return true;
-      }),
-    [orders, fromDay, fromMonth, fromYear, toDay, toMonth, toYear],
-  );
+  const { searchQuery } = useHeaderSearch();
+
+  const filteredOrders = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return orders.filter((order) => {
+      if (q) {
+        const matchSearch =
+          order.numero_commande.toLowerCase().includes(q) ||
+          order.patient.nom.toLowerCase().includes(q) ||
+          order.patient.prenom.toLowerCase().includes(q);
+        if (!matchSearch) return false;
+      }
+      if (order.date === "-") return true;
+      const parts = order.date.split("/");
+      if (parts.length !== 3) return true;
+      const [dd, mm, yyyy] = parts;
+      const orderDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
+      if (fromDay && fromMonth && fromYear) {
+        const fromDate = new Date(`${fromYear}-${fromMonth}-${fromDay}T00:00:00`);
+        if (orderDate < fromDate) return false;
+      }
+      if (toDay && toMonth && toYear) {
+        const toDate = new Date(`${toYear}-${toMonth}-${toDay}T23:59:59`);
+        if (orderDate > toDate) return false;
+      }
+      return true;
+    });
+  }, [orders, searchQuery, fromDay, fromMonth, fromYear, toDay, toMonth, toYear]);
 
   return (
     <>
@@ -324,7 +346,7 @@ export default function PartenaireDashboardPage() {
                     onClick={() => router.push(`/partenaire/commandes/${order.id}`)}
                   >
                     <td className="px-8 py-6 text-base font-mono text-gray-700">
-                      {order.id}
+                      {order.numero_commande}
                     </td>
                     <td className="px-8 py-6 text-base font-semibold text-gray-900">
                       {order.patient.nom} {order.patient.prenom}
@@ -333,7 +355,7 @@ export default function PartenaireDashboardPage() {
                       {order.montant}
                     </td>
                     <td className="px-8 py-6">
-                      <span className="inline-block rounded-full bg-red-100 px-4 py-2 text-sm font-semibold text-red-700">
+                      <span className="inline-block rounded-full px-4 py-2 text-sm font-semibold" style={getStatusBadgeStyle(order.statut)}>
                         {order.statut}
                       </span>
                     </td>

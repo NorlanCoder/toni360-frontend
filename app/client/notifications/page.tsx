@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BellOff, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { BellOff, ExternalLink, X } from "lucide-react";
 import { toast } from "sonner";
 import NotificationCard from "@/components/notifications/NotificationCard";
 import {
@@ -21,9 +22,12 @@ interface Notification {
   title: string;
   description: string;
   isRead: boolean;
+  commande_id?: string;
+  numero_commande?: string;
 }
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [nonReadCount, setNonReadCount] = useState(0);
   const [selectedNotif, setSelectedNotif] = useState<Notification | null>(null);
@@ -54,6 +58,8 @@ export default function NotificationsPage() {
           title: notification.titre,
           description: notification.message,
           isRead: notification.is_read,
+          commande_id: typeof notification.data?.commande_id === "string" ? notification.data.commande_id : undefined,
+          numero_commande: typeof notification.data?.numero === "string" ? notification.data.numero : undefined,
         })),
       );
 
@@ -156,6 +162,22 @@ export default function NotificationsPage() {
               <h2 className="font-bold text-gray-900 text-base pr-6">{selectedNotif.title}</h2>
             </div>
             <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{selectedNotif.description}</p>
+            {selectedNotif.commande_id && (
+              <div className="mt-4 flex items-center gap-2">
+                <span className="text-sm text-gray-500">Commande :</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedNotif(null);
+                    router.push(`/client/orders/${selectedNotif.commande_id}`);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-toni-green-dark-2 px-3 py-1 text-sm font-semibold text-toni-green-dark-2 hover:bg-[#E6F6F0] transition-colors"
+                >
+                  <ExternalLink size={13} />
+                  {selectedNotif.numero_commande ?? selectedNotif.commande_id}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

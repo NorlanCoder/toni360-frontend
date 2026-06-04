@@ -275,6 +275,7 @@ export interface PatientNotificationItem {
   titre: string;
   message: string;
   is_read: boolean;
+  data?: Record<string, unknown>;
 }
 
 export interface NotificationsResponse {
