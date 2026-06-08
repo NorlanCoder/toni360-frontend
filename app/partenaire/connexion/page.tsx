@@ -1,27 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Lock, Eye, EyeOff } from "lucide-react";
-import Link from "next/link";
 import Image from "next/image";
-import { COUNTRY_CODES } from "@/lib/countryCodes";
+import { useRouter } from "next/navigation";
+import { Lock, Eye, EyeOff, AtSign } from "lucide-react";
+import Link from "next/link";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 import { getPartnerProfile, loginPartner } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
+import { getPartnerHomeRoute } from "@/lib/auth/authorization";
+import { toast } from "sonner";
 
 export default function ConnexionPartenairePage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<"phone" | "email">("phone");
+  const [loginMethod, setLoginMethod] = useState<"phone" | "email">("email");
   const [submitting, setSubmitting] = useState(false);
 
-  const beninCode =
-    COUNTRY_CODES.find((c) => c.code === "+229") || COUNTRY_CODES[0];
-
   const [formData, setFormData] = useState({
-    indicatif: beninCode.code,
-    telephone: "",
+    telephone: undefined as string | undefined,
     email: "",
     password: "",
     rememberMe: false,
@@ -35,11 +34,11 @@ export default function ConnexionPartenairePage() {
     }
 
     const loginValue = loginMethod === "phone"
-      ? `${formData.indicatif}${formData.telephone}`.replace(/\s+/g, "")
+      ? (formData.telephone ?? "")
       : formData.email.trim();
 
     if (!loginValue || !formData.password) {
-      window.alert("Veuillez renseigner vos identifiants.");
+      toast.warning("Veuillez renseigner vos identifiants.");
       return;
     }
 
@@ -52,21 +51,22 @@ export default function ConnexionPartenairePage() {
 
       const profileResponse = await getPartnerProfile(response.data.token);
 
-      saveAuthSession({
-        userType: "user",
+      const session = {
+        userType: "user" as const,
         token: response.data.token,
         tokenType: response.data.token_type,
         profile: profileResponse.data.user ?? response.data.user ?? null,
         permissions: profileResponse.data.permissions ?? response.data.permissions ?? [],
-      });
+      };
+      saveAuthSession(session, formData.rememberMe);
 
-      window.alert(response.message ?? "Connexion réussie.");
-      router.push("/partenaire/dashboard");
+      toast.success(response.message ?? "Connexion réussie.");
+      router.push(getPartnerHomeRoute(session));
     } catch (error: unknown) {
       if (error instanceof ApiError) {
-        window.alert(error.message);
+        toast.error(error.message);
       } else {
-        window.alert("Une erreur est survenue pendant la connexion.");
+        toast.error("Une erreur est survenue pendant la connexion.");
       }
     } finally {
       setSubmitting(false);
@@ -74,117 +74,81 @@ export default function ConnexionPartenairePage() {
   };
 
   return (
-    <div className="flex min-h-screen h-screen">
-      {/* Section Image - Gauche */}
-      <div className="hidden lg:block lg:w-1/2 relative">
-        <Image
-          src="/images/imgc.jpg"
-          alt="Pharmacienne"
-          fill
-          className="object-cover object-center"
-          priority
+    <div className="flex min-h-screen">
+      {/* Section Image - Gauche - Cachée sur mobile */}
+      <div className="relative hidden lg:block lg:w-3/5">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/images/imgc.jpg')" }}
         />
       </div>
 
       {/* Section Formulaire - Droite */}
       <div
-        className="w-full lg:w-1/2 flex flex-col items-center justify-center px-6"
-        style={{ backgroundColor: "#f9fafb" }}
+        className="flex w-full flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-10 lg:w-2/5 lg:px-8 lg:py-12"
+        style={{ backgroundColor: "#eafff8" }}
       >
         <div className="w-full max-w-md">
           {/* Logo */}
-          <div className="mb-6 text-center">
-            <Image
-              src="/images/logo.png"
-              alt="Toni360"
-              width={180}
-              height={60}
-              className="mx-auto"
-              priority
-            />
+          <div className="mb-6 text-center sm:mb-8">
+            <Link href="/" aria-label="Accueil">
+              <Image
+                src="/images/logo.png"
+                alt="Toni360"
+                width={192}
+                height={96}
+                priority
+                className="mx-auto h-20 w-auto sm:h-24"
+              />
+            </Link>
           </div>
 
           {/* Titre */}
-          <h1
-            className="text-5xl font-bold text-center mb-8"
-            style={{ color: "#137551" }}
-          >
+          <h2 className="mb-8 text-center text-3xl text-gray-800 sm:mb-10 sm:text-4xl lg:text-5xl">
             Connexion
-          </h1>
+          </h2>
 
-          {/* Onglets */}
-          <div className="flex mb-8">
+          {/* Tabs */}
+          <div className="mb-5 grid grid-cols-2 border-b-2 border-gray-300 sm:mb-6">
             <button
               type="button"
               onClick={() => setLoginMethod("phone")}
-              className={`flex-1 py-3 text-sm font-bold tracking-wide uppercase transition-all rounded-md ${
-                loginMethod === "phone"
-                  ? "text-white"
-                  : "text-gray-600 bg-transparent"
-              }`}
-              style={
-                loginMethod === "phone"
-                  ? { backgroundColor: "#137551" }
-                  : undefined
-              }
+              className={`px-1 py-2.5 text-xs font-semibold tracking-wide transition sm:py-3 sm:text-sm ${loginMethod === "phone"
+                  ? "border-b-4 border-toni-green-dark-2 text-toni-green-dark-2"
+                  : "text-gray-600"
+                }`}
             >
-              Numero de telephone
+              NUMERO DE TELEPHONE
             </button>
             <button
               type="button"
               onClick={() => setLoginMethod("email")}
-              className={`flex-1 py-3 text-sm font-bold tracking-wide uppercase transition-all rounded-md ${
-                loginMethod === "email"
-                  ? "text-white"
-                  : "text-gray-600 bg-transparent"
-              }`}
-              style={
-                loginMethod === "email"
-                  ? { backgroundColor: "#137551" }
-                  : undefined
-              }
+              className={`px-1 py-2.5 text-xs font-semibold tracking-wide transition sm:py-3 sm:text-sm ${loginMethod === "email"
+                  ? "border-b-4 border-toni-green-dark-2 text-toni-green-dark-2"
+                  : "text-gray-600"
+                }`}
             >
-              Addresse mail
+              ADDRESSE MAIL
             </button>
           </div>
 
           {/* Formulaire */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Champ téléphone ou email */}
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+            {/* Téléphone ou Email */}
             {loginMethod === "phone" ? (
-              <div
-                className="flex items-center rounded-lg overflow-hidden"
-                style={{ backgroundColor: "#f1f1f1", border: "1px solid #e0e0e0" }}
-              >
-                <div className="flex items-center gap-1.5 px-4 py-4">
-                  <span className="text-lg leading-none">{beninCode.flag}</span>
-                  <select
-                    value={formData.indicatif}
-                    onChange={(e) =>
-                      setFormData({ ...formData, indicatif: e.target.value })
-                    }
-                    className="bg-transparent text-sm text-gray-700 focus:outline-none appearance-none cursor-pointer"
-                    style={{ minWidth: "52px" }}
-                  >
-                    {COUNTRY_CODES.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {c.flag} {c.code}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <input
-                  type="tel"
-                  placeholder="numéro de téléphone"
+              <div className="flex rounded-md border bg-white border-black px-3 py-2.5 text-black transition-colors focus-within:border-toni-green-dark-2 sm:py-3">
+                <PhoneInput
+                  international
+                  defaultCountry="BJ"
+                  placeholder="Numéro de téléphone"
                   value={formData.telephone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, telephone: e.target.value })
-                  }
-                  className="flex-1 px-2 py-4 bg-transparent focus:outline-none text-gray-700 text-sm placeholder-gray-400"
+                  onChange={(value) => setFormData({ ...formData, telephone: value })}
+                  className="bg-white"
                 />
               </div>
             ) : (
-              <div>
+              <div className="relative flex items-center">
+                <AtSign className="absolute left-4 text-gray-400" size={18} />
                 <input
                   type="email"
                   placeholder="Adresse email"
@@ -192,24 +156,14 @@ export default function ConnexionPartenairePage() {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full px-4 py-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137551] text-gray-700 text-sm placeholder-gray-400"
-                  style={{
-                    backgroundColor: "#f1f1f1",
-                    border: "1px solid #e0e0e0",
-                  }}
+                  className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
                 />
               </div>
             )}
 
             {/* Mot de passe */}
-            <div
-              className="relative flex items-center rounded-lg"
-              style={{ backgroundColor: "#f1f1f1", border: "1px solid #e0e0e0" }}
-            >
-              <Lock
-                className="absolute left-4 text-gray-400"
-                size={18}
-              />
+            <div className="relative flex items-center">
+              <Lock className="absolute left-4 text-gray-400" size={18} />
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Mot de passe"
@@ -217,7 +171,7 @@ export default function ConnexionPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full pl-11 pr-12 py-4 bg-transparent rounded-lg focus:outline-none text-gray-700 text-sm placeholder-gray-400"
+                className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
               <button
                 type="button"
@@ -229,7 +183,7 @@ export default function ConnexionPartenairePage() {
             </div>
 
             {/* Se souvenir de moi & Mot de passe oublié */}
-            <div className="flex items-center justify-between text-sm pt-1">
+            <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -237,38 +191,30 @@ export default function ConnexionPartenairePage() {
                   onChange={(e) =>
                     setFormData({ ...formData, rememberMe: e.target.checked })
                   }
-                  className="w-4 h-4 border-gray-300 rounded"
+                  className="w-4 h-4 border-gray-300 rounded outline-none"
                 />
-                <span className="text-gray-600 text-sm">Se souvenir de moi</span>
+                <span className="text-sm text-gray-700">Se souvenir de moi</span>
               </label>
-              <Link
-                href="#"
-                className="text-gray-600 text-sm hover:underline"
-              >
+              <Link href="/mot-de-passe-oublie?from=partenaire" className="text-sm text-gray-700 hover:text-toni-green-dark-2 sm:text-right">
                 Mot de passe oublié ?
               </Link>
             </div>
 
-            {/* Bouton Continuer */}
+            {/* Bouton Se connecter */}
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-4 text-white font-bold text-base rounded-lg transition hover:opacity-90"
-              style={{ backgroundColor: "#137551" }}
+              className="w-full rounded-md bg-toni-green-dark-2 py-2.5 text-sm font-bold text-white transition hover:bg-toni-green-dark sm:py-3 sm:text-base"
             >
-              {submitting ? "Connexion..." : "Continuer"}
+              {submitting ? "Connexion..." : "Se connecter"}
             </button>
           </form>
 
-          {/* Lien inscription */}
-          <p className="text-center mt-8 text-base text-gray-600">
-            Déjà un compte ?{" "}
-            <Link
-              href="/partenaire/inscription"
-              className="font-bold hover:underline"
-              style={{ color: "#137551" }}
-            >
-              Je me connecte
+          {/* Lien vers inscription */}
+          <p className="mt-5 text-center text-sm text-gray-700 sm:mt-6">
+            Pas encore de compte ?{" "}
+            <Link href="/partenaire/inscription" className="text-toni-green-dark-2 font-semibold hover:underline">
+              Inscrivez-vous.
             </Link>
           </p>
         </div>

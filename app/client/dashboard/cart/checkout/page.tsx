@@ -1,26 +1,30 @@
 "use client";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { Camera, Upload } from "lucide-react";
-import {
-  clearPanier,
+import { Eye, FileText, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
+import { annulerCommande,
   createCommande,
   getCommande,
   getPanier,
-  initierCommandePaiement,
+  mettreEnAttenteCommande,
   removePanierItem,
   updatePanierItemQuantity,
   uploadOrdonnanceForProduitCommande,
+  validerCommande,
 } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import { useCart } from "@/lib/cart-context";
+import PharmacieHeader from "@/components/client/PharmacieHeader";
 
 interface CartItem {
   id: string;
   name: string;
   type: string;
   qty: number;
+  maxQty: number;
   price: number;
   requiresPrescription: boolean;
 }
@@ -41,11 +45,24 @@ function CartPageContent() {
   const isCommandeValidationMode = Boolean(commandeIdFromUrl);
 
   const [items, setItems] = useState<CartItem[]>([]);
-  const [message, setMessage] = useState("");
-  const [pending, setPending] = useState(false);
+  const [pendingCancel, setPendingCancel] = useState(false);
+  const [pendingHold, setPendingHold] = useState(false);
+  const [pendingCheckout, setPendingCheckout] = useState(false);
+  const [pendingItems, setPendingItems] = useState(false);
+  const anyPending = pendingCancel || pendingHold || pendingCheckout || pendingItems;
   const [ordonnanceFile, setOrdonnanceFile] = useState<File | null>(null);
+  const [ordonnancePreviewUrl, setOrdonnancePreviewUrl] = useState<string | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [uploadRetryCandidateId, setUploadRetryCandidateId] = useState<string | null>(null);
+  const [uploadRetryCandidateNumero, setUploadRetryCandidateNumero] = useState<string | null>(null);
   const [pharmacyName, setPharmacyName] = useState(pharmacyNameFromUrl);
+  const [pharmacyAdresse, setPharmacyAdresse] = useState("");
+  const [pharmacyTelephone, setPharmacyTelephone] = useState("");
+  const [pharmacyEmail, setPharmacyEmail] = useState("");
   const [prescriptionCount, setPrescriptionCount] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const maxQtyByIdRef = useRef<Record<string, number>>({});
+  const { clearLocalCart } = useCart();
 
   const resolvePaymentPhone = (): string => {
     const session = getAuthSession();
@@ -76,28 +93,37 @@ function CartPageContent() {
     try {
       const response = await getPanier(token);
       const panier = response.data.panier;
-      const resolvedPharmacyName = panier.pharmacies[0]?.pharmacie?.nom ?? pharmacyNameFromUrl;
-      setPharmacyName(resolvedPharmacyName);
+      const firstPharmacie = panier.pharmacies[0]?.pharmacie;
+      setPharmacyName(firstPharmacie?.nom ?? pharmacyNameFromUrl);
+      setPharmacyAdresse([firstPharmacie?.adresse, firstPharmacie?.ville].filter(Boolean).join(", "));
+      setPharmacyTelephone(firstPharmacie?.telephone ?? "");
+      setPharmacyEmail(firstPharmacie?.email ?? "");
 
       const mappedItems = panier.pharmacies.flatMap((pharmacieBloc) =>
-        pharmacieBloc.produits.map((item) => ({
-          id: item.id,
-          name: item.produit.nom,
-          type: [item.produit.forme, item.produit.dosage].filter(Boolean).join(" ") || "Produit",
-          qty: item.quantite,
-          price: Number(item.prix_unitaire ?? 0),
-          requiresPrescription: Boolean(item.produit.necessite_ordonnance),
-        })),
+        pharmacieBloc.produits.map((item) => {
+          if (!(item.id in maxQtyByIdRef.current)) {
+            maxQtyByIdRef.current[item.id] = item.quantite;
+          }
+          return {
+            id: item.id,
+            name: item.produit.nom,
+            type: [item.produit.forme, item.produit.dosage].filter(Boolean).join(" ") || "Produit",
+            qty: item.quantite,
+            maxQty: maxQtyByIdRef.current[item.id],
+            price: Number(item.prix_unitaire ?? 0),
+            requiresPrescription: Boolean(item.produit.necessite_ordonnance),
+          };
+        }),
       );
 
       setItems(mappedItems);
       setPrescriptionCount(panier.produits_avec_ordonnance.length);
       if (mappedItems.length === 0) {
-        setMessage("Votre panier est vide.");
+        toast.warning("Votre panier est vide.");
       }
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     }
   };
@@ -113,15 +139,24 @@ function CartPageContent() {
       const response = await getCommande(token, commandeId);
       const commande = response.data.commande;
       setPharmacyName(commande.pharmacie?.nom ?? pharmacyNameFromUrl);
+      setPharmacyAdresse(commande.pharmacie?.adresse ?? "");
+      setPharmacyTelephone(commande.pharmacie?.telephone ?? "");
+      setPharmacyEmail((commande.pharmacie as { email?: string })?.email ?? "");
 
-      const mappedItems: CartItem[] = commande.produits.map((item) => ({
-        id: item.id,
-        name: item.produit?.nom ?? "Produit",
-        type: "Produit",
-        qty: Number(item.quantite ?? 1),
-        price: Number(item.prix_unitaire ?? 0),
-        requiresPrescription: Boolean(item.ordonnance_requise),
-      }));
+      const mappedItems: CartItem[] = commande.produits.map((item) => {
+        if (!(item.id in maxQtyByIdRef.current)) {
+          maxQtyByIdRef.current[item.id] = Number(item.quantite ?? 1);
+        }
+        return {
+          id: item.id,
+          name: item.produit?.nom ?? "Produit",
+          type: "Produit",
+          qty: Number(item.quantite ?? 1),
+          maxQty: maxQtyByIdRef.current[item.id],
+          price: Number(item.prix_unitaire ?? 0),
+          requiresPrescription: Boolean(item.ordonnance_requise),
+        };
+      });
 
       setItems(mappedItems);
       const missingPrescriptionCount = commande.produits.filter(
@@ -130,7 +165,7 @@ function CartPageContent() {
       setPrescriptionCount(missingPrescriptionCount);
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     }
   };
@@ -196,17 +231,22 @@ function CartPageContent() {
       return;
     }
 
+    if (delta > 0 && item.qty >= item.maxQty) {
+      toast.warning("Vous ne pouvez pas dépasser la quantité initiale.");
+      return;
+    }
+
     const nextQty = Math.max(1, item.qty + delta);
-    setPending(true);
+    setPendingItems(true);
     try {
       await updatePanierItemQuantity(token, id, nextQty);
       await loadPanier();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
-      setPending(false);
+      setPendingItems(false);
     }
   };
 
@@ -215,39 +255,61 @@ function CartPageContent() {
       return;
     }
 
-    setPending(true);
+    setPendingItems(true);
     try {
       await removePanierItem(token, id);
       await loadPanier();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
-      setPending(false);
+      setPendingItems(false);
     }
   };
 
   const handleCancel = async () => {
-    if (!token) {
+    if (anyPending) {
       return;
     }
 
-    setPending(true);
+    if (!token) {
+      clearAuthSession();
+      router.replace("/client/connexion");
+      return;
+    }
+
+    if (items.length === 0) {
+      router.push("/client/orders");
+      return;
+    }
+
+    setPendingCancel(true);
     try {
-      await clearPanier(token);
-      router.push("/client/dashboard/cart");
+      const livePanierId = await resolveActivePanierId();
+      if (!livePanierId) {
+        router.push("/client/orders");
+        return;
+      }
+
+      const creation = await createCommande(token, livePanierId);
+      const commandeId = creation.data.commande.id;
+
+      await annulerCommande(token, commandeId, "Annulée par le patient depuis le checkout");
+
+      clearLocalCart();
+      router.push("/client/orders");
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
-      setPending(false);
+      setPendingCancel(false);
     }
   };
 
   const handleCheckout = async () => {
-    if (pending) {
+    if (anyPending) {
       return;
     }
 
@@ -258,293 +320,499 @@ function CartPageContent() {
         return;
       }
 
-      setPending(true);
-      setMessage("");
+      setPendingCheckout(true);
       try {
         if (ordonnanceFile) {
-          await uploadOrdonnances(commandeIdFromUrl, ordonnanceFile);
+          try {
+            await uploadOrdonnances(commandeIdFromUrl, ordonnanceFile);
+          } catch (uploadError) {
+            setOrdonnanceFile(null);
+            if (uploadError instanceof ApiError) {
+              toast.error("L'ordonnance n'a pas pu être envoyée. Veuillez sélectionner un nouveau fichier et réessayer.");
+            }
+            return;
+          }
         }
 
-        const paiement = await initierCommandePaiement(
-          token,
-          commandeIdFromUrl,
-          "MTN",
-          resolvePaymentPhone(),
-        );
+        await validerCommande(token, commandeIdFromUrl);
 
-        if (!paiement.data.reference && !paiement.data.qr_code?.code) {
-          setMessage("Paiement validé mais QR code non généré. Réessayez dans quelques secondes.");
-        }
-
-        router.push("/client/orders");
+        router.push(`/client/orders/${commandeIdFromUrl}/qrcode`);
       } catch (error) {
         if (error instanceof ApiError) {
-          setMessage(error.message);
+          toast.error(error.message);
         }
       } finally {
-        setPending(false);
+        setPendingCheckout(false);
       }
 
       return;
     }
 
     if (!token || items.length === 0) {
-      setMessage("Votre panier est vide.");
+      toast.warning("Votre panier est vide.");
       return;
     }
 
-    setPending(true);
-    setMessage("");
+    // Retry : commande déjà créée mais upload d'ordonnance échoué
+    if (uploadRetryCandidateId && uploadRetryCandidateNumero) {
+      if (!ordonnanceFile) {
+        toast.warning("Veuillez sélectionner un nouveau fichier d'ordonnance.");
+        return;
+      }
+      setPendingCheckout(true);
+      try {
+        await uploadOrdonnances(uploadRetryCandidateId, ordonnanceFile);
+        const numero = uploadRetryCandidateNumero;
+        setUploadRetryCandidateId(null);
+        setUploadRetryCandidateNumero(null);
+        router.push(`/client/orders?commande=${encodeURIComponent(numero)}`);
+      } catch (error) {
+        setOrdonnanceFile(null);
+        if (error instanceof ApiError) {
+          toast.error("L'ordonnance n'a pas pu être envoyée. Veuillez sélectionner un nouveau fichier et réessayer.");
+        }
+      } finally {
+        setPendingCheckout(false);
+      }
+      return;
+    }
+
+    setPendingCheckout(true);
     try {
       const livePanierId = await resolveActivePanierId();
       if (!livePanierId) {
-        setMessage("Panier introuvable. Rechargez la page puis réessayez.");
+        toast.error("Panier introuvable. Rechargez la page puis réessayez.");
         return;
       }
 
       const creation = await createCommande(token, livePanierId);
       const commandeId = creation.data.commande.id;
+      const commandeNumero = creation.data.commande.numero_commande;
+
+      if (!creation.data.necessite_ordonnance) {
+        await validerCommande(token, commandeId);
+        clearLocalCart();
+        router.push(`/client/orders/${commandeId}/qrcode`);
+        return;
+      }
 
       if (creation.data.necessite_ordonnance && ordonnanceFile) {
-        await uploadOrdonnances(commandeId, ordonnanceFile);
+        try {
+          await uploadOrdonnances(commandeId, ordonnanceFile);
+        } catch (uploadError) {
+          setUploadRetryCandidateId(commandeId);
+          setUploadRetryCandidateNumero(commandeNumero);
+          setOrdonnanceFile(null);
+          if (uploadError instanceof ApiError) {
+            toast.error("L'ordonnance n'a pas pu être envoyée. Veuillez sélectionner un nouveau fichier et réessayer.");
+          }
+          return;
+        }
       }
 
-      router.push(`/client/orders?commande=${encodeURIComponent(creation.data.commande.numero_commande)}`);
+      await validerCommande(token, commandeId);
+      clearLocalCart();
+      router.push(`/client/orders/${commandeId}/qrcode`);
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
-      setPending(false);
+      setPendingCheckout(false);
     }
   };
 
   const handlePutOnHold = async () => {
-    if (pending) {
+    if (anyPending) {
       return;
     }
 
     if (!token || items.length === 0) {
-      setMessage("Votre panier est vide.");
+      toast.warning("Votre panier est vide.");
       return;
     }
 
-    setPending(true);
-    setMessage("");
+    setPendingHold(true);
     try {
       const livePanierId = await resolveActivePanierId();
       if (!livePanierId) {
-        setMessage("Panier introuvable. Rechargez la page puis réessayez.");
+        toast.error("Panier introuvable. Rechargez la page puis réessayez.");
         return;
       }
 
-      const creation = await createCommande(token, livePanierId, "Commande mise en attente par le patient");
+      const creation = await createCommande(token, livePanierId);
+      const holdCommandeId = creation.data.commande.id;
+      const holdCommandeNumero = creation.data.commande.numero_commande;
+
+      // Mettre en attente AVANT l'upload : l'upload change le statut vers
+      // ORDONNANCE_EN_VERIFICATION, ce qui bloquerait mettreEnAttente.
+      await mettreEnAttenteCommande(token, holdCommandeId);
+
       if (creation.data.necessite_ordonnance && ordonnanceFile) {
-        await uploadOrdonnances(creation.data.commande.id, ordonnanceFile);
+        try {
+          await uploadOrdonnances(holdCommandeId, ordonnanceFile);
+        } catch (uploadError) {
+          // La commande est déjà en attente, on mémorise le retry pour l'ordonnance.
+          setUploadRetryCandidateId(holdCommandeId);
+          setUploadRetryCandidateNumero(holdCommandeNumero);
+          setOrdonnanceFile(null);
+          if (uploadError instanceof ApiError) {
+            toast.warning("Commande mise en attente, mais l'ordonnance n'a pas pu être envoyée. Veuillez la joindre depuis « Mes commandes ».");
+          }
+          clearLocalCart();
+          router.push(`/client/orders?commande=${encodeURIComponent(holdCommandeNumero)}`);
+          return;
+        }
       }
-      router.push(`/client/orders?commande=${encodeURIComponent(creation.data.commande.numero_commande)}`);
+
+      clearLocalCart();
+      router.push(`/client/orders?commande=${encodeURIComponent(holdCommandeNumero)}`);
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
-      setPending(false);
+      setPendingHold(false);
     }
   };
 
   const formatPrice = (value: number | null | undefined) =>
-    Number(value ?? 0).toLocaleString("fr-FR").replace(/,/g, " ");
+    Math.round(Number(value ?? 0))
+      .toString()
+      .replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
 
   const total = items.reduce((sum, item) => sum + item.qty * item.price, 0);
+  const hasPrescription = prescriptionCount > 0;
 
   return (
-    <div className="px-6 pb-8 flex-1">
-          {message && <p className="mb-4 text-sm text-red-500">{message}</p>}
-          {/* Pharmacy Card */}
-          <div className="rounded-xl overflow-hidden mb-5 max-w-4xl"
-            style={{
-              background: "linear-gradient(135deg, #137551 0%, #0fa37f 50%, #11ca8c 100%)",
-            }}
+    <section className="mx-auto w-full max-w-6xl px-3 pb-6 sm:px-6 sm:pb-8">
+
+      {/* ── Header pharmacie ── */}
+      <PharmacieHeader
+        nom={pharmacyName}
+        adresse={pharmacyAdresse}
+        telephone={pharmacyTelephone}
+        email={pharmacyEmail}
+        className="rounded-xl px-3 py-3"
+      />
+
+      {/* ── Table produits ── */}
+      <div className="overflow-hidden bg-white">
+
+        {/* En-têtes colonnes (desktop) */}
+        <div className="hidden sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr_44px] gap-2 px-6 py-3 text-base font-bold text-[#B5B5B5] border-b border-[#66666680]">
+          <span>Nom du produit</span>
+          <span className="text-center">Qté</span>
+          <span>P.U</span>
+          <span>Total</span>
+          <span />
+        </div>
+
+        {items.map((item, idx) => (
+          <div
+            key={item.id}
+            className={`flex flex-col gap-3 px-6 py-4 sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr_44px] sm:gap-2 sm:items-center ${idx < items.length - 1 ? "border-b border-[#66666680]" : ""
+              }`}
           >
-            <div className="flex items-center justify-between px-5 py-3">
-              <div className="text-white">
-                <h2 className="text-lg font-bold mb-1">Pharmacie</h2>
-                <h2 className="text-xl font-bold mb-1">{pharmacyName}</h2>
-                <p className="text-xs text-white/80 max-w-[200px] leading-relaxed">
-                  Sittué à 200m da la von du quartier de la zone résidentielle du pays
-                </p>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <div className="text-white text-sm text-center">
-                  <p className="text-sm">Hubertmaga@gmail.com</p>
-                  <p className="mt-1 text-sm">+229 65 65 65 65</p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <button className="flex items-center gap-2 bg-white text-gray-800 px-3 py-1.5 rounded-full text-xs font-semibold mt-1 hover:shadow-md transition-shadow">
-                  <LocationIcon />
-                  Itinéraire
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Products Table */}
-          <div className="w-full max-w-4xl">
-            {/* Table Header */}
-            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-center px-3 py-2 text-xs text-gray-400 border-b border-gray-100 font-medium">
-              <span>Nom du produit</span>
-              <span className="text-center">Qte</span>
-              <span className="text-center">Prix</span>
-              <span className="text-center">Total</span>
-              <span className="w-10"></span>
-            </div>
-
-            {/* Table Rows */}
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-center px-3 py-3 border-b border-gray-50 text-sm"
-              >
-                {/* Product Name */}
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{item.type}</p>
-                  {item.requiresPrescription && (
-                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[11px] font-semibold">
+            {/* Nom */}
+            <div>
+              <p className="font-semibold text-gray-900 flex items-center gap-2">
+                {item.name}
+                {item.requiresPrescription && (
+                  <span className="relative group/ordo shrink-0">
+                    <FileText size={15} className="text-red-500" />
+                    <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-red-500 px-2 py-1 text-xs text-white z-10">
                       Ordonnance requise
                     </span>
-                  )}
-                </div>
+                  </span>
+                )}
+              </p>
+              <p className="text-sm text-gray-500">{item.type}</p>
+            </div>
 
-                {/* Quantity */}
-                <div className="flex items-center justify-center">
-                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                    <button
-                      onClick={() => updateQty(item.id, -1)}
-                      disabled={isCommandeValidationMode}
-                      className="px-2 py-1.5 text-gray-500 hover:bg-gray-50 text-sm font-medium transition-colors"
-                    >
-                      −
-                    </button>
-                    <span className="px-2 py-1.5 text-sm font-semibold text-gray-800 min-w-[28px] text-center bg-gray-50">
-                      {item.qty}
-                    </span>
-                    <button
-                      onClick={() => updateQty(item.id, 1)}
-                      disabled={isCommandeValidationMode}
-                      className="px-2 py-1.5 text-[#0fa37f] hover:bg-green-50 text-sm font-medium transition-colors"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* Price */}
-                <p className="text-sm text-gray-600 text-center">
-                  {formatPrice(item.price)} XOF CFA
-                </p>
-
-                {/* Total */}
-                <p className="text-sm font-semibold text-gray-800 text-center">
-                  {formatPrice(item.qty * item.price)} XOF CFA
-                </p>
-
-                {/* Delete */}
+            {/* Qté */}
+            <div className="flex sm:justify-center">
+              <div className="inline-flex items-center rounded-full border border-gray-200 px-2 py-1">
                 <button
-                  onClick={() => removeItem(item.id)}
-                  disabled={isCommandeValidationMode}
-                  className="w-8 flex items-center justify-center text-red-400 hover:text-red-600 transition-colors"
+                  type="button"
+                  onClick={() => updateQty(item.id, -1)}
+                  disabled={anyPending || isCommandeValidationMode}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-50"
                 >
-                  <TrashIcon />
+                  <Minus size={13} />
+                </button>
+                <span className="px-3 text-sm font-semibold text-gray-800 min-w-[24px] text-center">{item.qty}</span>
+                <button
+                  type="button"
+                  onClick={() => updateQty(item.id, 1)}
+                  disabled={anyPending || isCommandeValidationMode}
+                  className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                    item.qty >= item.maxQty
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-toni-green-dark-2 hover:bg-toni-green-light"
+                  }`}
+                >
+                  <Plus size={13} />
                 </button>
               </div>
-            ))}
-          </div>
-
-          {/* Total Bar */}
-          <div className="flex items-center justify-between bg-[#e8faf3] rounded-xl px-8 py-5 mt-6 max-w-4xl">
-            <h3 className="text-xl font-bold text-gray-800">Montant total</h3>
-            <p className="text-xl font-bold text-gray-800">
-              {formatPrice(total)} XOF CFA
-            </p>
-          </div>
-
-          {/* Add Prescription */}
-          <div className="flex flex-col gap-3 mt-6 px-4">
-            <p className="text-sm text-gray-600">
-              {prescriptionCount > 0
-                ? `${prescriptionCount} médicament(s) de cette commande nécessitent une ordonnance.`
-                : "Aucun médicament de cette commande ne nécessite d'ordonnance."}
-            </p>
-            <p className="text-sm font-semibold text-gray-700">Ajouter une ordonnance</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#e8faf3] text-[#0fa37f] hover:bg-[#d9f5ea] transition-colors"
-                aria-label="Prendre une photo"
-              >
-                <Camera size={20} />
-              </button>
-              <label
-                className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#e8faf3] text-[#0fa37f] hover:bg-[#d9f5ea] transition-colors cursor-pointer"
-                aria-label="Importer un fichier"
-              >
-                <Upload size={20} />
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  className="hidden"
-                  onChange={(event) => setOrdonnanceFile(event.target.files?.[0] ?? null)}
-                />
-              </label>
             </div>
-          </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-start gap-3 mt-10 w-full px-4">
+            {/* Prix */}
+            <span className="text-sm text-gray-700 whitespace-nowrap">
+              <span className="sm:hidden text-gray-400 mr-1">P.U :</span>
+              {formatPrice(item.price)} FCFA
+            </span>
+
+            {/* Total */}
+            <span className="text-sm text-gray-700 whitespace-nowrap">
+              <span className="sm:hidden text-gray-400 mr-1">Total :</span>
+              {formatPrice(item.qty * item.price)} FCFA
+            </span>
+
+            {/* Delete */}
             <button
-              onClick={handleCancel}
-              disabled={pending || isCommandeValidationMode}
-              className="px-10 py-3 border-2 border-red-500 text-red-600 rounded-full text-lg font-semibold hover:bg-red-50 transition-colors min-w-[180px]"
+              type="button"
+              onClick={() => removeItem(item.id)}
+              disabled={anyPending || isCommandeValidationMode}
+              className="flex sm:justify-center text-red-400 hover:text-red-600"
+              aria-label="Supprimer"
             >
-              Annuler
-            </button>
-            <button
-              onClick={handlePutOnHold}
-              disabled={pending || items.length === 0}
-              className="px-10 py-3 bg-gray-200 text-gray-600 rounded-full text-lg font-semibold hover:bg-gray-300 transition-colors min-w-[180px] disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              Mettre en attente
-            </button>
-            <button
-              onClick={handleCheckout}
-              disabled={pending || items.length === 0}
-              className="px-10 py-3 bg-[#0fa37f] text-white rounded-full text-lg font-semibold hover:bg-[#0e9272] transition-colors min-w-[200px] disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {pending ? "Traitement..." : isCommandeValidationMode ? "Valider cette commande" : "Valider la commande"}
+              <Trash2 size={17} />
             </button>
           </div>
-    </div>
-  );
-}
+        ))}
 
-/* ─── SVG Icon Components ─── */
+        {/* Montant total */}
+        <div className="flex items-center justify-between bg-[#D7EFDA] px-6 py-5">
+          <span className="text-lg md:text-2xl font-bold text-gray-900">Montant total</span>
+          <span className="text-lg md:text-2xl font-bold text-gray-900">
+            {formatPrice(total)} FCFA
+          </span>
+        </div>
+      </div>
 
-function LocationIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0fa37f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-      <circle cx="12" cy="10" r="3" />
-    </svg>
-  );
-}
+      {/* Ajouter une ordonnance */}
+      {hasPrescription && (
+        <div className="mt-5 flex flex-col gap-2">
+          {uploadRetryCandidateId && (
+            <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <span className="shrink-0 mt-0.5">⚠️</span>
+              <span>L&apos;envoi de l&apos;ordonnance a échoué. Sélectionnez un nouveau fichier puis cliquez sur &quot;Valider&quot;.</span>
+            </div>
+          )}
+          <p className="text-sm text-gray-600 mb-1">
+            {prescriptionCount} médicament(s) de cette commande nécessitent une ordonnance.
+          </p>
 
-function TrashIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    </svg>
+          {/* Fichier sélectionné : prévisualisation */}
+          {ordonnanceFile ? (
+            <div className="flex items-center gap-3 rounded-xl border border-toni-green-dark-2/30 bg-green-50 px-4 py-3">
+              {/* Miniature ou icône PDF */}
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(true)}
+                className="shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-gray-200 bg-white flex items-center justify-center hover:opacity-80 transition"
+                title="Prévisualiser"
+              >
+                {ordonnancePreviewUrl && ordonnanceFile.type.startsWith("image/") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={ordonnancePreviewUrl} alt="aperçu" className="w-full h-full object-cover" />
+                ) : (
+                  <FileText size={22} className="text-toni-green-dark-2" />
+                )}
+              </button>
+
+              {/* Nom du fichier */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 truncate">{ordonnanceFile.name}</p>
+                <p className="text-xs text-gray-400">{(ordonnanceFile.size / 1024).toFixed(0)} Ko</p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowPreviewModal(true)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition"
+                  title="Prévisualiser"
+                >
+                  <Eye size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition"
+                  title="Remplacer"
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrdonnanceFile(null);
+                    if (ordonnancePreviewUrl) URL.revokeObjectURL(ordonnancePreviewUrl);
+                    setOrdonnancePreviewUrl(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-red-500 transition"
+                  title="Supprimer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-3 text-sm font-medium text-gray-700 hover:text-toni-green-dark-2 transition"
+            >
+              <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-toni-green-dark-2 text-white shrink-0">
+                <Plus size={18} />
+              </span>
+              Ajouter une ordonnance
+            </button>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".jpg,.jpeg,.png,.pdf"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null;
+              if (!file) return;
+              const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+              const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".pdf"];
+              const MAX_SIZE = 5 * 1024 * 1024; // 5 Mo
+              const ext = "." + (file.name.split(".").pop() ?? "").toLowerCase();
+              const mimeOk = file.type ? ALLOWED_TYPES.includes(file.type) : false;
+              const extOk = ALLOWED_EXTENSIONS.includes(ext);
+              if (!mimeOk && !extOk) {
+                toast.error("Format non supporté. Seuls les fichiers JPG, PNG et PDF sont acceptés.");
+                e.target.value = "";
+                return;
+              }
+              if (file.size > MAX_SIZE) {
+                toast.error(`Fichier trop volumineux (${(file.size / 1024 / 1024).toFixed(1)} Mo). La taille maximale est de 5 Mo.`);
+                e.target.value = "";
+                return;
+              }
+              if (ordonnancePreviewUrl) URL.revokeObjectURL(ordonnancePreviewUrl);
+              setOrdonnancePreviewUrl(URL.createObjectURL(file));
+              setOrdonnanceFile(file);
+            }}
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            Formats acceptés : JPG, PNG, PDF — Taille max : 5 Mo
+          </p>
+
+          {/* Modal de prévisualisation */}
+          {showPreviewModal && ordonnancePreviewUrl && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+              onClick={() => setShowPreviewModal(false)}
+            >
+              <div
+                className="relative max-w-2xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-semibold text-gray-800 truncate max-w-[80%]">{ordonnanceFile?.name}</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowPreviewModal(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="p-4 flex justify-center">
+                  {ordonnanceFile?.type.startsWith("image/") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={ordonnancePreviewUrl} alt="Ordonnance" className="max-h-[70vh] w-auto rounded-lg object-contain" />
+                  ) : (
+                    <iframe src={ordonnancePreviewUrl} title="Ordonnance PDF" className="w-full h-[70vh] rounded-lg" />
+                  )}
+                </div>
+                <div className="flex gap-2 px-4 pb-4 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => { setShowPreviewModal(false); fileInputRef.current?.click(); }}
+                    className="flex items-center gap-2 rounded-full border border-toni-green-dark-2 px-4 py-2 text-sm font-medium text-toni-green-dark-2 hover:bg-green-50 transition"
+                  >
+                    <Pencil size={14} /> Remplacer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPreviewModal(false);
+                      setOrdonnanceFile(null);
+                      URL.revokeObjectURL(ordonnancePreviewUrl);
+                      setOrdonnancePreviewUrl(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="flex items-center gap-2 rounded-full border border-red-400 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50 transition"
+                  >
+                    <Trash2 size={14} /> Supprimer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <button
+          type="button"
+          onClick={handleCancel}
+          disabled={anyPending}
+          className="flex-1 rounded-full border-2 border-[#00955F] py-3 text-base font-bold text-[#00955F] transition hover:bg-green-50 disabled:opacity-50"
+        >
+          {pendingCancel ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-5 h-5 rounded-full border-2 border-[#00955F] border-t-transparent animate-spin" />
+              Traitement…
+            </span>
+          ) : "Terminer"}
+        </button>
+
+        <button
+          type="button"
+          onClick={handlePutOnHold}
+          disabled={anyPending || items.length === 0}
+          className="flex-1 rounded-full bg-[#E0E0E0] py-3 text-base font-bold text-[#6B6B6B] transition hover:bg-[#d0d0d0] disabled:opacity-50"
+        >
+          {pendingHold ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-5 h-5 rounded-full border-2 border-[#6B6B6B] border-t-transparent animate-spin" />
+              Traitement…
+            </span>
+          ) : "Mettre en attente"}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleCheckout}
+          disabled={anyPending || items.length === 0 || (hasPrescription && !ordonnanceFile)}
+          className="flex-1 rounded-full bg-toni-green-dark-2 py-3 text-base font-bold text-white transition hover:bg-toni-green-dark disabled:opacity-70"
+        >
+          {pendingCheckout ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              Traitement…
+            </span>
+          ) : isCommandeValidationMode ? "Valider cette commande" : "Valider la commande"}
+        </button>
+      </div>
+      {hasPrescription && !ordonnanceFile && (
+        <p className="text-sm text-red-500 text-center mt-2">
+          Veuillez ajouter votre ordonnance avant de valider.
+        </p>
+      )}
+    </section>
   );
 }
 

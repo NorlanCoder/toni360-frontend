@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Montserrat } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 
-const inter = Inter({
+const montserrat = Montserrat({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-montserrat",
 });
 
 export const metadata: Metadata = {
@@ -18,32 +19,10 @@ export default function RootLayout({
   children: React.ReactNode;
   }>) {
   return (
-    <html lang="fr">
-      <head>
-        {/* Tailwind CDN */}
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              tailwind.config = {
-                theme: {
-                  extend: {
-                    colors: {
-                      'toni-green': '#11ca8c',
-                      'toni-green-dark': '#059669',
-                      'toni-green-dark-2': '#137551',
-                    },
-                    fontFamily: {
-                      sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-                    }
-                  }
-                }
-              }
-            `,
-          }}
-        />
-      </head>
-      <body className={`${inter.variable} font-sans antialiased`}>
+    <html lang="fr" className={montserrat.variable}>
+      <head />
+      <body className="font-sans antialiased">
+        <Toaster position="top-right" richColors closeButton />
         {children}
       </body>
     </html>

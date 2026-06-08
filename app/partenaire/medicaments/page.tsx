@@ -2,12 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { Bell, User, Search, Upload, Menu } from "lucide-react";
-import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
-import { extractCollection, getPartnerProduits } from "@/lib/api/partner";
+import { extractCollection, getPartnerStocks } from "@/lib/api/partner";
+import { toast } from "sonner";
+import ImportModal from "./components/ImportModal";
+import { useHeaderSearch } from "@/app/partenaire/_header-search-context";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type FilterKey = "tous" | "disponible" | "au-seuil" | "indisponible" | "desactives";
@@ -16,11 +19,9 @@ interface Medicine {
   id: string;
   nom: string;
   prix: string;
+  quantite: number;
   statut: "Disponible" | "Au seuil" | "Indisponible" | "Désactivé";
 }
-
-/* ──────────────────────── Mock data ──────────────────────────── */
-const mockMedicines: Medicine[] = [];
 
 
 /* ──────────────────────── Helpers ────────────────────────────── */
@@ -41,11 +42,21 @@ const filterMap: Record<FilterKey, Medicine["statut"] | null> = {
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireMedicamentsPage() {
+  const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("tous");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [medicines, setMedicines] = useState<Medicine[]>(mockMedicines);
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const { searchQuery, setShowSearch, setSearchPlaceholder, setSearchQuery } = useHeaderSearch();
+
+  useEffect(() => {
+    setShowSearch(true);
+    setSearchPlaceholder("Rechercher un médicament");
+    return () => {
+      setShowSearch(false);
+      setSearchQuery("");
+    };
+  }, [setShowSearch, setSearchPlaceholder, setSearchQuery]);
 
   const filters: { key: FilterKey; label: string }[] = [
     { key: "tous", label: "Tous" },
@@ -55,147 +66,117 @@ export default function PartenaireMedicamentsPage() {
     { key: "desactives", label: "Désactivés" },
   ];
 
-  const filteredMedicines =
-    activeFilter === "tous"
-      ? medicines
-      : medicines.filter((m) => m.statut === filterMap[activeFilter]);
+  const filteredMedicines = medicines
+    .filter((m) => activeFilter === "tous" || m.statut === filterMap[activeFilter])
+    .filter((m) =>
+      searchQuery.trim() === "" ||
+      m.nom.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   const moneyFormat = useMemo(
     () =>
-      new Intl.NumberFormat("fr-FR", {
-        style: "currency",
-        currency: "XOF",
-        maximumFractionDigits: 0,
+      ({
+        format: (value: number) =>
+          new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value) + " FCFA",
       }),
     [],
   );
 
-  useEffect(() => {
-    const loadMedicines = async () => {
-      const session = getAuthSession();
-      if (!session || session.userType !== "user" || !session.token) {
-        setError("Session partenaire invalide.");
-        setIsLoading(false);
-        return;
-      }
+  const loadMedicines = useCallback(async () => {
+    setIsLoading(true);
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token) {
+      toast.error("Session partenaire invalide.");
+      setIsLoading(false);
+      return;
+    }
 
-      try {
-        const response = await getPartnerProduits(session.token, { per_page: 200 });
-        const produits = extractCollection(response.data);
+    try {
+      const response = await getPartnerStocks(session.token, { per_page: 200 });
+      const stocks = extractCollection(response.data);
 
         setMedicines(
-          produits.map((produit) => {
+          stocks.map((stock) => {
             let statut: Medicine["statut"] = "Disponible";
-            if (!produit.is_active) {
-              statut = "Désactivé";
-            } else if ((produit.stock?.quantite ?? 0) <= 0) {
+            if (stock.statut === "rupture") {
               statut = "Indisponible";
-            } else if (produit.stock?.en_alerte) {
+            } else if (stock.statut === "alerte" || stock.statut === "critique") {
               statut = "Au seuil";
+            } else if (stock.statut === "expire") {
+              statut = "Désactivé";
             }
 
             return {
-              id: produit.id,
-              nom: produit.nom,
-              prix: moneyFormat.format(produit.prix_vente ?? 0),
+              id: stock.produit_id,
+              nom: stock.produit?.nom ?? "—",
+              prix: moneyFormat.format(stock.prix_unitaire ?? 0),
+              quantite: stock.quantite ?? 0,
               statut,
             };
           }),
         );
-        setError(null);
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger les médicaments.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger les médicaments.");
       } finally {
         setIsLoading(false);
       }
-    };
+    }, [moneyFormat]);
 
+  useEffect(() => {
     void loadMedicines();
-  }, [moneyFormat]);
+  }, [loadMedicines]);
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      <PartenaireSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      {/* ───────────── MAIN AREA ──────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* ─── HEADER ─── */}
-        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
-          {/* Hamburger (mobile) */}
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-
-          {/* Search */}
-          <div className="relative w-full max-w-lg">
-            <Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un médicament"
-              className="w-full rounded-full border-0 bg-emerald-50/60 py-3 pl-14 pr-4 text-base text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3">
-            <Link
-              href="/partenaire/notifications"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Notifications</span>
-              <Bell className="h-5 w-5" />
-            </Link>
-            <button
-              type="button"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </button>
-          </div>
-        </header>
-
+    <>
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
-          {/* Action bar */}
+          {/* Retour */}
+          <Link
+            href="/partenaire"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-toni-green-dark-2 hover:underline mb-4"
+          >
+            ← Retour au tableau de bord
+          </Link>
+
+          {/* Import modal */}
+          {showImportModal && (
+            <ImportModal
+              onClose={() => setShowImportModal(false)}
+              onSuccess={() => void loadMedicines()}
+            />
+          )}
           <div className="mb-6 flex items-center gap-2 sm:gap-4">
             <Link
               href="/partenaire/medicaments/ajouter"
-              className="flex items-center gap-2 rounded-lg bg-emerald-700 px-3 sm:px-5 py-2 sm:py-3 text-sm sm:text-base font-bold text-white transition-colors hover:bg-emerald-800"
+              className="inline-flex items-center gap-2 overflow-hidden  text-sm sm:text-base font-bold text-emerald-700 transition-colors"
             >
-              <Image
-                src="/fluent.svg"
-                alt="Ajouter"
-                width={24}
-                height={24}
-              />
-              Ajouter un médicament
+              <span className="flex items-center justify-center bg-emerald-600 px-3 py-2.5 text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </span>
+              <span className="px-4 py-2.5 bg-emerald-50  hover:bg-emerald-100">Ajouter un médicament</span>
+            </Link>
+            
+            <Link
+              href="/partenaire/medicaments/incoherences"
+              aria-label="Normalisation des médicaments"
+              className="flex items-center justify-center rounded-lg  p-2 sm:p-3 text-emerald-700 transition-colors hover:bg-gray-50"
+            >
+              <Image src="/images/dossier.svg" alt="Normalisation des médicaments" width={24} height={24} />
             </Link>
             <button
               type="button"
               aria-label="Importer"
-              className="flex items-center justify-center rounded-lg border border-gray-300 p-2 sm:p-3 text-emerald-700 transition-colors hover:bg-gray-50"
-            >
-              <Image src="/images/dossier.svg" alt="Importer" width={24} height={24} />
-            </button>
-            <button
-              type="button"
-              aria-label="Exporter"
-              className="flex items-center justify-center rounded-lg border border-gray-300 p-2 sm:p-3 text-emerald-700 transition-colors hover:bg-gray-50"
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center justify-center rounded-lg  p-2 sm:p-3 text-emerald-700 transition-colors hover:bg-gray-50"
             >
               <Upload className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
           </div>
 
           {/* Filter tabs */}
-          <div className="mb-6 flex flex-wrap gap-x-2 sm:gap-x-6 lg:gap-x-20 gap-y-3">
+          <div className="mb-6 flex flex-wrap  gap-x-2  gap-y-3">
             {filters.map((filter) => {
               const isActive = activeFilter === filter.key;
               return (
@@ -203,7 +184,7 @@ export default function PartenaireMedicamentsPage() {
                   key={filter.key}
                   type="button"
                   onClick={() => setActiveFilter(filter.key)}
-                  className={`rounded-full border border-emerald-600 px-4 sm:px-10 lg:px-24 py-2 text-sm sm:text-base font-bold transition-colors ${
+                  className={`rounded-full border border-emerald-600 px-4 py-2 text-sm sm:text-base font-bold transition-colors ${
                     isActive
                       ? "bg-emerald-700 text-white"
                       : "bg-white text-emerald-700 hover:bg-emerald-50"
@@ -219,8 +200,6 @@ export default function PartenaireMedicamentsPage() {
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             {isLoading ? (
               <div className="px-6 py-6 text-sm text-gray-500">Chargement des médicaments...</div>
-            ) : error ? (
-              <div className="px-6 py-6 text-sm text-red-600">{error}</div>
             ) : (
             <table className="min-w-[520px] w-full table-auto text-sm lg:text-base">
               <thead>
@@ -231,6 +210,9 @@ export default function PartenaireMedicamentsPage() {
                   <th className="px-3 sm:px-8 py-3 sm:py-5 text-left text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
                     Prix unitaire
                   </th>
+                  <th className="px-3 sm:px-8 py-3 sm:py-5 text-left text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
+                    Quantité
+                  </th>
                   <th className="px-3 sm:px-8 py-3 sm:py-5 text-right text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
                     Statut
                   </th>
@@ -240,32 +222,24 @@ export default function PartenaireMedicamentsPage() {
                 {filteredMedicines.map((med) => (
                   <tr
                     key={med.id}
-                    className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50/40 transition-colors cursor-pointer"
+                    onClick={() => router.push(`/partenaire/medicaments/${med.id}`)}
+                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60 transition-colors cursor-pointer"
                   >
-                    <td className="px-3 sm:px-8 py-3 sm:py-6">
-                      <Link
-                        href={`/partenaire/medicaments/${med.id}`}
-                        className="text-sm sm:text-base text-gray-700"
-                      >
-                        {med.nom}
-                      </Link>
+                    <td className="px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
+                      {med.nom}
                     </td>
-                    <td className="px-3 sm:px-8 py-3 sm:py-6">
-                      <Link
-                        href={`/partenaire/medicaments/${med.id}`}
-                        className="text-sm sm:text-base text-gray-700"
-                      >
-                        {med.prix}
-                      </Link>
+                    <td className="px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
+                      {med.prix}
+                    </td>
+                    <td className="px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
+                      {med.quantite}
                     </td>
                     <td className="px-3 sm:px-8 py-3 sm:py-6 text-right">
-                      <Link href={`/partenaire/medicaments/${med.id}`}>
-                        <span
-                          className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${statusStyles[med.statut]}`}
-                        >
-                          {med.statut}
-                        </span>
-                      </Link>
+                      <span
+                        className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${statusStyles[med.statut]}`}
+                      >
+                        {med.statut}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -274,7 +248,7 @@ export default function PartenaireMedicamentsPage() {
             )}
           </div>
         </main>
-      </div>
-    </div>
+    </>
+  
   );
 }

@@ -3,8 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { Bell, User, Search, Menu } from "lucide-react";
-import PartenaireSidebar from "@/components/partenaire/Sidebar";
+
 
 
 /* ──────────────────── Mock data ─────────────────────────────── */
@@ -20,64 +19,16 @@ const orderInfo = {
 const orderItems = Array.from({ length: 5 }, () => ({
   medicament: "Paracétamol 500 mg",
   qte: "02",
-  pu: "100 XOF CFA",
-  total: "1000 XOF CFA",
+  pu: "100 FCFA",
+  total: "1000 FCFA",
 }));
 
-const montantTotal = "50 000 XOF";
+const montantTotal = "50 000 FCFA";
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireCommandeRecupereeDetailPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      <PartenaireSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      {/* ───────────── MAIN AREA ──────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* ─── HEADER ─── */}
-        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
-          {/* Hamburger (mobile) */}
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-
-          {/* Search */}
-          <div className="relative w-full max-w-lg">
-            <Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              className="w-full rounded-full border-0 bg-emerald-50/60 py-3 pl-14 pr-4 text-base text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3">
-            <Link
-              href="/partenaire/notifications"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Notifications</span>
-              <Bell className="h-5 w-5" />
-            </Link>
-            <button
-              type="button"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </button>
-          </div>
-        </header>
-
+    <>
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-12 lg:py-20">
           {/* Page title */}
@@ -178,8 +129,8 @@ export default function PartenaireCommandeRecupereeDetailPage() {
             <span className="text-xl font-bold text-gray-900">{montantTotal}</span>
           </div>
         </main>
-      </div>
-    </div>
+    </>
+  
   );
 }
 

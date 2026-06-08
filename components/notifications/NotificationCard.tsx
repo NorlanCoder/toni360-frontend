@@ -1,10 +1,12 @@
+"use client";
+
 import { Trash2 } from "lucide-react";
 
 interface NotificationCardProps {
   title: string;
   description: string;
   isRead?: boolean;
-  onClick?: () => void;
+  onOpen: () => void;
   onDelete: () => void;
 }
 
@@ -12,21 +14,21 @@ export default function NotificationCard({
   title,
   description,
   isRead = false,
-  onClick,
+  onOpen,
   onDelete,
 }: NotificationCardProps) {
   return (
     <div
-      onClick={onClick}
-      className={`bg-white rounded-lg p-6 flex items-start gap-4 shadow-sm border border-gray-200 ${
-        isRead ? "opacity-80" : ""
+      onClick={onOpen}
+      className={`cursor-pointer p-2 flex items-start gap-4 rounded-full transition-all duration-200 hover:shadow-sm ${
+        isRead ? "bg-white" : "bg-[#E6F6F0]"
       }`}
     >
       {/* Logo */}
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 mt-0.5">
         <div className="w-12 h-12 rounded-full border-2 border-toni-green-dark-2 flex items-center justify-center bg-white">
           <img
-            src="/images/logo.png"
+            src="/images/icon.png"
             alt="Toni360"
             className="w-8 h-8 object-contain"
           />
@@ -34,18 +36,24 @@ export default function NotificationCard({
       </div>
 
       {/* Content */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <h3 className="font-bold text-gray-900 text-base mb-1">{title}</h3>
-        <p className="text-gray-600 text-sm">{description}</p>
+        <p className="text-gray-600 text-sm truncate">{description}</p>
       </div>
 
-      {/* Delete Button */}
-      <button
-        onClick={onDelete}
-        className="flex-shrink-0 text-red-600 hover:text-red-700 transition"
-      >
-        <Trash2 size={20} />
-      </button>
+      {/* Delete */}
+      <div className="flex-shrink-0 flex items-center self-center">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="text-red-500 hover:text-red-700 transition p-1"
+          aria-label="Supprimer la notification"
+        >
+          <Trash2 size={20} />
+        </button>
+      </div>
     </div>
   );
 }

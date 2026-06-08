@@ -2,17 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Lock, Eye, EyeOff } from "lucide-react";
+import { User, Lock, Eye, EyeOff, Check, X } from "lucide-react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
 import { registerPatient } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
+import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@/lib/passwordPolicy";
 
 export default function InscriptionPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
@@ -20,6 +23,10 @@ export default function InscriptionPage() {
     telephone: "",
     password: "",
   });
+
+  const passwordRules = getPasswordRuleResults(formData.password);
+  const passwordStrength = getPasswordStrength(formData.password);
+  const passwordValid = isPasswordStrong(formData.password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +37,13 @@ export default function InscriptionPage() {
 
     const fullName = formData.nom.trim();
     if (!fullName || !formData.email.trim() || !formData.telephone.trim() || !formData.password) {
-      window.alert("Veuillez remplir tous les champs obligatoires.");
+      toast.warning("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    if (!passwordValid) {
+      setPasswordTouched(true);
+      toast.warning("Le mot de passe doit contenir au moins 8 caracteres, une majuscule, une minuscule, un chiffre et un caractere special.");
       return;
     }
 
@@ -57,13 +70,13 @@ export default function InscriptionPage() {
         profile: response.data.patient ?? null,
       });
 
-      window.alert(response.message ?? "Inscription réussie.");
+      toast.success(response.message ?? "Inscription réussie.");
       router.push("/client/accueil");
     } catch (error: unknown) {
       if (error instanceof ApiError) {
-        window.alert(error.message);
+        toast.error(error.message);
       } else {
-        window.alert("Une erreur est survenue pendant l'inscription.");
+        toast.error("Une erreur est survenue pendant l'inscription.");
       }
     } finally {
       setSubmitting(false);
@@ -104,7 +117,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, nom: e.target.value })
                 }
-                className="w-full px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full bg-white px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
@@ -118,7 +131,7 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full pl-12 pr-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full bg-white pl-12 pr-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
@@ -143,36 +156,66 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, telephone: e.target.value })
                 }
-                className="flex-1 px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="flex-1 bg-white px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
             </div>
 
             {/* Mot de passe */}
-            <div className="relative flex items-center">
-              <Lock className="absolute left-4 text-gray-400" size={18} />
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Créer un mot de passe"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-                className="w-full pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 text-gray-400 hover:text-gray-600"
-                style={{ marginTop: '1px' }}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+            <div className="space-y-1">
+              <div className="relative flex items-center">
+                <Lock className="absolute left-4 text-gray-400" size={18} />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Créer un mot de passe"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  onBlur={() => setPasswordTouched(true)}
+                  className="w-full bg-white pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 text-gray-400 hover:text-gray-600"
+                  style={{ marginTop: '1px' }}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+
+              {(passwordTouched || formData.password.length > 0) && (
+                <div className="space-y-2 pl-1">
+                  <div>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="text-gray-600">Robustesse</span>
+                      <span className="font-semibold text-gray-700">{passwordStrength.label}</span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                      <div
+                        className={`h-full ${passwordStrength.colorClass} transition-all duration-200`}
+                        style={{ width: `${passwordStrength.percent}%` }}
+                      />
+                    </div>
+                  </div>
+                  <ul className="space-y-0.5">
+                    {passwordRules.map((rule) => (
+                      <li key={rule.id} className={`flex items-center gap-1.5 text-xs leading-tight transition-colors ${rule.valid ? "text-emerald-600" : "text-red-500"}`}>
+                        {rule.valid
+                          ? <Check size={12} className="shrink-0" />
+                          : <X size={12} className="shrink-0" />}
+                        {rule.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {/* Bouton S'inscrire */}
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || !passwordValid}
               className="w-full bg-toni-green-dark-2 text-white font-bold py-3 rounded-md hover:bg-toni-green-dark transition"
             >
               {submitting ? "Inscription..." : "S\'inscrire"}

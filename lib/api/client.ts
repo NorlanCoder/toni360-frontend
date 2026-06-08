@@ -63,6 +63,7 @@ export interface PatientPanierResponse {
           adresse?: string | null;
           ville?: string | null;
           telephone?: string | null;
+          email?: string | null;
         };
         produits: Array<{
           id: string;
@@ -91,11 +92,14 @@ export interface CommandeSummary {
   numero_commande: string;
   statut: string;
   statut_label: string;
+  etat_ordonnance?: string;
   montant_total: number;
   pharmacie?: {
     nom?: string;
     adresse?: string;
+    ville?: string;
     telephone?: string;
+    email?: string;
   } | null;
   created_at?: string;
 }
@@ -113,16 +117,23 @@ export interface PatientCommandeCompteursResponse {
   success: boolean;
   data: {
     en_attente_ordonnance: number;
+    en_attente_client: number;
     ordonnance_en_verification: number;
     ordonnance_rejetee: number;
     en_attente_paiement: number;
+    en_cours: number;
     payee: number;
     en_preparation: number;
     prete: number;
     recuperee: number;
     annulee: number;
     total: number;
-    en_cours: number;
+    total_en_attente: number;
+    total_en_cours: number;
+    total_prete: number;
+    total_recuperee: number;
+    total_annulee: number;
+    total_terminee: number;
   };
 }
 
@@ -157,6 +168,7 @@ export interface CommandeDetailResponse {
           id: string;
           statut?: string;
           statut_label?: string;
+          fichier_url?: string | null;
         } | null;
         produit?: {
           id: string;
@@ -165,6 +177,10 @@ export interface CommandeDetailResponse {
       }>;
       pharmacie?: {
         nom?: string;
+        adresse?: string;
+        ville?: string;
+        telephone?: string;
+        email?: string;
       } | null;
     };
   };
@@ -248,6 +264,7 @@ export interface PatientOrderQrCodeResponse {
       nom?: string;
       adresse?: string;
       telephone?: string;
+      email?: string;
     } | null;
     instructions?: string[];
   };
@@ -258,6 +275,7 @@ export interface PatientNotificationItem {
   titre: string;
   message: string;
   is_read: boolean;
+  data?: Record<string, unknown>;
 }
 
 export interface NotificationsResponse {
@@ -291,6 +309,7 @@ export interface PatientProfileResponse {
       nom_complet?: string;
       email: string;
       telephone: string;
+      ville?: string | null;
     };
   };
 }
@@ -394,8 +413,11 @@ export async function clearPanier(token: string): Promise<PatientPanierResponse>
   });
 }
 
-export async function getClientCommandes(token: string, statut?: string): Promise<PatientCommandesResponse> {
-  const qs = statut ? `?statut=${encodeURIComponent(statut)}` : "";
+export async function getClientCommandes(token: string, statut?: string, perPage?: number): Promise<PatientCommandesResponse> {
+  const params = new URLSearchParams();
+  if (statut) params.set("statut", statut);
+  if (perPage) params.set("per_page", String(perPage));
+  const qs = params.toString() ? `?${params.toString()}` : "";
   return apiRequest<PatientCommandesResponse>(`/patient/commandes${qs}`, {
     method: "GET",
     token,
@@ -494,6 +516,63 @@ export async function annulerCommande(token: string, commandeId: string, motif?:
   });
 }
 
+export async function validerCommande(token: string, commandeId: string): Promise<{ success: boolean; message?: string; data?: { commande?: { statut?: string; statut_label?: string } } }> {
+  return apiRequest<{ success: boolean; message?: string; data?: { commande?: { statut?: string; statut_label?: string } } }>(`/patient/commandes/${commandeId}/valider`, {
+    method: "POST",
+    token,
+  });
+}
+
+export async function mettreEnAttenteCommande(token: string, commandeId: string): Promise<{ success: boolean; message?: string }> {
+  return apiRequest<{ success: boolean; message?: string }>(`/patient/commandes/${commandeId}/mettre-en-attente`, {
+    method: "POST",
+    token,
+  });
+}
+
+export interface VerifierDisponibiliteCommandeResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    commande_annulee?: boolean;
+    commande?: CommandeDetailResponse["data"]["commande"];
+    produits_supprimes?: Array<{ id: string; nom: string }>;
+    produits_ajustes?: Array<{ id: string; nom: string; quantite_demandee: number; quantite_ajustee: number }>;
+  };
+}
+
+export async function verifierDisponibiliteCommande(token: string, commandeId: string): Promise<VerifierDisponibiliteCommandeResponse> {
+  return apiRequest<VerifierDisponibiliteCommandeResponse>(`/patient/commandes/${commandeId}/verifier-disponibilite`, {
+    method: "POST",
+    token,
+  });
+}
+
+export async function modifierProduitCommande(
+  token: string,
+  commandeId: string,
+  produitCommandeId: string,
+  quantite: number,
+): Promise<{ success: boolean; message?: string; data?: { quantite?: number; prix_total?: number; montant_total_commande?: number } }> {
+  return apiRequest(`/patient/commandes/${commandeId}/produits/${produitCommandeId}`, {
+    method: "PUT",
+    token,
+    body: JSON.stringify({ quantite }),
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+export async function supprimerProduitCommande(
+  token: string,
+  commandeId: string,
+  produitCommandeId: string,
+): Promise<{ success: boolean; message?: string; data?: { montant_total_commande?: number } }> {
+  return apiRequest(`/patient/commandes/${commandeId}/produits/${produitCommandeId}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
 export async function uploadOrdonnanceForProduitCommande(
   token: string,
   produitCommandeId: string,
@@ -556,7 +635,7 @@ export async function deleteReadClientNotifications(token: string): Promise<{ su
 
 export async function updatePatientProfile(
   token: string,
-  payload: Partial<Pick<PatientProfileResponse["data"]["patient"], "nom" | "prenom" | "email" | "telephone">>,
+  payload: Partial<Pick<PatientProfileResponse["data"]["patient"], "nom" | "prenom" | "email" | "telephone" | "ville">>,
 ): Promise<PatientProfileResponse> {
   const json = buildJsonRequest(payload);
   return apiRequest<PatientProfileResponse>("/patient/profile", {
@@ -564,6 +643,99 @@ export async function updatePatientProfile(
     token,
     body: json.body,
     headers: json.headers,
+  });
+}
+
+export async function deletePatientAccount(token: string, password: string): Promise<{ success: boolean; message?: string }> {
+  const json = buildJsonRequest({ password });
+  return apiRequest<{ success: boolean; message?: string }>("/patient/account", {
+    method: "DELETE",
+    token,
+    body: json.body,
+    headers: json.headers,
+  });
+}
+
+// ─── Historique des localisations ───────────────────────────────────────────
+
+export interface LocalisationResultat {
+  id: string;
+  pharmacie_id: string;
+  produit_id: string;
+  prix: number;
+  quantite_disponible: number;
+  quantite_demandee: number;
+  distance_km: number;
+  ordre: number;
+  pharmacie?: {
+    id: string;
+    nom: string;
+    adresse?: string | null;
+    ville?: string | null;
+    telephone?: string | null;
+  } | null;
+  produit?: {
+    id: string;
+    nom: string;
+    forme?: string | null;
+    dosage?: string | null;
+  } | null;
+}
+
+export interface LocalisationSummary {
+  id: string;
+  criteres: { produits: Array<{ terme: string; quantite: number }> };
+  latitude_patient: number;
+  longitude_patient: number;
+  rayon_km: number;
+  statut: string;
+  date: string;
+  created_at: string;
+  resultats: LocalisationResultat[];
+}
+
+export interface HistoriqueLocalisationsResponse {
+  success: boolean;
+  data: {
+    data: LocalisationSummary[];
+    current_page?: number;
+    last_page?: number;
+    total?: number;
+  };
+}
+
+export interface LocalisationDetailResponse {
+  success: boolean;
+  data: {
+    recherche: LocalisationSummary;
+  };
+}
+
+export async function getHistoriqueLocalisations(token: string): Promise<HistoriqueLocalisationsResponse> {
+  return apiRequest<HistoriqueLocalisationsResponse>("/patient/recherche/historique", {
+    method: "GET",
+    token,
+  });
+}
+
+export async function getLocalisationDetail(token: string, id: string): Promise<LocalisationDetailResponse> {
+  return apiRequest<LocalisationDetailResponse>(`/patient/recherche/${id}`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function deleteLocalisation(token: string, id: string): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>(`/patient/recherche/${id}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export async function deleteAllLocalisations(token: string): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>("/patient/recherche/all", {
+    method: "DELETE",
+    token,
   });
 }
 

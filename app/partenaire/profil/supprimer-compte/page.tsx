@@ -1,162 +1,77 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import {
-  LayoutGrid,
-  Users,
-  PlusSquare,
-  FileText,
-  HelpCircle,
-  LogOut,
-  Bell,
-  User,
-  Lock,
-  Link2,
-} from "lucide-react";
+import { Lock, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-const menuItems = [
-  { icon: LayoutGrid, label: "Tableau de bord", href: "/partenaire/dashboard", active: false },
-  { icon: Users, label: "Gestion des employés", href: "/partenaire/employes", active: false },
-  { icon: PlusSquare, label: "Gestion des médicaments", href: "/partenaire/medicaments", active: false },
-  { icon: FileText, label: "Historique des actions", href: "/partenaire/employes/historique", active: false },
-  { icon: HelpCircle, label: "Assistance et support", href: "#", active: false },
-  { icon: LogOut, label: "Déconnexion", href: "/partenaire/deconnexion", active: false },
-];
+import { toast } from "sonner";
+import { getAuthSession, clearAuthSession } from "@/lib/api/session";
+import { deletePartnerAccount } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/errors";
 
 export default function SupprimerComptePage() {
   const router = useRouter();
   const [password, setPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleCancel = (): void => {
     setPassword("");
     router.push("/partenaire/profil");
   };
 
-  const handleDelete = (): void => {
-    if (!password.trim()) return;
-    // TODO: call API to delete account
-    console.log("Account deletion requested");
+  const handleDelete = async (): Promise<void> => {
+    if (!password.trim()) {
+      toast.error("Veuillez entrer votre mot de passe.");
+      return;
+    }
+
+    const session = getAuthSession();
+    if (!session?.token) {
+      toast.error("Session invalide. Veuillez vous reconnecter.");
+      router.replace("/partenaire/connexion");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await deletePartnerAccount(session.token, password);
+      clearAuthSession();
+      toast.success("Votre compte a été supprimé avec succès.");
+      router.replace("/partenaire/connexion");
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        toast.error(err.message ?? "Mot de passe incorrect.");
+      } else {
+        toast.error("Une erreur est survenue. Veuillez réessayer.");
+      }
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
-    <div
-      className="flex h-screen overflow-hidden bg-white"
-      style={{ fontFamily: "'Inter', sans-serif" }}
-    >
-      {/* Sidebar */}
-      <aside className="hidden lg:flex w-[280px] min-w-[280px] bg-[#f7f8fa] flex-col">
-        {/* Logo */}
-        <div className="flex items-center gap-2 px-6 pt-5 pb-4">
-          <Image
-            src="/images/logo.png"
-            alt="Toni 360"
-            width={200}
-            height={66}
-            className="h-[60px] w-auto"
-          />
-        </div>
-
-        {/* Link icon */}
-        <div className="px-5 pt-2 pb-3">
-          <Link2
-            className="w-[18px] h-[18px] text-[#9ca3af]"
-            strokeWidth={2}
-          />
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex flex-col gap-[2px] px-3">
-          {menuItems.map((item, idx) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={idx}
-                href={item.href}
-                className={`flex items-center gap-4 w-full px-4 py-[18px] rounded-xl text-[18px] font-semibold text-left transition-colors ${
-                  item.active
-                    ? "bg-[#e0f8ef] text-[#10b981]"
-                    : "text-[#4b5563] hover:bg-gray-100"
-                }`}
-              >
-                <Icon
-                  className={`w-[28px] h-[28px] flex-shrink-0 ${
-                    item.active ? "text-[#10b981]" : "text-[#6b7280]"
-                  }`}
-                  strokeWidth={2.2}
-                />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </aside>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-auto bg-white">
-        {/* Header */}
-        <header className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-0 px-4 md:px-6 pt-4 pb-3">
-          {/* Search bar */}
-          <div className="flex-1 flex justify-center md:mr-4">
-            <input
-              type="text"
-              placeholder="Rechercher un médicament"
-              autoComplete="off"
-              className="w-full max-w-[700px] px-5 py-[17px] rounded-full bg-[#ecf9f4] border border-[#b8e4d4] text-[17px] text-[#6b7280] placeholder-[#9ca3af] outline-none focus:border-[#10b981] transition-colors"
-            />
-          </div>
-
-          {/* Right actions */}
-          <div className="flex items-center gap-2 md:gap-4">
-            {/* Notifications */}
-            <Link href="/partenaire/notifications" className="flex items-center gap-3 pl-4 md:pl-6 pr-3 py-[10px] rounded-full border-[2px] border-[#10b981] text-[#10b981] hover:bg-[#ecf9f4] transition-colors">
-              <span className="text-[15px] md:text-[18px] font-bold">Notifications</span>
-              <span className="flex items-center justify-center w-[44px] h-[44px] rounded-full bg-[#10b981]">
-                <Bell
-                  className="w-[22px] h-[22px] text-white"
-                  fill="white"
-                  strokeWidth={0}
-                />
-              </span>
-            </Link>
-
-            {/* Mon Compte */}
-            <Link href="/partenaire/profil" className="flex items-center gap-3 pl-4 md:pl-6 pr-3 py-[10px] rounded-full border-[2px] border-[#10b981] text-[#10b981] hover:bg-[#ecf9f4] transition-colors">
-              <span className="text-[15px] md:text-[18px] font-bold">Mon Compte</span>
-              <span className="flex items-center justify-center w-[44px] h-[44px] rounded-full bg-[#10b981]">
-                <User
-                  className="w-[22px] h-[22px] text-white"
-                  fill="white"
-                  strokeWidth={2}
-                />
-              </span>
-            </Link>
-          </div>
-        </header>
-
-        {/* Content area */}
-        <main className="flex-1 flex flex-col items-center px-4 md:px-8 pt-6 md:pt-10 pb-10">
+    <div className="flex flex-1 flex-col overflow-hidden">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-10 py-6 lg:py-8">
           {/* Tabs */}
-          <div className="flex justify-start items-center gap-30 mb-8 md:mb-10 w-full max-w-[1000px]">
+          <div className="mb-8 flex items-center justify-center gap-5 sm:gap-8">
             <Link
               href="/partenaire/profil"
-              className="relative pb-3 text-[18px] md:text-[21px] font-bold transition-colors text-[#9ca3af] hover:text-[#1f2937]"
+              className="pb-2 sm:pb-3 text-sm sm:text-lg sm:text-xl font-bold text-gray-400 hover:text-gray-700 whitespace-nowrap"
             >
               Mes informations
             </Link>
             <Link
               href="/partenaire/profil/supprimer-compte"
-              className="relative pb-3 text-[18px] md:text-[21px] font-bold transition-colors text-[#1f2937]"
+              className="relative pb-2 sm:pb-3 text-sm sm:text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap"
             >
               Supprimer mon compte
-              <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-[#10b981]" />
+              <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-emerald-600" />
             </Link>
           </div>
 
           {/* Delete account confirmation */}
-          <div className="flex flex-col items-start justify-start flex-1 w-full max-w-[1000px] ml-20 mt-12">
+          <div className="flex flex-col items-center justify-center flex-1 w-full mt-8 md:mt-12">
             {/* Title */}
             <h1 className="text-2xl md:text-3xl lg:text-[36px] font-semibold text-[#1f2937] text-center leading-snug mb-8 md:mb-10 w-full max-w-[550px]">
               Êtes-vous sûr de vouloir
@@ -168,32 +83,40 @@ export default function SupprimerComptePage() {
             <div className="relative w-full max-w-[550px] mb-8">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-[20px] h-[20px] text-[#9ca3af]" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Entrez votre mot de passe"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-14 pr-4 py-[15px] border-2 border-[#10b981] rounded-xl text-[18px] text-[#374151] placeholder-[#9ca3af] outline-none focus:border-[#10b981] transition-colors"
+                className="w-full pl-14 pr-12 py-[15px] border-2 border-[#10b981] rounded-xl text-base sm:text-[18px] text-[#374151] placeholder-[#9ca3af] outline-none focus:border-[#10b981] transition-colors"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
 
             {/* Action buttons */}
-            <div className="flex items-center justify-center gap-5 w-full max-w-[550px]">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-[550px]">
               <button
                 onClick={handleCancel}
-                className="px-10 py-[14px] rounded-full border-[2px] border-[#10b981] text-[#10b981] font-bold text-[18px] hover:bg-[#ecf9f4] transition-colors cursor-pointer"
+                disabled={isDeleting}
+                className="w-full sm:w-auto px-8 py-[14px] rounded-full border-[2px] border-[#10b981] text-[#10b981] font-bold text-base sm:text-[18px] hover:bg-[#ecf9f4] transition-colors cursor-pointer disabled:opacity-50"
               >
                 Annuler
               </button>
               <button
-                onClick={handleDelete}
-                className="px-10 py-[14px] rounded-full bg-[#ef4444] text-white font-bold text-[18px] hover:bg-[#dc2626] transition-colors cursor-pointer"
+                onClick={() => void handleDelete()}
+                disabled={isDeleting}
+                className="w-full sm:w-auto px-8 py-[14px] rounded-full bg-[#ef4444] text-white font-bold text-base sm:text-[18px] hover:bg-[#dc2626] transition-colors cursor-pointer disabled:opacity-60"
               >
-                Supprimer
+                {isDeleting ? "Suppression..." : "Supprimer"}
               </button>
             </div>
           </div>
         </main>
-      </div>
     </div>
   );
 }

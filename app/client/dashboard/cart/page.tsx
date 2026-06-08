@@ -1,15 +1,15 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   FileText,
   Minus,
   Plus,
-  MapPin,
+  ShoppingCart,
   Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   addPanierItem,
   clearPanier,
@@ -21,6 +21,8 @@ import {
 } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import { useCart } from "@/lib/cart-context";
+import { useSearch } from "@/lib/search-context";
 
 type CartItem = {
   id: string;
@@ -29,19 +31,6 @@ type CartItem = {
   type: string;
   qty: number;
   requiresPrescription?: boolean;
-};
-
-type NearbyPharmacy = {
-  id: string;
-  name: string;
-  address: string;
-  distance: string;
-  produits: Array<{
-    id: string;
-    nom: string;
-    quantiteDemandee: number;
-    quantiteDisponible: number;
-  }>;
 };
 
 type SearchProductResult = {
@@ -75,16 +64,13 @@ function ClientCartPageContent() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [busyByItem, setBusyByItem] = useState<Record<string, boolean>>({});
   const [globalBusy, setGlobalBusy] = useState(false);
-  const [message, setMessage] = useState<string>("");
-  const [showNearbyPharmacies, setShowNearbyPharmacies] = useState(false);
-  const [nearbyPharmacies, setNearbyPharmacies] = useState<NearbyPharmacy[]>([]);
   const [searchProducts, setSearchProducts] = useState<SearchProductResult[]>([]);
   const [busySearchProductKey, setBusySearchProductKey] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [hasLocalized, setHasLocalized] = useState(false);
-  const [searchRadiusKm, setSearchRadiusKm] = useState<number | null>(null);
-  const [localizationSummary, setLocalizationSummary] = useState<string>("");
   const autoSearchAttemptedRef = useRef(false);
+  const { refreshCart, clearLocalCart, updateCount } = useCart();
+  const { focusSearchInput } = useSearch();
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -114,10 +100,12 @@ function ClientCartPageContent() {
         })),
       );
       setItems(mappedItems);
+      const totalQty = mappedItems.reduce((sum, it) => sum + it.qty, 0);
+      updateCount(totalQty);
       return mappedItems;
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
       return [];
     }
@@ -136,7 +124,7 @@ function ClientCartPageContent() {
       await loadPanier();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setBusyByItem((prev) => ({ ...prev, [id]: false }));
@@ -154,7 +142,7 @@ function ClientCartPageContent() {
       await loadPanier();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setBusyByItem((prev) => ({ ...prev, [id]: false }));
@@ -169,10 +157,11 @@ function ClientCartPageContent() {
     setGlobalBusy(true);
     try {
       await clearPanier(token);
+      clearLocalCart();
       await loadPanier();
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setGlobalBusy(false);
@@ -186,11 +175,7 @@ function ClientCartPageContent() {
 
   useEffect(() => {
     setHasLocalized(false);
-    setShowNearbyPharmacies(false);
-    setNearbyPharmacies([]);
     setSearchProducts([]);
-    setSearchRadiusKm(null);
-    setLocalizationSummary("");
     autoSearchAttemptedRef.current = false;
   }, [searchTerm]);
 
@@ -200,7 +185,7 @@ function ClientCartPageContent() {
     }
 
     if (isSearchMode && searchTerm.length < 2) {
-      setMessage("Saisissez au moins 2 caracteres pour lancer la recherche.");
+      toast.warning("Saisissez au moins 2 caracteres pour lancer la recherche.");
       return;
     }
 
@@ -209,12 +194,11 @@ function ClientCartPageContent() {
       : items.map((item) => ({ terme: item.name, quantite: item.qty }));
 
     if (produitsToSearch.length === 0) {
-      setMessage("Ajoutez d'abord un médicament au panier avant de localiser.");
+      toast.warning("Ajoutez d'abord un médicament au panier avant de localiser.");
       return;
     }
 
     setIsLocating(true);
-    setMessage("");
     try {
       const coordinates = await getBrowserCoordinates();
       const response = await searchProduits(
@@ -222,29 +206,15 @@ function ClientCartPageContent() {
         produitsToSearch,
         coordinates,
       );
-      setLocalizationSummary(response.message ?? "");
 
-      const rawRadius = (response.data as { rayon_trouve_km?: number; rayon_recherche_km?: number }).rayon_trouve_km
-        ?? (response.data as { rayon_trouve_km?: number; rayon_recherche_km?: number }).rayon_recherche_km;
-      setSearchRadiusKm(typeof rawRadius === "number" ? rawRadius : null);
-
-      const mapped = response.data.pharmacies.map((item) => ({
-        id: item.pharmacie.id,
-        name: item.pharmacie.nom,
-        address: [item.pharmacie.ville, item.pharmacie.quartier, item.pharmacie.adresse]
-          .filter(Boolean)
-          .join(", "),
-        distance:
-          typeof item.pharmacie.distance_km === "number"
-            ? `${item.pharmacie.distance_km.toString().replace(".", ",")} km`
-            : "-",
-        produits: item.produits.map((produit) => ({
-          id: produit.id,
-          nom: produit.nom,
-          quantiteDemandee: Number(produit.quantite_demandee ?? 0),
-          quantiteDisponible: Number(produit.quantite_disponible ?? 0),
-        })),
-      }));
+      if (!isSearchMode) {
+        if (response.data.pharmacies.length === 0) {
+          toast.warning("Aucune pharmacie disponible à proximité pour votre panier.");
+          return;
+        }
+        router.push("/client/dashboard/cart/checkout");
+        return;
+      }
 
       const products = response.data.pharmacies.flatMap((item) =>
         item.produits.map((produit) => ({
@@ -261,18 +231,17 @@ function ClientCartPageContent() {
         })),
       );
 
-      setNearbyPharmacies(mapped);
       setSearchProducts(products);
+
       setHasLocalized(true);
-      setShowNearbyPharmacies(true);
     } catch (error) {
       if (error instanceof ApiError) {
-        setMessage(error.message);
+        toast.error(error.message);
       }
     } finally {
       setIsLocating(false);
     }
-  }, [token, isSearchMode, searchTerm, items]);
+  }, [token, isSearchMode, searchTerm, items, router]);
 
   const handleLocaliser = async () => {
     await runProductSearch();
@@ -284,7 +253,7 @@ function ClientCartPageContent() {
     }
 
     if (searchTerm.length < 2) {
-      setMessage("Saisissez au moins 2 caracteres pour lancer la recherche.");
+      toast.warning("Saisissez au moins 2 caracteres pour lancer la recherche.");
       return;
     }
 
@@ -304,13 +273,12 @@ function ClientCartPageContent() {
 
     const previousQty = items.find((entry) => entry.produitId === result.produitId)?.qty ?? 0;
     setBusySearchProductKey(result.key);
-    setMessage("");
     try {
       await addPanierItem(token, result.produitId, 1, result.rechercheId, result.pharmacieId);
       const refreshed = await loadPanier();
       const currentQty =
         refreshed.find((entry) => entry.produitId === result.produitId)?.qty ?? (previousQty + 1);
-      setMessage(`Produit ajouté (x${currentQty}).`);
+      toast.success(`Produit ajouté (x${currentQty}).`);
     } catch (error) {
       if (error instanceof ApiError) {
         const details = error.details as {
@@ -328,13 +296,13 @@ function ClientCartPageContent() {
             const refreshed = await loadPanier();
             const currentQty =
               refreshed.find((entry) => entry.produitId === result.produitId)?.qty ?? (previousQty + 1);
-            setMessage(`Panier réinitialisé pour la nouvelle recherche. Produit ajouté (x${currentQty}).`);
+            toast.success(`Panier réinitialisé pour la nouvelle recherche. Produit ajouté (x${currentQty}).`);
             return;
           } catch (retryError) {
             if (retryError instanceof ApiError) {
-              setMessage(retryError.message);
+              toast.error(retryError.message);
             } else {
-              setMessage("Impossible de réinitialiser le panier automatiquement.");
+              toast.error("Impossible de réinitialiser le panier automatiquement.");
             }
             return;
           }
@@ -344,11 +312,11 @@ function ClientCartPageContent() {
         const pharmaciesAutorisees = details?.data?.pharmacies_autorisees;
 
         if (pharmacieProduit && Array.isArray(pharmaciesAutorisees) && pharmaciesAutorisees.length > 0) {
-          setMessage(
+          toast.error(
             `${error.message} Produit: ${pharmacieProduit}. Autorisees: ${pharmaciesAutorisees.join(", ")}.`,
           );
         } else {
-          setMessage(error.message);
+          toast.error(error.message);
         }
       }
     } finally {
@@ -358,18 +326,42 @@ function ClientCartPageContent() {
 
   return (
     <section className="mx-auto w-full max-w-6xl px-3 pb-6 sm:px-6 sm:pb-8">
+
+      {/* ── Vue Panier ── */}
+      {items.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-200px)]">
+          <div className="flex flex-col items-center justify-center">
+            <ShoppingCart size={120} className="text-gray-400 mb-8" />
+            <div className="text-2xl text-gray-500 text-center">
+              Votre panier est vide
+            </div>
+            <p className="mt-3 text-sm text-gray-400 text-center">
+              Recherchez un médicament pour commencer
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                router.push("/client/accueil");
+                setTimeout(focusSearchInput, 300);
+              }}
+              className="mt-6 rounded-full bg-[#00955F] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#007a4e] transition"
+            >
+              Rechercher un médicament
+            </button>
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Supprimer tout */}
       <div className="mb-6">
         <button
           onClick={removeAll}
           disabled={globalBusy}
-          className="text-sm font-medium text-toni-green-dark-2 hover:underline sm:text-base"
+          className="text-xl font-medium text-toni-green-dark-2 underline sm:text-base"
         >
           Supprimer tout
         </button>
       </div>
-
-      {message && <p className="mb-4 text-sm text-red-500">{message}</p>}
 
       {/* Products grid */}
       <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
@@ -379,11 +371,16 @@ function ClientCartPageContent() {
             className="relative rounded-2xl border border-gray-200 bg-white p-4 sm:p-6"
           >
             {item.requiresPrescription && (
-              <FileText size={18} className="absolute right-4 top-4 text-red-500" />
+              <span className="absolute right-4 top-4 group/ordo">
+                <FileText size={18} className="text-red-500" />
+                <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-red-500 px-2 py-1 text-xs text-white z-10">
+                  Ordonnance requise
+                </span>
+              </span>
             )}
-            <div className="mb-5 sm:mb-6">
-              <h3 className="text-base font-bold text-gray-900">{item.name}</h3>
-              <p className="text-sm text-gray-400">{item.type}</p>
+            <div className="mb-5 sm:mb-6 pr-8">
+              <h3 className="text-base md:text-xl font-semibold text-gray-900">{item.name}</h3>
+              <p className="text-sm md:text-base text-black">{item.type}</p>
             </div>
 
             <div className="flex items-center justify-between">
@@ -435,59 +432,15 @@ function ClientCartPageContent() {
           <button
             onClick={handleLocaliser}
             disabled={isLocating}
-            className="mx-auto block w-full rounded-full bg-toni-green-dark-2 py-3 text-base font-bold text-white transition hover:bg-toni-green-dark sm:w-auto sm:min-w-64 sm:px-10 sm:text-lg"
+            className="block w-full rounded-full bg-toni-green-dark-2 py-3 text-base font-bold text-white transition hover:bg-toni-green-dark disabled:opacity-70"
           >
-            Localiser
+            {isLocating ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                Localisation en cours…
+              </span>
+            ) : "Localiser"}
           </button>
-        )}
-
-        {!isSearchMode && hasLocalized && showNearbyPharmacies && (
-          <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-4 sm:p-6">
-            <h3 className="text-base font-bold text-gray-900 mb-4">
-              Pharmacies à moins de {searchRadiusKm !== null ? `${searchRadiusKm.toString().replace(".", ",")} km` : "20 km"}
-            </h3>
-            {localizationSummary && (
-              <p className="mb-4 text-sm text-gray-600">{localizationSummary}</p>
-            )}
-            <div className="space-y-4">
-              {nearbyPharmacies.map((pharmacy) => (
-                <div
-                  key={pharmacy.id}
-                  className="group flex flex-col gap-3 rounded-xl border border-gray-100 px-4 py-3 transition-colors hover:bg-[#008F4F] sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <p className="font-semibold text-gray-900">{pharmacy.name}</p>
-                    <p className="flex items-center gap-2 text-sm text-gray-500 group-hover:text-white">
-                      <MapPin size={14} className="text-gray-500 group-hover:text-white" />
-                      {pharmacy.address}
-                    </p>
-                    <div className="mt-2 space-y-1">
-                      {pharmacy.produits.map((produit) => (
-                        <p key={`${pharmacy.id}-${produit.id}`} className="text-xs text-gray-500 group-hover:text-white">
-                          {produit.nom} · Qté demandée: {produit.quantiteDemandee} · Stock: {produit.quantiteDisponible}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
-                    <span className="text-sm font-semibold text-toni-green-dark-2 group-hover:text-white">
-                      {pharmacy.distance}
-                    </span>
-                    <Link
-                      href={`/client/dashboard/cart/checkout?pharmacy=${encodeURIComponent(pharmacy.name)}`}
-                      className="rounded-full border border-white bg-white px-4 py-2 text-sm font-semibold text-[#008F4F] transition hover:bg-gray-50"
-                    >
-                      Commander
-                    </Link>
-                  </div>
-                </div>
-              ))}
-
-              {nearbyPharmacies.length === 0 && (
-                <p className="text-sm text-gray-500">Aucune pharmacie trouvée pour cette recherche.</p>
-              )}
-            </div>
-          </div>
         )}
 
         {hasLocalized && isSearchMode && (
@@ -505,7 +458,14 @@ function ClientCartPageContent() {
                     <div className="min-w-0">
                       <p className="font-semibold text-gray-900 flex items-center gap-2">
                         {produit.nom}
-                        {produit.ordonnance && <FileText size={14} className="text-red-500" />}
+                        {produit.ordonnance && (
+                          <span className="relative group/ordo shrink-0">
+                            <FileText size={14} className="text-red-500" />
+                            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-red-500 px-2 py-1 text-xs text-white z-10">
+                              Ordonnance requise
+                            </span>
+                          </span>
+                        )}
                       </p>
                       <p className="text-sm text-gray-500">{produit.type}</p>
                       <p className="text-sm text-gray-500">
@@ -533,6 +493,8 @@ function ClientCartPageContent() {
           </div>
         )}
       </div>
+      </>
+      )}
     </section>
   );
 }

@@ -87,17 +87,17 @@ export default function ContactPage() {
                 <span className="font-medium">Email</span>
                 <span className="mx-2">:</span>
                 <a
-                  href="mailto:support@votresite.com"
-                  className="text-[#008F4F] hover:underline"
+                  href="mailto:contact@toni360.com"
+                  className="text-[#008F4F] underline hover:underline"
                 >
-                  support@votresite.com
+                  contact@toni360.com
                 </a>
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-gray-500">•</span>
                 <span className="font-medium">Téléphone</span>
                 <span className="mx-2">:</span>
-                <span>+229 12 34 56 78.</span>
+                <a href="tel:+2290129111487" className="text-[#008F4F] underline hover:underline">+229 01 29 11 14 87</a>.
               </li>
             </ul>
           </div>

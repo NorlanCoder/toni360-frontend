@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
 import { loginPatient } from "@/lib/api/auth";
@@ -34,7 +35,7 @@ export default function ConnexionPage() {
       : formData.email.trim();
 
     if (!loginValue || !formData.password) {
-      window.alert("Veuillez renseigner vos identifiants.");
+      toast.warning("Veuillez renseigner vos identifiants.");
       return;
     }
 
@@ -50,15 +51,15 @@ export default function ConnexionPage() {
         token: response.data.token,
         tokenType: response.data.token_type,
         profile: response.data.patient ?? null,
-      });
+      }, formData.rememberMe);
 
-      window.alert(response.message ?? "Connexion réussie.");
+      toast.success(response.message ?? "Connexion réussie.");
       router.push("/client/accueil");
     } catch (error: unknown) {
       if (error instanceof ApiError) {
-        window.alert(error.message);
+        toast.error(error.message);
       } else {
-        window.alert("Une erreur est survenue pendant la connexion.");
+        toast.error("Une erreur est survenue pendant la connexion.");
       }
     } finally {
       setSubmitting(false);
@@ -138,7 +139,7 @@ export default function ConnexionPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, telephone: e.target.value })
                   }
-                  className="flex-1 px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                  className="flex-1 bg-white px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
                 />
               </div>
             ) : (
@@ -150,7 +151,7 @@ export default function ConnexionPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                  className="w-full bg-white px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
                 />
               </div>
             )}
@@ -165,7 +166,7 @@ export default function ConnexionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                className="w-full bg-white pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
               />
               <button
                 type="button"

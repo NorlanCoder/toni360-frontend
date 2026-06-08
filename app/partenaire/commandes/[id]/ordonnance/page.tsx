@@ -1,347 +1,233 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, User, Search, Menu, ArrowLeft } from "lucide-react";
-import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
-import { rejeterPartnerOrdonnance, validerPartnerOrdonnance } from "@/lib/api/partner";
+import {
+  getPartnerCommande,
+  validerPartnerOrdonnance,
+  rejeterPartnerOrdonnance,
+} from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
+import { toast } from "sonner";
 
-/* ════════════════════════════ PAGE ════════════════════════════ */
 export default function OrdonnancePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [ordonnanceUrl, setOrdonnanceUrl] = useState<string | null>(null);
+  const [isLoadingOrd, setIsLoadingOrd] = useState(true);
+  const [ordonnanceStatut, setOrdonnanceStatut] = useState<string>("");
   const [notification, setNotification] = useState("");
-  const [decision, setDecision] = useState<"valide" | "refuse" | null>(null);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submittingValider, setSubmittingValider] = useState(false);
+  const [submittingRefuser, setSubmittingRefuser] = useState(false);
+  const [submittingEnvoyer, setSubmittingEnvoyer] = useState(false);
 
-  /* Auto-close success modal after 2.5 s then go back */
   useEffect(() => {
-    if (!showSuccess) return;
-    const timer = setTimeout(() => {
-      setShowSuccess(false);
-      router.push(`/partenaire/commandes/${id}`);
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [showSuccess, router, id]);
+    const loadOrdonnance = async () => {
+      const session = getAuthSession();
+      if (!session || session.userType !== "user" || !session.token || !id) {
+        setIsLoadingOrd(false);
+        return;
+      }
+      try {
+        const response = await getPartnerCommande(session.token, id);
+        const commande = response.data.commande;
+        const firstOrd = commande.produits.find((p) => p.ordonnance?.fichier_url)?.ordonnance ?? null;
+        setOrdonnanceUrl(firstOrd?.fichier_url ?? null);
+        setOrdonnanceStatut(firstOrd?.statut ?? "");
+      } catch {
+        // silently fail
+      } finally {
+        setIsLoadingOrd(false);
+      }
+    };
+    void loadOrdonnance();
+  }, [id]);
 
-  async function handleValider() {
+  const getSession = () => {
     const session = getAuthSession();
-    if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
-      return;
-    }
+    if (!session || session.userType !== "user" || !session.token || !id) return null;
+    return session;
+  };
 
-    setIsSubmitting(true);
+  const getPharmacieNom = () => {
+    const s = getAuthSession();
+    const profile = s?.profile as { pharmacie?: { nom?: string } | null; prenom?: string; nom?: string } | null;
+    return profile?.pharmacie?.nom ?? profile?.prenom ?? "La pharmacie";
+  };
+
+  const isAnySubmitting = submittingValider || submittingRefuser || submittingEnvoyer;
+  const messageHasContent = notification.trim().length > 0;
+
+  // Statuts ordonnance o\u00f9 Valider et Refuser sont autoris\u00e9s
+  const ORD_ALLOWED = new Set(["EN_ATTENTE", "EN_VERIFICATION", "REJETEE"]);
+  const canValider = ORD_ALLOWED.has(ordonnanceStatut);
+  const canRefuser = ORD_ALLOWED.has(ordonnanceStatut);
+  const ordonnanceStatutConfig: Record<string, { label: string; color: string }> = {
+    EN_ATTENTE:    { label: "En attente de vérification", color: "bg-amber-100 text-amber-700 border border-amber-300" },
+    EN_VERIFICATION: { label: "En cours de vérification", color: "bg-blue-100 text-blue-700 border border-blue-300" },
+    VALIDEE:       { label: "Ordonnance validée", color: "bg-emerald-100 text-emerald-700 border border-emerald-300" },
+    REJETEE:       { label: "Ordonnance rejetée", color: "bg-red-100 text-red-700 border border-red-300" },
+    EXPIREE:       { label: "Ordonnance expirée", color: "bg-gray-100 text-gray-500 border border-gray-300" },
+  };
+  const statutConfig = ordonnanceStatut ? ordonnanceStatutConfig[ordonnanceStatut] : null;
+  const handleValider = async () => {
+    const session = getSession();
+    if (!session) { toast.error("Session partenaire invalide."); return; }
+    setSubmittingValider(true);
     try {
       await validerPartnerOrdonnance(session.token, id);
-      setDecision("valide");
-      setError(null);
-      router.push(`/partenaire/commandes/${id}`);
+      toast.success("Ordonnance validée. Le patient a été notifié.");
+      router.back();
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Validation impossible.");
+      toast.error(err instanceof ApiError ? err.message : "Impossible de valider l'ordonnance.");
     } finally {
-      setIsSubmitting(false);
+      setSubmittingValider(false);
     }
-  }
+  };
 
-  function handleRefuser() {
-    setDecision("refuse");
-  }
-
-  async function handleEnvoyer() {
-    if (!notification.trim()) return;
-
-    const session = getAuthSession();
-    if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
-      return;
-    }
-
-    setIsSubmitting(true);
+  const handleRefuser = async () => {
+    const session = getSession();
+    if (!session) { toast.error("Session partenaire invalide."); return; }
+    setSubmittingRefuser(true);
     try {
-      await rejeterPartnerOrdonnance(session.token, id, notification.trim());
-      setShowSuccess(true);
-      setNotification("");
-      setDecision(null);
-      setError(null);
+      await rejeterPartnerOrdonnance(session.token, id, "Ordonnance non conforme.");
+      toast.success("Ordonnance refusée. Le patient a été notifié.");
+      router.back();
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Envoi impossible.");
+      toast.error(err instanceof ApiError ? err.message : "Impossible de refuser l'ordonnance.");
     } finally {
-      setIsSubmitting(false);
+      setSubmittingRefuser(false);
     }
-  }
+  };
+
+  const handleEnvoyer = async () => {
+    const session = getSession();
+    if (!session) { toast.error("Session partenaire invalide."); return; }
+    const texte = notification.trim();
+    if (!texte) return;
+    setSubmittingEnvoyer(true);
+    try {
+      const pharmacieNom = getPharmacieNom();
+      await notifierPartnerPatient(
+        session.token,
+        id,
+        `${pharmacieNom} a émis une observation concernant votre ordonnance : ${texte}. Veuillez consulter les détails et apporter les corrections nécessaires.`
+      );
+      toast.success("Message envoyé au patient.");
+      setNotification("");
+    } catch (err: unknown) {
+      toast.error(err instanceof ApiError ? err.message : "Impossible d'envoyer le message.");
+    } finally {
+      setSubmittingEnvoyer(false);
+    }
+  };
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      <PartenaireSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-16 py-5 lg:py-10 bg-emerald-50">
+      {/* Back + Title */}
+      <div className="mb-8 flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="flex items-center gap-1 text-gray-500 hover:text-emerald-700 transition-colors text-sm font-medium"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Retour
+        </button>
+        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Ordonnance</h1>
+      </div>
 
-      {/* ───────────── MAIN AREA ──────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* ─── HEADER ─── */}
-        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
+      {/* Layout : aperçu haut/gauche + actions bas/droite */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-          <div className="relative w-full max-w-lg">
-            <Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un médicament"
-              className="w-full rounded-full border-0 bg-emerald-50/60 py-3 pl-14 pr-4 text-base text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
+        {/* Aperçu */}
+        <div className="w-full lg:flex-1 lg:max-w-[520px] rounded-xl border border-gray-300 bg-white shadow-sm overflow-hidden min-h-[260px] sm:min-h-[400px] lg:min-h-[580px] flex items-center justify-center">
+          {isLoadingOrd ? (
+            <p className="text-sm text-gray-500">Chargement de l&apos;ordonnance...</p>
+          ) : ordonnanceUrl ? (
+            <iframe src={ordonnanceUrl} title="Ordonnance" className="w-full h-[260px] sm:h-[400px] lg:h-[580px] border-0" />
+          ) : (
+            <p className="text-sm text-gray-400 px-8 text-center">
+              Aucune ordonnance jointe à cette commande.
+            </p>
+          )}
+        </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/partenaire/notifications"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Notifications</span>
-              <Bell className="h-5 w-5" />
-            </Link>
-            <button
-              type="button"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </button>
-          </div>
-        </header>
+        {/* Actions */}
+        <div className="flex flex-col gap-4 w-full lg:w-[320px]">
 
-        {/* ─── CONTENT ─── */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10 bg-emerald-50">
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
+          {/* Badge statut ordonnance */}
+          {statutConfig && (
+            <div className={`inline-flex items-center gap-2 self-start rounded-full px-4 py-2 text-sm font-semibold ${statutConfig.color}`}>
+              {ordonnanceStatut === "VALIDEE" && (
+                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
+              {statutConfig.label}
             </div>
           )}
 
-          {/* Back + Title */}
-          <div className="mb-8 flex items-center gap-4">
+          {/* Valider / Refuser */}
+          <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => router.back()}
-              className="flex items-center gap-1 text-gray-500 hover:text-emerald-700 transition-colors text-sm font-medium"
+              onClick={handleValider}
+              disabled={isAnySubmitting || messageHasContent || !canValider}
+              className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition-colors ${
+                !isAnySubmitting && !messageHasContent && canValider
+                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
+              }`}
             >
-              <ArrowLeft className="h-4 w-4" />
-              Retour
+              {submittingValider && <Loader2 className="h-4 w-4 animate-spin" />}
+              Valider
             </button>
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
-              Ordonnance
-            </h1>
+            <button
+              type="button"
+              onClick={handleRefuser}
+              disabled={isAnySubmitting || messageHasContent || !canRefuser}
+              className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full border-2 px-6 py-2.5 text-sm font-semibold transition-colors ${
+                !isAnySubmitting && !messageHasContent && canRefuser
+                  ? "border-emerald-600 text-emerald-700 bg-white hover:bg-emerald-50"
+                  : "border-gray-200 text-gray-400 bg-white cursor-not-allowed"
+              }`}
+            >
+              {submittingRefuser && <Loader2 className="h-4 w-4 animate-spin" />}
+              Refuser
+            </button>
           </div>
 
-          {/* ─── MAIN LAYOUT : aperçu gauche + actions droite ─── */}
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
-
-            {/* ── Aperçu ordonnance ── */}
-            <div className="flex-1 max-w-[520px]">
-              <div className="rounded-xl border border-gray-300 bg-white shadow-sm overflow-hidden">
-                {/* Document */}
-                <div className="p-8 font-serif text-[13px] text-gray-800 min-h-[580px] flex flex-col">
-
-                  {/* En-tête médecin */}
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <p className="font-bold text-sm">Dr Arnaud PROVO</p>
-                      <p className="text-gray-600 text-xs">Médecin généraliste</p>
-                    </div>
-                    <div className="text-right text-xs text-gray-600">
-                      <p>121 Rue d&apos;Aguesseau</p>
-                      <p>92100 Boulogne-Billancourt</p>
-                      <p>Tél : 01 49 09 22 00</p>
-                    </div>
-                  </div>
-
-                  {/* Codes-barres */}
-                  <div className="flex items-center gap-4 my-4">
-                    <div className="flex flex-col items-start gap-0.5">
-                      {Array.from({ length: 12 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="bg-gray-900"
-                          style={{
-                            height: "2px",
-                            width: `${40 + ((i * 7) % 24)}px`,
-                            marginBottom: "1px",
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <div className="flex flex-col items-start gap-0.5">
-                      {Array.from({ length: 12 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="bg-gray-900"
-                          style={{
-                            height: "2px",
-                            width: `${35 + ((i * 11) % 28)}px`,
-                            marginBottom: "1px",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex-1" />
-
-                  {/* Infos patient */}
-                  <div className="mb-6 mt-4">
-                    <p className="font-bold">Madame Diane LANE</p>
-                    <p className="text-gray-600 text-xs">55 ans</p>
-                  </div>
-
-                  {/* Médicament */}
-                  <div className="mb-6">
-                    <p className="font-bold text-sm tracking-wide">DOLIPRANE 1 000MG CPR 8</p>
-                    <p className="text-xs text-gray-600 italic">
-                      1 comprimé matin, midi et soir pendant 3 jours
-                    </p>
-                  </div>
-
-                  {/* Date + Signature */}
-                  <div className="flex justify-between items-end mt-6">
-                    <span className="text-xs text-gray-500">
-                      Boulogne-Billancourt, le 21/03/2022
-                    </span>
-                    <div className="text-right">
-                      {/* Signature stylisée */}
-                      <svg
-                        width="80"
-                        height="40"
-                        viewBox="0 0 80 40"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M10 30 Q20 5 30 20 Q40 35 50 15 Q60 5 70 25"
-                          stroke="#374151"
-                          strokeWidth="1.5"
-                          fill="none"
-                          strokeLinecap="round"
-                        />
-                        <path
-                          d="M15 34 Q30 28 50 32 Q60 34 68 30"
-                          stroke="#374151"
-                          strokeWidth="1"
-                          fill="none"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Numéro de page */}
-                  <div className="flex justify-end mt-4">
-                    <span className="border border-gray-400 px-2 py-0.5 text-xs text-gray-500">
-                      1
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ── Actions droite ── */}
-            <div className="flex flex-col gap-6 w-full lg:w-[360px]">
-
-              {/* Boutons Valider / Refuser */}
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={handleValider}
-                  disabled={isSubmitting}
-                  className={`flex-1 rounded-full px-8 py-3 text-base font-semibold transition-colors ${
-                    decision === "valide"
-                      ? "bg-emerald-700 text-white"
-                      : "bg-emerald-600 text-white hover:bg-emerald-700"
-                  }`}
-                >
-                  Valider
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRefuser}
-                  disabled={isSubmitting}
-                  className={`flex-1 rounded-full border-2 px-8 py-3 text-base font-semibold transition-colors ${
-                    decision === "refuse"
-                      ? "border-red-600 bg-red-50 text-red-700"
-                      : "border-emerald-600 bg-white text-emerald-700 hover:bg-emerald-50"
-                  }`}
-                >
-                  Refuser
-                </button>
-              </div>
-
-              {/* Zone de notification */}
-              <div className="flex flex-col gap-3">
-                <textarea
-                  value={notification}
-                  onChange={(e) => setNotification(e.target.value)}
-                  placeholder="Notifier une incohérence au patient..."
-                  rows={10}
-                  className="w-full resize-none rounded-2xl border border-gray-300 bg-white px-5 py-4 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-sm"
-                />
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleEnvoyer}
-                    disabled={!notification.trim() || isSubmitting}
-                    className="rounded-full border-2 border-emerald-600 px-10 py-3 text-base font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? "Envoi..." : "Envoyer"}
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </main>
-      </div>
-      {/* ─── Success Modal ─── */}
-      {showSuccess && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
-          onClick={() => setShowSuccess(false)}
-        >
-          <div
-            className="mx-4 w-full max-w-xs rounded-2xl bg-white px-8 py-12 text-center shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full border-[6px] border-emerald-500">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-12 w-12 text-emerald-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                aria-hidden="true"
+          {/* Textarea + Envoyer */}
+          <div className="flex flex-col gap-3">
+            <textarea
+              value={notification}
+              onChange={(e) => setNotification(e.target.value)}
+              disabled={isAnySubmitting}
+              rows={6}
+              placeholder="Notifier une incohérence au patient..."
+              className="w-full resize-none rounded-2xl border border-gray-300 bg-white px-5 py-4 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-sm disabled:opacity-50"
+            />
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleEnvoyer}
+                disabled={isAnySubmitting || !messageHasContent}
+                className={`inline-flex items-center justify-center gap-2 rounded-full border-2 px-8 py-2.5 text-sm font-semibold transition-colors ${
+                  !isAnySubmitting && messageHasContent
+                    ? "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+                    : "border-gray-200 text-gray-400 cursor-not-allowed"
+                }`}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+                {submittingEnvoyer && <Loader2 className="h-4 w-4 animate-spin" />}
+                Envoyer
+              </button>
             </div>
-            <p className="text-base leading-relaxed text-gray-600">
-              L&apos;ordonnance a été<br />demandée au patient.
-            </p>
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    </main>
   );
 }

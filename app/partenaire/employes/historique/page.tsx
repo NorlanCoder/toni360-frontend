@@ -1,258 +1,288 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import {
-  LayoutDashboard,
-  Package,
-  Boxes,
-  Users,
-  Pill,
-  History,
-  HelpCircle,
-  LogOut,
-  Bell,
-  User,
-  Search,
-  ChevronDown,
-  Menu,
-} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, ClockArrowUp, X } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
-import { extractCollection, getPartnerNotifications } from "@/lib/api/partner";
+import {
+  ActionLogEntry,
+  getPartnerHistorique,
+  getPartnerHistoriqueUtilisateurs,
+} from "@/lib/api/partner";
+import { toast } from "sonner";
 
-/* ──────────────────────────── Types ──────────────────────────── */
-interface HistoriqueEntry {
-  id: string;
-  titre: string;
-  description: string;
-  date: string;
-  heure: string;
-}
+const MODULE_LABELS: Record<string, string> = {
+  GESTION_USERS: "Employés",
+  GESTION_PRODUITS: "Médicaments",
+  GESTION_STOCKS: "Stocks",
+  GESTION_COMMANDES: "Commandes",
+  GESTION_PAIEMENTS: "Paiements",
+  GESTION_ORDONNANCES: "Ordonnances",
+  GESTION_INCOHERENCES: "Incohérences",
+  PARAMETRAGE_PHARMACIE: "Paramétrage",
+};
 
-/* ──────────────────────── Mock data ──────────────────────────── */
-const mockHistorique: HistoriqueEntry[] = [];
+const ACTION_LABELS: Record<string, string> = {
+  CREATE: "Création",
+  UPDATE: "Modification",
+  DELETE: "Suppression",
+  READ:   "Consultation",
+};
 
-/* ──────────────────── Sidebar nav items ─────────────────────── */
-const navItems = [
-  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/dashboard" },
-  { label: "Gestion de commande", icon: Package, href: "/partenaire/commandes" },
-  { label: "Gestion de Stocks", icon: Boxes, href: "/partenaire/stocks" },
-  { label: "Gestion des employés", icon: Users, href: "/partenaire/employes" },
-  { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
-  { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique", active: true },
-  { label: "Assistance et support", icon: HelpCircle, href: "#" },
-];
+const ACTION_COLORS: Record<string, string> = {
+  CREATE: "bg-emerald-100 text-emerald-700",
+  UPDATE: "bg-blue-100 text-blue-700",
+  DELETE: "bg-red-100 text-red-700",
+  READ:   "bg-gray-100 text-gray-600",
+};
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireHistoriquePage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [entries, setEntries] = useState<HistoriqueEntry[]>(mockHistorique);
+  const [entries, setEntries] = useState<ActionLogEntry[]>([]);
+  const [utilisateurs, setUtilisateurs] = useState<{ id: string; nom: string }[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<ActionLogEntry | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const loadHistorique = async () => {
+    const loadData = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
 
       try {
-        const response = await getPartnerNotifications(session.token, 100);
-        const notifications = extractCollection(response.data.notifications);
-        setEntries(
-          notifications.map((notification) => {
-            const created = notification.created_at ? new Date(notification.created_at) : null;
-            return {
-              id: notification.id,
-              titre: notification.titre,
-              description: notification.message,
-              date: created ? created.toLocaleDateString("fr-FR") : "-",
-              heure: created
-                ? created.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
-                : "-",
-            };
-          }),
-        );
-        setError(null);
+        const [histResponse, usersResponse] = await Promise.all([
+          getPartnerHistorique(session.token, { per_page: 200 }),
+          getPartnerHistoriqueUtilisateurs(session.token),
+        ]);
+
+        setEntries(histResponse.data.data ?? []);
+        setUtilisateurs(usersResponse.data ?? []);
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger l'historique.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger l'historique.");
       } finally {
         setIsLoading(false);
       }
     };
 
-    void loadHistorique();
+    void loadData();
   }, []);
 
+  // Fermer le dropdown si clic hors
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filtered = selectedUserId
+    ? entries.filter((e) => e.user_id === selectedUserId)
+    : entries;
+
+  const selectedUser = utilisateurs.find((u) => u.id === selectedUserId);
+
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      {/* ───────────── MOBILE OVERLAY ───────────── */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ───────────── SIDEBAR ───────────── */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 lg:relative lg:z-auto lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
-      >
-        {/* Logo */}
-        <div className="flex h-20 items-center px-5">
-          <Link href="/partenaire/dashboard" className="flex items-center gap-2">
-            <Image
-              src="/images/logo.png"
-              alt="Toni 360°"
-              width={180}
-              height={56}
-              priority
-            />
-          </Link>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex flex-1 flex-col gap-1 px-3 pt-4" aria-label="Navigation partenaire">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-4 py-4 text-base font-medium transition-colors ${
-                  item.active
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <Icon className="h-6 w-6 shrink-0" />
-                {item.label}
-              </Link>
-            );
-          })}
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Déconnexion */}
-          <Link
-            href="/partenaire/deconnexion"
-            className="mb-6 flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
-          >
-            <LogOut className="h-5 w-5 shrink-0" />
-            Déconnexion
-          </Link>
-        </nav>
-      </aside>
-
-      {/* ───────────── MAIN AREA ──────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* ─── HEADER ─── */}
-        <header className="flex h-16 lg:h-20 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
-          {/* Hamburger (mobile) */}
+    <div className="px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
+      {/* Titre + Dropdown filtre employé */}
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">Historique des actions</h1>
+        <div className="relative" ref={dropdownRef}>
           <button
             type="button"
-            aria-label="Ouvrir le menu"
-            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => setDropdownOpen((o) => !o)}
+            className="flex items-center gap-2 rounded-full border border-gray-300 px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-gray-700 transition-colors hover:bg-gray-50"
           >
-            <Menu className="h-6 w-6" />
+            {selectedUser ? selectedUser.nom : "Tous les employés"}
+            <ChevronDown className="h-5 w-5" />
           </button>
+          {dropdownOpen && (
+            <div className="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden">
+              <button
+                onClick={() => { setSelectedUserId(null); setDropdownOpen(false); }}
+                className={`w-full px-4 py-2 text-left text-sm transition-colors hover:bg-gray-50 ${
+                  selectedUserId === null ? "font-semibold text-toni-green-dark-2" : "text-gray-700"
+                }`}
+              >
+                Tous les employés
+              </button>
+              {utilisateurs.map((u) => (
+                <button
+                  key={u.id}
+                  onClick={() => { setSelectedUserId(u.id); setDropdownOpen(false); }}
+                  className={`w-full px-4 py-2 text-left text-sm transition-colors hover:bg-gray-50 ${
+                    selectedUserId === u.id ? "font-semibold text-toni-green-dark-2" : "text-gray-700"
+                  }`}
+                >
+                  {u.nom}
+                </button>
+              ))}
+              {utilisateurs.length === 0 && (
+                <p className="px-4 py-2 text-sm text-gray-400">Aucun employé</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
-          {/* Search */}
-          <div className="relative min-w-0 flex-1 max-w-lg">
-            <Search className="absolute left-3 sm:left-5 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un médicament"
-              className="w-full rounded-full border-0 bg-emerald-50/60 py-2 sm:py-3 pl-9 sm:pl-14 pr-3 sm:pr-4 text-sm sm:text-base text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
+      {isLoading ? (
+        <div className="rounded-xl border border-gray-200 px-4 py-4 text-sm text-gray-500">
+          Chargement de l&apos;historique...
+        </div>
+      ) : entries.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-200px)]">
+          <div className="flex flex-col items-center justify-center">
+            <ClockArrowUp size={120} className="text-gray-400 mb-8" />
+            <div className="text-2xl text-gray-500 text-center">Aucun historique disponible</div>
           </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3">
-            <Link
-              href="/partenaire/notifications"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Notifications</span>
-              <Bell className="h-5 w-5" />
-            </Link>
-            <button
-              type="button"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </button>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-200px)]">
+          <div className="flex flex-col items-center justify-center">
+            <ClockArrowUp size={120} className="text-gray-400 mb-8" />
+            <div className="text-2xl text-gray-500 text-center">
+              Aucune activité pour cet employé
+            </div>
           </div>
-        </header>
+        </div>
+      ) : (
+        <div className="max-w-5xl mx-auto space-y-4">
+          {filtered.map((entry) => {
+            const created = entry.created_at ? new Date(entry.created_at) : null;
+            const date = created ? created.toLocaleDateString("fr-FR") : "-";
+            const heure = created
+              ? created.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+              : "-";
+            const employeNom = entry.user
+              ? `${entry.user.prenom} ${entry.user.nom}`
+              : null;
+            const moduleLabel = MODULE_LABELS[entry.module] ?? entry.module;
+            const actionLabel = ACTION_LABELS[entry.action] ?? entry.action;
+            const actionColor = ACTION_COLORS[entry.action] ?? "bg-gray-100 text-gray-600";
+            const description = entry.description ?? "";
 
-        {/* ─── CONTENT ─── */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
-          {/* Dropdown filtre employé */}
-          <div className="mb-6 flex justify-end">
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded-full border border-gray-300 px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-gray-700 transition-colors hover:bg-gray-50"
-            >
-              Nom de l&apos;employé
-              <ChevronDown className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Liste historique */}
-          <div className="flex flex-col gap-4">
-            {isLoading ? (
-              <div className="rounded-xl border border-gray-200 px-4 py-4 text-sm text-gray-500">Chargement de l'historique...</div>
-            ) : error ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">{error}</div>
-            ) : entries.map((entry) => (
+            return (
               <div
                 key={entry.id}
-                className="flex items-center gap-4 sm:gap-6 rounded-2xl px-4 sm:px-6 py-4 sm:py-5"
-                style={{ backgroundColor: "#f0faf5" }}
+                onClick={() => setSelectedEntry(entry)}
+                className="rounded-2xl px-4 py-3 flex items-center gap-4 bg-[#E6F6F0] cursor-pointer hover:bg-emerald-100 transition-colors"
               >
-                {/* Icône logo */}
-                <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-full bg-white shadow-sm">
-                  <Image
-                    src="/images/logo.png"
-                    alt="Toni360"
-                    width={40}
-                    height={40}
-                    className="h-10 w-10 object-contain"
-                  />
+                {/* Icône */}
+                <div className="flex-shrink-0">
+                  <div className="w-11 h-11 rounded-full border-2 border-toni-green-dark-2 flex items-center justify-center bg-white">
+                    <Image
+                      src="/images/icon.png"
+                      alt="Toni360"
+                      width={28}
+                      height={28}
+                      className="object-contain"
+                    />
+                  </div>
                 </div>
 
                 {/* Texte */}
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm sm:text-base font-bold text-gray-900">
-                    {entry.titre}
-                  </p>
-                  <p className="mt-1 truncate text-xs sm:text-sm text-gray-500">
-                    {entry.description}
-                  </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                    <span className="font-bold text-gray-900 text-sm">{moduleLabel}</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${actionColor}`}>
+                      {actionLabel}
+                    </span>
+                  </div>
+                  {description && (
+                    <p className="text-gray-600 text-xs truncate">{description}</p>
+                  )}
+                  {employeNom && (
+                    <p className="text-xs text-emerald-700 font-medium mt-0.5">{employeNom}</p>
+                  )}
                 </div>
 
                 {/* Date & heure */}
-                <span className="shrink-0 text-xs sm:text-sm font-medium text-gray-500">
-                  {entry.date}&nbsp;&nbsp;{entry.heure}
+                <span className="flex-shrink-0 text-xs text-gray-400 pr-1 text-right whitespace-nowrap">
+                  {date}
+                  <br />
+                  {heure}
                 </span>
               </div>
-            ))}
+            );
+          })}
+        </div>
+      )}
+
+      {/* ═══════════════ DETAIL MODAL ═══════════════ */}
+      {selectedEntry && (() => {
+        const e = selectedEntry;
+        const created = e.created_at ? new Date(e.created_at) : null;
+        const date = created ? created.toLocaleDateString("fr-FR") : "-";
+        const heure = created
+          ? created.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+          : "-";
+        const employeNom = e.user ? `${e.user.prenom} ${e.user.nom}` : null;
+        const moduleLabel = MODULE_LABELS[e.module] ?? e.module;
+        const actionLabel = ACTION_LABELS[e.action] ?? e.action;
+        const actionColor = ACTION_COLORS[e.action] ?? "bg-gray-100 text-gray-600";
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setSelectedEntry(null)}
+            />
+            <div className="relative z-10 mx-4 w-full max-w-md rounded-2xl bg-white shadow-xl">
+              {/* Header */}
+              <div className="flex items-start justify-between border-b border-gray-200 px-5 py-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-900">{moduleLabel}</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${actionColor}`}>
+                      {actionLabel}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-gray-400">{date} à {heure}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedEntry(null)}
+                  className="ml-4 rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="divide-y divide-gray-100 px-5 py-2">
+                {e.description && (
+                  <Row label="Description" value={e.description} />
+                )}
+                {employeNom && (
+                  <Row label="Employé" value={employeNom} />
+                )}
+                {e.user?.role?.libelle && (
+                  <Row label="Rôle" value={e.user.role.libelle} />
+                )}
+              </div>
+            </div>
           </div>
-        </main>
-      </div>
+        );
+      })()}
     </div>
   );
 }
 
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-start gap-3 py-2.5">
+      <span className="w-28 shrink-0 text-xs font-medium text-gray-400">{label}</span>
+      <span className={`flex-1 text-sm text-gray-800 break-all ${mono ? "font-mono text-xs" : ""}`}>
+        {value}
+      </span>
+    </div>
+  );
+}

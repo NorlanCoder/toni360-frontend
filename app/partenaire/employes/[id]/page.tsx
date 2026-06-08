@@ -4,11 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Bell, User, Search, Menu } from "lucide-react";
-import PartenaireSidebar from "@/components/partenaire/Sidebar";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
-import { getPartnerUser, togglePartnerUserActive, updatePartnerUser } from "@/lib/api/partner";
+import {
+  getPartnerUser,
+  getPartnerUserPermissions,
+  togglePartnerUserActive,
+  updatePartnerUserPermissions,
+  type PartnerUserPermission,
+} from "@/lib/api/partner";
+import { toast } from "sonner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 interface Permission {
@@ -71,6 +76,81 @@ const PERMISSIONS_BY_ROLE: Record<EmployeeRoleCode, Permission[]> = {
   ],
 };
 
+/**
+ * Mapping UI label → modules backend (pour construire les overrides à envoyer à l'API).
+ * Un label sans modules = frontend-only (toujours activé, non envoyé à l'API).
+ */
+const LABEL_TO_MODULES: Partial<Record<EmployeeRoleCode, Record<string, string[]>>> = {
+  GESTIONNAIRE_OPERATIONNEL: {
+    "Gestion des commandes": ["GESTION_COMMANDES", "GESTION_ORDONNANCES"],
+    "Gestion des médicaments": ["GESTION_PRODUITS", "GESTION_INCOHERENCES"],
+    "Gestion des stocks": ["GESTION_STOCKS"],
+    "Gestion des données de la pharmacie": ["PARAMETRAGE_PHARMACIE"],
+    "Gestion des interactions avec les patients": ["GESTION_ORDONNANCES"],
+    "Gestion des performances": ["CONSULTATION_STATISTIQUES"],
+    "Gestion des paiements": ["GESTION_PAIEMENTS"],
+  },
+  RESPONSABLE_STOCKS: {
+    "Gestion des médicaments": ["GESTION_PRODUITS", "GESTION_INCOHERENCES"],
+    "Gestion des stocks": ["GESTION_STOCKS"],
+  },
+  RESPONSABLE_COMMANDES: {
+    "Gestion des commandes": ["GESTION_COMMANDES", "GESTION_ORDONNANCES"],
+    "Gestion des paiements": ["GESTION_PAIEMENTS"],
+  },
+};
+
+/**
+ * À partir des permissions retournées par l'API, construit les states UI (label + enabled).
+ * Un label est "enabled" si TOUTES ses permissions API correspondantes sont is_enabled = true.
+ * Les labels sans modules (frontend-only) sont toujours enabled.
+ */
+function buildUiPermissions(
+  roleCode: EmployeeRoleCode,
+  rawPerms: PartnerUserPermission[],
+): Permission[] {
+  const defaults = PERMISSIONS_BY_ROLE[roleCode];
+  const labelMap = LABEL_TO_MODULES[roleCode];
+  if (!labelMap) return defaults;
+
+  return defaults.map((p) => {
+    const modules = labelMap[p.label];
+    if (!modules || modules.length === 0) return { ...p, enabled: true }; // frontend-only
+
+    // Le label est activé si toutes les perms des modules concernés sont is_enabled
+    const relatedPerms = rawPerms.filter((rp) => modules.includes(rp.module));
+    if (relatedPerms.length === 0) return { ...p, enabled: true }; // pas encore en BDD → défaut actif
+    return { ...p, enabled: relatedPerms.every((rp) => rp.is_enabled) };
+  });
+}
+
+/**
+ * Construit la liste { permission_id, is_enabled } à envoyer à l'API.
+ * Seules les permissions avec modules (pas les frontend-only) sont incluses.
+ */
+function buildApiPayload(
+  roleCode: EmployeeRoleCode,
+  uiPerms: Permission[],
+  rawPerms: PartnerUserPermission[],
+): Array<{ permission_id: string; is_enabled: boolean }> {
+  const labelMap = LABEL_TO_MODULES[roleCode];
+  if (!labelMap) return [];
+
+  const payload: Array<{ permission_id: string; is_enabled: boolean }> = [];
+
+  for (const uiPerm of uiPerms) {
+    const modules = labelMap[uiPerm.label];
+    if (!modules || modules.length === 0) continue; // frontend-only, skip
+
+    const relatedPerms = rawPerms.filter((rp) => modules.includes(rp.module));
+    for (const rp of relatedPerms) {
+      payload.push({ permission_id: rp.id, is_enabled: uiPerm.enabled });
+    }
+  }
+
+  return payload;
+}
+
 function mapRoleCode(code: string | undefined): EmployeeRoleCode | null {
   if (code === "PHARMACIEN_TITULAIRE") return "PHARMACIEN_TITULAIRE";
   if (code === "GESTIONNAIRE_OPERATIONNEL") return "GESTIONNAIRE_OPERATIONNEL";
@@ -99,27 +179,50 @@ function getPermissionsForRole(code: EmployeeRoleCode | null): Permission[] {
 export default function PartenaireEmployeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [rawPermissions, setRawPermissions] = useState<PartnerUserPermission[]>([]);
   const [employee, setEmployee] = useState(mockEmployee);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editableName, setEditableName] = useState("");
-  const [editablePhone, setEditablePhone] = useState("");
+  const [isSavingPermissions, setIsSavingPermissions] = useState(false);
 
-  /* ── Modal state ── */
+  /* ── Toggle permission (persist via API) ── */
+  const togglePermission = async (idx: number) => {
+    if (isSavingPermissions || !employee.roleCode) return;
+
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token || !id) return;
+
+    const updated = permissions.map((p, i) => (i === idx ? { ...p, enabled: !p.enabled } : p));
+    setPermissions(updated); // mise à jour optimiste
+
+    const payload = buildApiPayload(employee.roleCode, updated, rawPermissions);
+    if (payload.length === 0) return; // frontend-only, rien à sauvegarder
+
+    setIsSavingPermissions(true);
+    try {
+      await updatePartnerUserPermissions(session.token, id, payload);
+      toast.success("Permissions mises à jour. L'employé devra se reconnecter.");
+    } catch (err: unknown) {
+      // rollback
+      setPermissions(permissions);
+      toast.error(err instanceof ApiError ? err.message : "Impossible de mettre à jour les permissions.");
+    } finally {
+      setIsSavingPermissions(false);
+    }
+  };
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [deactivatePassword, setDeactivatePassword] = useState("");
+  const [showDeactivatePassword, setShowDeactivatePassword] = useState(false);
   const isTitulaire = employee.roleCode === "PHARMACIEN_TITULAIRE";
 
   useEffect(() => {
     const loadEmployee = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token || !id) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
@@ -145,55 +248,35 @@ export default function PartenaireEmployeDetailPage() {
           dateAjout: user.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "-",
         };
         setEmployee(mapped);
-        setPermissions(getPermissionsForRole(roleCode));
-        setEditableName(mapped.nom);
-        setEditablePhone(mapped.telephone);
+
+        // Charger les permissions depuis l'API
+        try {
+          const permsResponse = await getPartnerUserPermissions(session.token, id);
+          const raw = permsResponse.data.permissions;
+          setRawPermissions(raw);
+          if (roleCode) {
+            setPermissions(buildUiPermissions(roleCode, raw));
+          } else {
+            setPermissions(getPermissionsForRole(roleCode));
+          }
+        } catch {
+          // Fallback sur les permissions par défaut du rôle
+          setPermissions(getPermissionsForRole(roleCode));
+        }
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger l'employé.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger l'employé.");
       } finally {
         setIsLoading(false);
       }
     };
 
     void loadEmployee();
-  }, [id]);
-
-  const handleSave = async () => {
-    const session = getAuthSession();
-    if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
-      return;
-    }
-
-    const [nomPart, ...prenomParts] = editableName.trim().split(" ");
-    const prenomPart = prenomParts.join(" ") || nomPart;
-
-    setIsSubmitting(true);
-    try {
-      const response = await updatePartnerUser(session.token, id, {
-        nom: nomPart,
-        prenom: prenomPart,
-        telephone: editablePhone,
-      });
-      const user = response.data.user;
-      setEmployee((prev) => ({
-        ...prev,
-        nom: user.nom_complet,
-        telephone: user.telephone,
-      }));
-      setIsEditing(false);
-      setError(null);
-    } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Erreur lors de la mise à jour.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  }, [id, router]);
 
   const handleToggleActive = async () => {
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
@@ -206,9 +289,9 @@ export default function PartenaireEmployeDetailPage() {
       }));
       setShowDeactivateModal(false);
       setDeactivatePassword("");
-      setError(null);
+      setShowDeactivatePassword(false);
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Action impossible sur cet employé.");
+      toast.error(err instanceof ApiError ? err.message : "Action impossible sur cet employé.");
     } finally {
       setIsSubmitting(false);
     }
@@ -220,66 +303,21 @@ export default function PartenaireEmployeDetailPage() {
   };
 
   if (isLoading) {
-    return <div className="p-6 text-sm text-gray-600">Chargement de l'employé...</div>;
+    return <div className="p-6 text-sm text-gray-600">Chargement de l&apos;employé...</div>;
   }
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      <PartenaireSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      {/* ───────────── MAIN AREA ──────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* ─── HEADER ─── */}
-        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
-          {/* Hamburger (mobile) */}
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-
-          {/* Search */}
-          <div className="relative min-w-0 flex-1 max-w-lg">
-            <Search className="absolute left-3 sm:left-5 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un médicament"
-              className="w-full rounded-full border-0 bg-emerald-50/60 py-2 sm:py-3 pl-9 sm:pl-14 pr-3 sm:pr-4 text-sm sm:text-base text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/partenaire/notifications"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Notifications</span>
-              <Bell className="h-5 w-5" />
-            </Link>
-            <button
-              type="button"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </button>
-          </div>
-        </header>
-
+    <>
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-32 py-6 lg:py-12">
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
           <div className="mx-auto w-full max-w-[860px] space-y-8">
+            {/* Retour */}
+            <Link
+              href="/partenaire/employes"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-toni-green-dark-2 hover:underline"
+            >
+              ← Retour aux employés
+            </Link>
             {/* ════════ EMPLOYEE CARD ════════ */}
             <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8">
               {/* Top row: name + badge + trash */}
@@ -287,13 +325,19 @@ export default function PartenaireEmployeDetailPage() {
                 <div>
                   <div className="flex items-center gap-3">
                     <h1 className="text-2xl font-bold text-gray-900">
-                      {isEditing ? editableName : employee.nom}
+                      {employee.nom}
                     </h1>
-                    <span className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-0.5 text-xs font-medium text-gray-600">
+                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                      employee.statut === "Actif"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : employee.statut === "Désactivé"
+                        ? "bg-gray-400 text-white"
+                        : "bg-red-200 text-red-600"
+                    }`}>
                       {employee.statut}
                     </span>
                   </div>
-                  <p className="mt-1 text-base text-gray-500">{employee.role}</p>
+                  <p className="mt-1 text-base text-[18px] text-black">{employee.role}</p>
                 </div>
 
                 {/* Trash icon */}
@@ -313,47 +357,28 @@ export default function PartenaireEmployeDetailPage() {
               </div>
 
               {/* Info row */}
-              <div className="mt-5 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-gray-600">
+              <div className="mt-5 flex flex-wrap font-semibold text-[18px] items-center gap-x-8 gap-y-2 text-black">
                 <span>{employee.email}</span>
-                <span>{isEditing ? editablePhone : employee.telephone}</span>
+                <span>{employee.telephone}</span>
                 <span>{employee.dateAjout}</span>
               </div>
-
-              {isEditing && (
-                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <input
-                    type="text"
-                    value={editableName}
-                    onChange={(e) => setEditableName(e.target.value)}
-                    className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800"
-                  />
-                  <input
-                    type="text"
-                    value={editablePhone}
-                    onChange={(e) => setEditablePhone(e.target.value)}
-                    className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800"
-                  />
-                </div>
-              )}
 
               {/* Action buttons */}
               <div className="mt-6 flex items-center gap-4">
                 {!isTitulaire && (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => (isEditing ? void handleSave() : setIsEditing(true))}
-                      disabled={isSubmitting}
+                    <Link
+                      href={`/partenaire/employes/${id}/modifier`}
                       className="rounded-full border-2 border-emerald-600 px-8 py-2 text-sm font-semibold text-emerald-600 transition-colors hover:bg-emerald-50"
                     >
-                      {isEditing ? "Enregistrer" : "Modifier"}
-                    </button>
+                      Modifier
+                    </Link>
                     <button
                       type="button"
                       className="rounded-full bg-gray-200 px-8 py-2 text-sm font-semibold text-gray-500 transition-colors hover:bg-gray-300"
                       onClick={() => setShowDeactivateModal(true)}
                     >
-                      Désactiver
+                      {employee.statut === "Actif" ? "Désactiver" : "Réactiver"}
                     </button>
                   </>
                 )}
@@ -386,10 +411,11 @@ export default function PartenaireEmployeDetailPage() {
                         role="switch"
                         aria-checked={perm.enabled}
                         aria-label={perm.label}
-                        disabled
+                        disabled={isSavingPermissions}
+                        onClick={() => void togglePermission(idx)}
                         className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${
-                          perm.enabled ? "bg-emerald-500" : "bg-gray-300"
-                        }`}
+                          isSavingPermissions ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+                        } ${perm.enabled ? "bg-emerald-500" : "bg-gray-300"}`}
                       >
                         <span
                           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ${
@@ -409,7 +435,6 @@ export default function PartenaireEmployeDetailPage() {
             </div>
           </div>
         </main>
-      </div>
 
       {/* ═══════════ MODAL 1 — Delete confirmation ═══════════ */}
       {showDeleteModal && (
@@ -450,7 +475,7 @@ export default function PartenaireEmployeDetailPage() {
       {showDeactivateModal && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
-          onClick={() => setShowDeactivateModal(false)}
+          onClick={() => { setShowDeactivateModal(false); setShowDeactivatePassword(false); setDeactivatePassword(""); }}
         >
           <div
             className="mx-4 w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl"
@@ -459,7 +484,7 @@ export default function PartenaireEmployeDetailPage() {
             {/* Dark green header */}
             <div className="bg-emerald-700 px-6 py-4">
               <h3 className="text-center text-base font-bold text-white">
-                Confirmer la désactivation
+                {employee.statut === "Actif" ? "Confirmer la désactivation" : "Confirmer la réactivation"}
               </h3>
             </div>
 
@@ -468,27 +493,48 @@ export default function PartenaireEmployeDetailPage() {
               <label className="mb-2 block text-sm font-medium text-gray-700">
                 Entrez votre mot de passe
               </label>
-              <input
-                type="password"
-                value={deactivatePassword}
-                onChange={(e) => setDeactivatePassword(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              />
+              <div className="relative">
+                <input
+                  type={showDeactivatePassword ? "text" : "password"}
+                  value={deactivatePassword}
+                  onChange={(e) => setDeactivatePassword(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 pr-10 text-sm text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowDeactivatePassword((v) => !v)}
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                  tabIndex={-1}
+                >
+                  {showDeactivatePassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
 
               <button
                 type="button"
-                className="mt-5 w-full rounded-full bg-emerald-600 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700"
+                disabled={isSubmitting}
+                className="mt-5 w-full rounded-full bg-emerald-600 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
                 onClick={() => {
                   void handleToggleActive();
                 }}
               >
-                Désactiver
+                {employee.statut === "Actif" ? "Désactiver" : "Réactiver"}
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </>
+
   );
 }
 

@@ -1,15 +1,59 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Bell, User, Search, Menu, ChevronDown } from "lucide-react";
-import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import { ChevronDown } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
-import { deactivatePartnerProduit, getPartnerProduit, updatePartnerProduit, updatePartnerProduitSeuil } from "@/lib/api/partner";
+import {
+  deactivatePartnerProduit,
+  getPartnerProduit,
+  getPartnerProduitFormes,
+  updatePartnerProduit,
+  updatePartnerProduitSeuil,
+  type PartnerProduit,
+} from "@/lib/api/partner";
+import { toast } from "sonner";
 
+
+/* ──────────────── Helpers numériques ────────────────────────── */
+function formatPrix(raw: string): string {
+  if (!raw) return "";
+  const [intPart, decPart] = raw.split(",");
+  const formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
+  return decPart !== undefined ? `${formatted},${decPart}` : formatted;
+}
+
+function onlyPrixChars(value: string): string {
+  const cleaned = value.replace(/[\s\u00a0]/g, "");
+  const withoutInvalid = cleaned.replace(/[^\d,]/g, "");
+  const parts = withoutInvalid.split(",");
+  if (parts.length > 2) return parts[0] + "," + parts.slice(1).join("");
+  return withoutInvalid;
+}
+
+function formatMilliers(raw: string): string {
+  if (!raw) return "";
+  return raw.replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
+}
+
+function onlyDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+function formatDateTime(dateStr?: string | null): string {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  const date = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  return `${date} à ${time}`;
+}
+
+const FORMES_DEFAUT = [
+  "Comprimés", "Gélules", "Sirop", "Suspension buvable", "Injectable",
+  "Crème", "Pommade", "Gel", "Suppositoire", "Solution buvable", "Poudre", "Patch", "Spray",
+];
 
 /* ──────────────── Delete confirmation modal ─────────────────── */
 function DeleteConfirmationModal({
@@ -38,7 +82,7 @@ function DeleteConfirmationModal({
       >
         {/* Green header */}
         <div className="bg-emerald-700 px-6 py-4 text-center">
-          <h2 className="text-lg font-bold text-white">Confirmer la supression</h2>
+          <h2 className="text-lg font-bold text-white">Confirmer la suppression</h2>
         </div>
 
         {/* Body */}
@@ -51,7 +95,7 @@ function DeleteConfirmationModal({
               <span className="font-bold">Nom :</span> {nom}
             </p>
             <p>
-              <span className="font-bold">Stock actuek :</span> {stock}
+              <span className="font-bold">Stock actuel :</span> {stock}
             </p>
           </div>
 
@@ -82,40 +126,57 @@ function DeleteConfirmationModal({
 export default function PartenaireMedicamentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [produit, setProduit] = useState<PartnerProduit | null>(null);
 
-  /* ── Form state (pre-filled with mock data) ── */
+  /* ── Form state ── */
   const [nom, setNom] = useState("");
   const [nomGenerique, setNomGenerique] = useState("");
-  const [forme, setForme] = useState("Comprimés");
-  const [prix, setPrix] = useState("0");
+  const [forme, setForme] = useState("");
+  const [prix, setPrix] = useState("");
   const [stockActuel, setStockActuel] = useState("0");
   const [seuil, setSeuil] = useState("0");
+  const [formes, setFormes] = useState<string[]>(FORMES_DEFAUT);
+  const [createdAt, setCreatedAt] = useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
   useEffect(() => {
     const loadProduit = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token || !id) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
 
       try {
-        const response = await getPartnerProduit(session.token, id);
-        const produit = response.data.produit;
-        setNom(produit.nom);
-        setNomGenerique(produit.dci ?? "");
-        setForme(produit.forme);
-        setPrix(String(produit.prix_vente ?? 0));
-        setStockActuel(String(produit.stock?.quantite ?? 0));
-        setSeuil(String(produit.stock?.seuil_alerte ?? 0));
+        const [response, formesRes] = await Promise.all([
+          getPartnerProduit(session.token, id),
+          getPartnerProduitFormes(session.token),
+        ]);
+        const p = response.data.produit;
+        setProduit(p);
+        setNom(p.nom);
+        setNomGenerique(p.nom_generique ?? "");
+        setForme(p.forme ?? "");
+        setPrix(p.stock?.prix_unitaire != null ? String(p.stock.prix_unitaire).replace(".", ",") : "");
+        setStockActuel(String(p.stock?.quantite ?? 0));
+        setSeuil(String(p.stock?.seuil_alerte ?? 0));
+        setCreatedAt(p.created_at ?? null);
+        setUpdatedAt(p.updated_at ?? null);
+
+        const apiFormes = formesRes.data?.formes ?? [];
+        if (apiFormes.length > 0) {
+          const merged = [...FORMES_DEFAUT];
+          for (const f of apiFormes) {
+            if (!merged.some((d) => d.toLowerCase() === f.toLowerCase())) merged.push(f);
+          }
+          setFormes(merged.sort());
+        }
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger le médicament.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger le médicament.");
       } finally {
         setIsLoading(false);
       }
@@ -129,22 +190,27 @@ export default function PartenaireMedicamentDetailPage() {
 
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
     setIsSubmitting(true);
     try {
+      const prixVente = prix ? Number(prix.replace(",", ".")) : undefined;
       await updatePartnerProduit(session.token, id, {
         nom,
         dci: nomGenerique,
         forme,
-        prix_vente: Number(prix),
+        prix_vente: prixVente && !Number.isNaN(prixVente) ? prixVente : undefined,
       });
-      await updatePartnerProduitSeuil(session.token, id, Number(seuil));
-      setError(null);
+      const seuilNum = Number(seuil);
+      if (!Number.isNaN(seuilNum)) {
+        await updatePartnerProduitSeuil(session.token, id, seuilNum);
+      }
+      toast.success("Médicament mis à jour.");
+      router.push("/partenaire/medicaments");
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Sauvegarde impossible.");
+      toast.error(err instanceof ApiError ? err.message : "Sauvegarde impossible.");
     } finally {
       setIsSubmitting(false);
     }
@@ -153,7 +219,7 @@ export default function PartenaireMedicamentDetailPage() {
   const handleDelete = async () => {
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token || !id) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
@@ -163,7 +229,7 @@ export default function PartenaireMedicamentDetailPage() {
       setShowDeleteModal(false);
       router.push("/partenaire/medicaments");
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Suppression impossible.");
+      toast.error(err instanceof ApiError ? err.message : "Suppression impossible.");
     } finally {
       setIsSubmitting(false);
     }
@@ -174,61 +240,15 @@ export default function PartenaireMedicamentDetailPage() {
   }
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      <PartenaireSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      {/* ───────────── MAIN AREA ──────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* ─── HEADER ─── */}
-        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
-          {/* Hamburger (mobile) */}
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-
-          {/* Search */}
-          <div className="relative w-full max-w-lg">
-            <Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un médicament"
-              className="w-full rounded-full border-0 bg-emerald-50/60 py-3 pl-14 pr-4 text-base text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3">
-            <Link
-              href="/partenaire/notifications"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Notifications</span>
-              <Bell className="h-5 w-5" />
-            </Link>
-            <button
-              type="button"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </button>
-          </div>
-        </header>
-
+    <>
         {/* ─── CONTENT ─── */}
-        <main className="flex-1 overflow-y-auto p-2 px-4 sm:px-12 lg:px-32 py-16 lg:py-24">
-          {error && (
-            <div className="mx-auto mb-4 w-full max-w-[920px] rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+        <main className="flex-1 overflow-y-auto p-2 px-4 sm:px-12 lg:px-32 py-10 lg:py-16">
+          <Link
+            href="/partenaire/medicaments"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-toni-green-dark-2 hover:underline mb-6"
+          >
+            ← Retour aux médicaments
+          </Link>
           <form
             onSubmit={handleSave}
             className="mx-auto w-full max-w-[920px] rounded-xl bg-white p-6 sm:p-8"
@@ -243,6 +263,7 @@ export default function PartenaireMedicamentDetailPage() {
                   type="text"
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
+                  disabled
                   className="w-full rounded-md border border-gray-300 bg-white px-4 py-3 text-lg text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all duration-200"
                 />
               </div>
@@ -254,6 +275,7 @@ export default function PartenaireMedicamentDetailPage() {
                   type="text"
                   value={nomGenerique}
                   onChange={(e) => setNomGenerique(e.target.value)}
+                  disabled
                   className="w-full rounded-md border border-gray-300 bg-white px-4 py-3 text-lg text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all duration-200"
                 />
               </div>
@@ -269,13 +291,13 @@ export default function PartenaireMedicamentDetailPage() {
                   <select
                     value={forme}
                     onChange={(e) => setForme(e.target.value)}
+                    disabled
                     className="w-full appearance-none rounded-md border border-gray-300 bg-white px-4 py-3 text-lg text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all duration-200"
                   >
-                    <option value="Comprimés">Comprimés</option>
-                    <option value="Gélules">Gélules</option>
-                    <option value="Sirop">Sirop</option>
-                    <option value="Injectable">Injectable</option>
-                    <option value="Pommade">Pommade</option>
+                    <option value="">Sélectionner...</option>
+                    {formes.map((f) => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
                 </div>
@@ -284,12 +306,19 @@ export default function PartenaireMedicamentDetailPage() {
                 <label className="mb-1 block text-sm text-gray-500">
                   Prix unitaire
                 </label>
-                <input
-                  type="text"
-                  value={prix}
-                  onChange={(e) => setPrix(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 bg-white px-4 py-3 text-lg text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all duration-200"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={formatPrix(prix)}
+                    onChange={(e) => setPrix(onlyPrixChars(e.target.value))}
+                    placeholder="Ex: 1 500,50"
+                    className="w-full rounded-md border border-gray-300 bg-white px-4 py-3 pr-16 text-lg text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all duration-200"
+                  />
+                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-medium text-gray-400">
+                    FCFA
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -301,13 +330,12 @@ export default function PartenaireMedicamentDetailPage() {
                 </label>
                 <input
                   type="text"
-                  value={stockActuel}
-                  onChange={(e) => setStockActuel(e.target.value)}
+                  value={formatMilliers(stockActuel)}
                   disabled
-                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5 text-base text-gray-500 cursor-not-allowed"
                 />
                 <p className="mt-1 text-xs text-emerald-600">
-                  Ajouté le 14-25-2024 à 15h30
+                  Ajouté le {formatDateTime(createdAt)}
                 </p>
               </div>
               <div>
@@ -316,18 +344,19 @@ export default function PartenaireMedicamentDetailPage() {
                 </label>
                 <input
                   type="text"
-                  value={seuil}
-                  onChange={(e) => setSeuil(e.target.value)}
+                  inputMode="numeric"
+                  value={formatMilliers(seuil)}
+                  onChange={(e) => setSeuil(onlyDigits(e.target.value))}
                   className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 />
                 <p className="mt-1 text-xs text-emerald-600">
-                  Mis à jour le 14-25-2024 à 15h30
+                  Mis à jour le {formatDateTime(updatedAt)}
                 </p>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="mt-10 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-4 sm:gap-8 lg:gap-40">
+            <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
               <button
                 type="button"
                 onClick={() => router.push("/partenaire/medicaments")}
@@ -335,34 +364,36 @@ export default function PartenaireMedicamentDetailPage() {
               >
                 Annuler
               </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="rounded-full bg-emerald-600 px-12 py-3.5 text-base font-semibold text-white transition-colors hover:bg-emerald-700 text-center"
-              >
-                {isSubmitting ? "Sauvegarde..." : "Sauvegarder"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(true)}
-                className="rounded-full bg-red-500 px-12 py-3.5 text-base font-semibold text-white transition-colors hover:bg-red-600 text-center"
-              >
-                Supprimer
-              </button>
+
+              <div className="flex gap-4 sm:ml-auto">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="rounded-full bg-emerald-600 px-12 py-3.5 text-base font-semibold text-white transition-colors hover:bg-emerald-700 text-center"
+                >
+                  {isSubmitting ? "Sauvegarde..." : "Sauvegarder"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(true)}
+                  className="rounded-full bg-red-500 px-12 py-3.5 text-base font-semibold text-white transition-colors hover:bg-red-600 text-center"
+                >
+                  Supprimer
+                </button>
+              </div>
             </div>
           </form>
         </main>
-      </div>
 
       {/* ───────────── DELETE CONFIRMATION MODAL ───────────── */}
       <DeleteConfirmationModal
         show={showDeleteModal}
-        nom={nomGenerique}
+        nom={nom}
         stock={stockActuel}
         onConfirm={handleDelete}
         onCancel={() => setShowDeleteModal(false)}
       />
-    </div>
+    </>
   );
 }
 

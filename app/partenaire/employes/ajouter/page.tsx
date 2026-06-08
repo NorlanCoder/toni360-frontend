@@ -8,33 +8,53 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { createPartnerUser, getPartnerRoles, PartnerRole } from "@/lib/api/partner";
-import {
-  LayoutDashboard,
-  Package,
-  Boxes,
-  Users,
-  Pill,
-  History,
-  HelpCircle,
-  LogOut,
-  Bell,
-  User,
-  Search,
-  Eye,
-  EyeOff,
-  Menu,
-} from "lucide-react";
+import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@/lib/passwordPolicy";
+import { toast } from "sonner";
+import { Check, Eye, EyeOff, X } from "lucide-react";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
-/* ──────────────────── Sidebar nav items ─────────────────────── */
-const navItems = [
-  { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/dashboard" },
-  { label: "Gestion de commande", icon: Package, href: "/partenaire/commandes" },
-  { label: "Gestion de Stocks", icon: Boxes, href: "/partenaire/stocks" },
-  { label: "Gestion des employés", icon: Users, href: "/partenaire/employes", active: true },
-  { label: "Gestion des médicaments", icon: Pill, href: "/partenaire/medicaments" },
-  { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
-  { label: "Assistance et support", icon: HelpCircle, href: "#" },
-];
+/* ── Field-error helpers ── */
+type FieldErrors = Partial<Record<"nom" | "email" | "telephone" | "role" | "motDePasse", string>>;
+
+const EMAIL_RE = /^[^\s@]+@[^^\s@]+\.[^\s@]+$/;
+
+function validateFields(
+  nom: string,
+  email: string,
+  telephone: string | undefined,
+  role: string,
+  motDePasse: string,
+  passwordStrong: boolean,
+): FieldErrors {
+  const errors: FieldErrors = {};
+  const parts = nom.trim().split(/\s+/).filter(Boolean);
+  if (!nom.trim()) {
+    errors.nom = "Le nom complet est obligatoire.";
+  } else if (parts.length < 2) {
+    errors.nom = "Veuillez saisir le nom ET le prénom (ex : AGOSSOU Jonathan).";
+  }
+  if (!email.trim()) {
+    errors.email = "L'adresse e-mail est obligatoire.";
+  } else if (!EMAIL_RE.test(email.trim())) {
+    errors.email = "Format d'e-mail invalide (ex : jean@exemple.com).";
+  }
+  const num = (telephone ?? "").trim();
+  if (!num) {
+    errors.telephone = "Le numéro de téléphone est obligatoire.";
+  } else if ((num.replace(/\D/g, "").length) < 10) {
+    errors.telephone = "Le numéro de téléphone doit contenir au moins 10 chiffres.";
+  }
+  if (!role) {
+    errors.role = "Veuillez sélectionner un rôle.";
+  }
+  if (!motDePasse) {
+    errors.motDePasse = "Le mot de passe est obligatoire.";
+  } else if (!passwordStrong) {
+    errors.motDePasse = "Le mot de passe ne respecte pas les critères de sécurité ci-dessous.";
+  }
+  return errors;
+}
 
 const ASSIGNABLE_ROLE_CODES = [
   "GESTIONNAIRE_OPERATIONNEL",
@@ -59,25 +79,32 @@ function getRoleDisplayLabel(roleItem: PartnerRole): string {
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireAjouterEmployePage() {
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [passwordTouched, setPasswordTouched] = useState(false);
   const [roles, setRoles] = useState<PartnerRole[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  const clearError = (field: keyof FieldErrors) =>
+    setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next; });
 
   /* ── Form state ── */
   const [nom, setNom] = useState("");
   const [email, setEmail] = useState("");
-  const [telephone, setTelephone] = useState("");
+  const [telephone, setTelephone] = useState<string | undefined>(undefined);
   const [role, setRole] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
+
+  const passwordRules = getPasswordRuleResults(motDePasse);
+  const passwordStrength = getPasswordStrength(motDePasse);
+  const passwordStrong = isPasswordStrong(motDePasse);
 
   useEffect(() => {
     const loadRoles = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         return;
       }
 
@@ -89,11 +116,8 @@ export default function PartenaireAjouterEmployePage() {
           .filter((item): item is PartnerRole => Boolean(item));
 
         setRoles(availableRoles);
-        if (availableRoles.length > 0) {
-          setRole(availableRoles[0].id);
-        }
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger les rôles.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger les rôles.");
       }
     };
 
@@ -115,18 +139,22 @@ export default function PartenaireAjouterEmployePage() {
 
     const session = getAuthSession();
     if (!session || session.userType !== "user" || !session.token) {
-      setError("Session partenaire invalide.");
+      toast.error("Session partenaire invalide.");
       return;
     }
 
-    const [nomPart, ...prenomParts] = nom.trim().split(" ");
-    const prenomPart = prenomParts.join(" ") || nomPart;
-    const numero = telephone.replace(/\D/g, "");
-
-    if (!nomPart || !prenomPart || !email || !numero || !role || motDePasse.length < 8) {
-      setError("Veuillez remplir correctement tous les champs.");
+    const errors = validateFields(nom, email, telephone, role, motDePasse, passwordStrong);
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      if (errors.motDePasse) setPasswordTouched(true);
       return;
     }
+    setFieldErrors({});
+
+    const parts = nom.trim().split(/\s+/).filter(Boolean);
+    const prenomPart = parts[0];
+    const nomPart = parts.slice(1).join(" ");
+    const numero = (telephone ?? "").trim();
 
     setIsSubmitting(true);
     try {
@@ -134,136 +162,54 @@ export default function PartenaireAjouterEmployePage() {
         nom: nomPart,
         prenom: prenomPart,
         email,
-        telephone: numero.startsWith("229") ? `+${numero}` : `+229${numero}`,
+        telephone: numero,
         password: motDePasse,
         password_confirmation: motDePasse,
         role_id: role,
       });
 
       setShowModal(true);
-      setError(null);
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : "Erreur lors de la création de l'employé.");
+      if (err instanceof ApiError) {
+        // Map API field errors when available
+        const detail = (err as ApiError & { errors?: Record<string, string[]> }).errors;
+        if (detail) {
+          const mapped: FieldErrors = {};
+          if (detail.nom || detail.prenom) mapped.nom = (detail.nom ?? detail.prenom ?? [])[0];
+          if (detail.email) mapped.email = detail.email[0];
+          if (detail.telephone) mapped.telephone = detail.telephone[0];
+          if (detail.role_id) mapped.role = detail.role_id[0];
+          if (detail.password) mapped.motDePasse = detail.password[0];
+          if (Object.keys(mapped).length > 0) {
+            setFieldErrors(mapped);
+          } else {
+            toast.error(err.message);
+          }
+        } else {
+          toast.error(err.message);
+        }
+      } else {
+        toast.error("Erreur lors de la création de l'employé.");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      {/* ───────────── MOBILE OVERLAY ───────────── */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ───────────── SIDEBAR ───────────── */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 lg:relative lg:z-auto lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
-      >
-        {/* Logo */}
-        <div className="flex h-20 items-center px-5">
-          <Link href="/partenaire/dashboard" className="flex items-center gap-2">
-            <Image
-              src="/images/logo.png"
-              alt="Toni 360°"
-              width={180}
-              height={56}
-              priority
-            />
-          </Link>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex flex-1 flex-col gap-1 px-3 pt-4" aria-label="Navigation partenaire">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-4 py-4 text-base font-medium transition-colors ${
-                  item.active
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <Icon className="h-6 w-6 shrink-0" />
-                {item.label}
-              </Link>
-            );
-          })}
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Déconnexion */}
-          <Link
-            href="/partenaire/deconnexion"
-            className="mb-6 flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
-          >
-            <LogOut className="h-5 w-5 shrink-0" />
-            Déconnexion
-          </Link>
-        </nav>
-      </aside>
-
-      {/* ───────────── MAIN AREA ──────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* ─── HEADER ─── */}
-        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
-          {/* Hamburger (mobile) */}
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-
-          {/* Search */}
-          <div className="relative min-w-0 flex-1 max-w-lg">
-            <Search className="absolute left-3 sm:left-5 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un médicament"
-              className="w-full rounded-full border-0 bg-emerald-50/60 py-2 sm:py-3 pl-9 sm:pl-14 pr-3 sm:pr-4 text-sm sm:text-base text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/partenaire/notifications"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Notifications</span>
-              <Bell className="h-5 w-5" />
-            </Link>
-            <button
-              type="button"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </button>
-          </div>
-        </header>
-
+    <div className="flex flex-1 flex-col overflow-hidden">
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-2 sm:px-6 lg:px-32 py-4 sm:py-8 lg:py-16">
-          {error && (
-            <div className="mx-auto mb-4 w-full max-w-[920px] rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+          {/* Retour */}
+          <div className="mb-4 lg:mb-6 mx-auto w-full max-w-[920px]">
+            <Link
+              href="/partenaire/employes"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-toni-green-dark-2 hover:underline"
+            >
+              ← Retour aux employés
+            </Link>
+          </div>
+
           <form
             onSubmit={handleSubmit}
             className="mx-auto w-full max-w-[920px] rounded-xl bg-white p-4 sm:p-8"
@@ -276,11 +222,18 @@ export default function PartenaireAjouterEmployePage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="AGOSSOU"
+                  placeholder="AGOSSOU Jonathan"
                   value={nom}
-                  onChange={(e) => setNom(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  onChange={(e) => { setNom(e.target.value); clearError("nom"); }}
+                  className={`w-full rounded-md border bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
+                    fieldErrors.nom
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                  }`}
                 />
+                {fieldErrors.nom && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.nom}</p>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-base font-medium text-gray-600">
@@ -290,9 +243,16 @@ export default function PartenaireAjouterEmployePage() {
                   type="email"
                   placeholder="jonathan@gmail.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  onChange={(e) => { setEmail(e.target.value); clearError("email"); }}
+                  className={`w-full rounded-md border bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
+                    fieldErrors.email
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                  }`}
                 />
+                {fieldErrors.email && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>
+                )}
               </div>
             </div>
 
@@ -302,18 +262,22 @@ export default function PartenaireAjouterEmployePage() {
                 <label className="mb-1 block text-base font-medium text-gray-600">
                   Téléphone
                 </label>
-                <div className="flex items-center rounded-md border border-gray-300 bg-white overflow-hidden focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
-                  <span className="flex items-center gap-1 border-r border-gray-300 bg-gray-50 px-3 py-2.5 text-sm text-gray-600">
-                    🇧🇯 +229
-                  </span>
-                  <input
-                    type="tel"
-                    placeholder="65456565"
+                <div className={`rounded-md border bg-white px-3 py-2.5 text-base text-gray-800 focus-within:outline-none focus-within:ring-1 ${
+                  fieldErrors.telephone
+                    ? "border-red-500 focus-within:border-red-500 focus-within:ring-red-500"
+                    : "border-gray-300 focus-within:border-emerald-500 focus-within:ring-emerald-500"
+                }`}>
+                  <PhoneInput
+                    international
+                    defaultCountry="BJ"
+                    placeholder="Numéro de téléphone"
                     value={telephone}
-                    onChange={(e) => setTelephone(e.target.value)}
-                    className="w-full border-0 bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none"
+                    onChange={(val) => { setTelephone(val); clearError("telephone"); }}
                   />
                 </div>
+                {fieldErrors.telephone && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.telephone}</p>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-base font-medium text-gray-600">
@@ -321,18 +285,26 @@ export default function PartenaireAjouterEmployePage() {
                 </label>
                 <select
                   value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  onChange={(e) => { setRole(e.target.value); clearError("role"); }}
+                  className={`w-full rounded-md border bg-white px-3 py-2.5 text-base text-gray-800 focus:outline-none focus:ring-1 ${
+                    fieldErrors.role
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                  }`}
                 >
+                  <option value="">Sélectionnez un rôle</option>
                   {roles.map((item) => (
                     <option key={item.id} value={item.id}>{getRoleDisplayLabel(item)}</option>
                   ))}
                 </select>
+                {fieldErrors.role && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.role}</p>
+                )}
               </div>
             </div>
 
             {/* Row 3 — password (half-width on desktop) */}
-            <div className="mt-4 sm:mt-6 grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2">
+            <div className="mt-4 sm:mt-6 grid grid-cols-1 gap-4">
               <div>
                 <label className="mb-1 block text-base font-medium text-gray-600">
                   Mot de passe
@@ -342,9 +314,17 @@ export default function PartenaireAjouterEmployePage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="***************"
                     value={motDePasse}
-                    onChange={(e) => setMotDePasse(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 pr-10 text-base text-gray-800 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    onChange={(e) => { setMotDePasse(e.target.value); clearError("motDePasse"); }}
+                    onBlur={() => setPasswordTouched(true)}
+                    className={`w-full rounded-md border bg-white px-3 py-2.5 pr-10 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
+                      fieldErrors.motDePasse
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                    }`}
                   />
+                  {fieldErrors.motDePasse && (
+                    <p className="mt-1 text-xs text-red-600">{fieldErrors.motDePasse}</p>
+                  )}
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
@@ -358,6 +338,34 @@ export default function PartenaireAjouterEmployePage() {
                     )}
                   </button>
                 </div>
+
+                {(passwordTouched || motDePasse.length > 0) && (
+                  <div className="mt-2 space-y-2 rounded-md border border-gray-200 bg-white p-2.5">
+                    <div>
+                      <div className="mb-1 flex items-center justify-between text-xs">
+                        <span className="text-gray-600">Robustesse</span>
+                        <span className="font-semibold text-gray-700">{passwordStrength.label}</span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                        <div
+                          className={`h-full ${passwordStrength.colorClass} transition-all duration-200`}
+                          style={{ width: `${passwordStrength.percent}%` }}
+                        />
+                      </div>
+                    </div>
+                    <ul className="space-y-0.5">
+                      {passwordRules.map((rule) => (
+                        <li
+                          key={rule.id}
+                          className={`flex items-center gap-1.5 text-[11px] leading-tight ${rule.valid ? "text-emerald-600" : "text-red-500"}`}
+                        >
+                          {rule.valid ? <Check size={12} className="shrink-0" /> : <X size={12} className="shrink-0" />}
+                          {rule.label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -365,7 +373,7 @@ export default function PartenaireAjouterEmployePage() {
             <div className="mt-6 sm:mt-10 flex justify-end">
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !passwordStrong}
                 className="w-full sm:w-auto rounded-full bg-emerald-700 px-4 sm:px-10 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white transition-colors hover:bg-emerald-800"
               >
                 {isSubmitting ? "Ajout en cours..." : "Ajouter cet employé"}
@@ -373,7 +381,6 @@ export default function PartenaireAjouterEmployePage() {
             </div>
           </form>
         </main>
-      </div>
 
       {/* ───────────── CONFIRMATION MODAL ───────────── */}
       <ConfirmationModal
@@ -385,4 +392,5 @@ export default function PartenaireAjouterEmployePage() {
     </div>
   );
 }
+
 

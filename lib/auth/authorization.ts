@@ -2,14 +2,48 @@ import type { AuthSession } from "@/lib/api/session";
 
 type PermissionAction = "create" | "read" | "update" | "delete";
 
+/** Rôles dont le dashboard leur est masqué — redirigés vers leur page principale. */
+const ROLE_HOME_ROUTES: Record<string, string> = {
+  RESPONSABLE_STOCKS:    "/partenaire/medicaments",
+  RESPONSABLE_COMMANDES: "/partenaire/commandes",
+};
+
+function getSessionRoleCode(session: AuthSession | null): string | null {
+  if (!session?.profile) return null;
+  const profile = session.profile as { role?: { code?: string } | null };
+  return profile?.role?.code ?? null;
+}
+
+/**
+ * Retourne la page d'accueil après connexion selon le rôle.
+ * Par défaut : /partenaire/dashboard
+ */
+export function getPartnerHomeRoute(session: AuthSession | null): string {
+  const roleCode = getSessionRoleCode(session);
+  if (roleCode && ROLE_HOME_ROUTES[roleCode]) {
+    return ROLE_HOME_ROUTES[roleCode];
+  }
+  return "/partenaire/dashboard";
+}
+
+/**
+ * Retourne true si ce rôle n'a pas accès au dashboard
+ * et doit être redirigé vers sa page principale.
+ */
+export function shouldRedirectAwayFromDashboard(session: AuthSession | null): boolean {
+  const roleCode = getSessionRoleCode(session);
+  return Boolean(roleCode && ROLE_HOME_ROUTES[roleCode]);
+}
+
 const PARTNER_ROUTE_REQUIREMENTS: Array<{ prefix: string; permission: string }> = [
+  { prefix: "/partenaire/employes/historique", permission: "gestion_historique:read" },
   { prefix: "/partenaire/employes/ajouter", permission: "gestion_users:create" },
   { prefix: "/partenaire/employes", permission: "gestion_users:read" },
+  { prefix: "/partenaire/medicaments/incoherences", permission: "gestion_produits:read" },
   { prefix: "/partenaire/medicaments/ajouter", permission: "gestion_produits:create" },
   { prefix: "/partenaire/medicaments", permission: "gestion_produits:read" },
   { prefix: "/partenaire/stocks", permission: "gestion_stocks:read" },
   { prefix: "/partenaire/commandes", permission: "gestion_commandes:read" },
-  { prefix: "/partenaire/profil", permission: "parametrage_pharmacie:read" },
 ];
 
 function getPermissions(session: AuthSession | null): string[] {
@@ -43,6 +77,7 @@ export function canAccessPartnerRoute(session: AuthSession | null, pathname: str
     pathname.startsWith("/partenaire/connexion") ||
     pathname.startsWith("/partenaire/inscription") ||
     pathname.startsWith("/partenaire/deconnexion") ||
+    pathname.startsWith("/partenaire/cgu") ||
     pathname.startsWith("/partenaire/dashboard")
   ) {
     return true;
@@ -62,6 +97,14 @@ export function filterPartnerNavigationByPermissions<T extends { href: string }>
   items: T[],
 ): T[] {
   return items.filter((item) => {
+    if (item.href.startsWith("/partenaire/dashboard")) {
+      return !shouldRedirectAwayFromDashboard(session);
+    }
+
+    if (item.href === "/partenaire/employes/historique") {
+      return hasPermission(session, "gestion_historique", "read");
+    }
+
     if (item.href.startsWith("/partenaire/employes")) {
       return hasPermission(session, "gestion_users", "read");
     }

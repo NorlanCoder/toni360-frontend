@@ -3,18 +3,32 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, User, Search, Package, Clock, CheckCircle, ChevronDown, Menu } from "lucide-react";
-import PartenaireSidebar from "@/components/partenaire/Sidebar";
+import { Package, Clock, CheckCircle, ChevronDown } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { extractCollection, getPartnerCommandes } from "@/lib/api/partner";
+import { useHeaderSearch } from "@/app/partenaire/_header-search-context";
+import { toast } from "sonner";
 
 type TabKey = "a-preparer" | "en-attente" | "recuperees";
 
+function getStatusBadgeStyle(statut: string): React.CSSProperties {
+  const s = statut.toLowerCase();
+  if (s.includes("attente"))
+    return { backgroundColor: "#FFF4C7", color: "#B8A659" };
+  if (s.includes("récupérée") || s.includes("recuperee"))
+    return { backgroundColor: "#D1FAE5", color: "#065F46" };
+  if (s.includes("prête") || s.includes("prete"))
+    return { backgroundColor: "#FEF3C7", color: "#D97706" };
+  return { backgroundColor: "#FFF4C7", color: "#B8A659" };
+}
+
 interface Order {
   id: string;
-  patient: string;
+  numero_commande: string;
+  patient: { nom: string; prenom: string };
   montant: string;
+  date: string;
   statut: string;
 }
 
@@ -22,7 +36,7 @@ const days = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0")
 const months = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"));
 const years = Array.from({ length: 10 }, (_, i) => String(2020 + i));
 
-function DateSelect({ label, className = "" }: { label: string; className?: string }) {
+function DateSelect({ label, className = "", day = "", month = "", year = "", onDayChange, onMonthChange, onYearChange }: { label: string; className?: string; day?: string; month?: string; year?: string; onDayChange?: (v: string) => void; onMonthChange?: (v: string) => void; onYearChange?: (v: string) => void }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <span className="text-base text-gray-700 font-medium">{label}</span>
@@ -31,7 +45,8 @@ function DateSelect({ label, className = "" }: { label: string; className?: stri
         <select
           aria-label="Jour"
           className="appearance-none w-[68px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          defaultValue=""
+          value={day}
+          onChange={(e) => onDayChange?.(e.target.value)}
         >
           <option value="" disabled>JJ</option>
           {days.map((d) => (
@@ -45,7 +60,8 @@ function DateSelect({ label, className = "" }: { label: string; className?: stri
         <select
           aria-label="Mois"
           className="appearance-none w-[72px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          defaultValue=""
+          value={month}
+          onChange={(e) => onMonthChange?.(e.target.value)}
         >
           <option value="" disabled>MM</option>
           {months.map((m) => (
@@ -59,7 +75,8 @@ function DateSelect({ label, className = "" }: { label: string; className?: stri
         <select
           aria-label="Année"
           className="appearance-none w-[88px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-7 text-sm text-gray-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          defaultValue=""
+          value={year}
+          onChange={(e) => onYearChange?.(e.target.value)}
         >
           <option value="" disabled>AAAA</option>
           {years.map((y) => (
@@ -75,23 +92,48 @@ function DateSelect({ label, className = "" }: { label: string; className?: stri
 export default function PartenaireRecupereesPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>("recuperees");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const tabs: { key: TabKey; label: string; icon: React.ElementType; href: string }[] = [
-    { key: "a-preparer", label: "A préparer", icon: Package, href: "/partenaire/commandes" },
-    { key: "en-attente", label: "En attente", icon: Clock, href: "/partenaire/commandes/en-attente" },
-    { key: "recuperees", label: "Récupérées", icon: CheckCircle, href: "/partenaire/commandes/recuperees" },
+  const [fromDay, setFromDay] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 6);
+    return String(d.getDate()).padStart(2, "0");
+  });
+  const [fromMonth, setFromMonth] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 6);
+    return String(d.getMonth() + 1).padStart(2, "0");
+  });
+  const [fromYear, setFromYear] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 6);
+    return String(d.getFullYear());
+  });
+  const [toDay, setToDay] = useState<string>(() => String(new Date().getDate()).padStart(2, "0"));
+  const [toMonth, setToMonth] = useState<string>(() => String(new Date().getMonth() + 1).padStart(2, "0"));
+  const [toYear, setToYear] = useState<string>(() => String(new Date().getFullYear()));
+
+  const tabs: { key: TabKey; label: string; img: string; href: string }[] = [
+    { key: "a-preparer", label: "A préparer", img: "/preparer_vert.svg", href: "/partenaire/commandes" },
+    { key: "en-attente", label: "En attente", img: "/images/localiser.svg", href: "/partenaire/commandes/en-attente" },
+    { key: "recuperees", label: "Récupérées", img: "/images/terminee.svg", href: "/partenaire/commandes/recuperees" },
   ];
 
   const moneyFormat = useMemo(
+    () => ({
+      format: (value: number) =>
+        new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value) + " FCFA",
+    }),
+    [],
+  );
+
+  const formatDate = useMemo(
     () =>
-      new Intl.NumberFormat("fr-FR", {
-        style: "currency",
-        currency: "XOF",
-        maximumFractionDigits: 0,
+      new Intl.DateTimeFormat("fr-FR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
       }),
     [],
   );
@@ -100,7 +142,7 @@ export default function PartenaireRecupereesPage() {
     const loadOrders = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token) {
-        setError("Session partenaire invalide.");
+        toast.error("Session partenaire invalide.");
         setIsLoading(false);
         return;
       }
@@ -112,14 +154,15 @@ export default function PartenaireRecupereesPage() {
         setOrders(
           commandes.map((commande) => ({
             id: commande.id,
-            patient: commande.patient?.nom_complet ?? "Patient inconnu",
+            numero_commande: commande.numero_commande ?? commande.id,
+            patient: { nom: commande.patient?.nom ?? "", prenom: commande.patient?.prenom ?? "" },
             montant: moneyFormat.format(commande.montant_total || 0),
+            date: commande.created_at ? formatDate.format(new Date(commande.created_at)) : "-",
             statut: commande.statut_label || "Récupérée",
           })),
         );
-        setError(null);
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : "Impossible de charger les commandes.");
+        toast.error(err instanceof ApiError ? err.message : "Impossible de charger les commandes.");
       } finally {
         setIsLoading(false);
       }
@@ -132,61 +175,65 @@ export default function PartenaireRecupereesPage() {
     }, 30000);
 
     return () => clearInterval(intervalId);
-  }, [moneyFormat]);
+  }, [moneyFormat, formatDate]);
+
+  const { searchQuery } = useHeaderSearch();
+
+  const filteredOrders = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return orders.filter((order) => {
+      if (q) {
+        const matchSearch =
+          order.numero_commande.toLowerCase().includes(q) ||
+          order.patient.nom.toLowerCase().includes(q) ||
+          order.patient.prenom.toLowerCase().includes(q);
+        if (!matchSearch) return false;
+      }
+      if (order.date === "-") return true;
+      const parts = order.date.split("/");
+      if (parts.length !== 3) return true;
+      const [dd, mm, yyyy] = parts;
+      const orderDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
+      if (fromDay && fromMonth && fromYear) {
+        const fromDate = new Date(`${fromYear}-${fromMonth}-${fromDay}T00:00:00`);
+        if (orderDate < fromDate) return false;
+      }
+      if (toDay && toMonth && toYear) {
+        const toDate = new Date(`${toYear}-${toMonth}-${toDay}T23:59:59`);
+        if (orderDate > toDate) return false;
+      }
+      return true;
+    });
+  }, [orders, searchQuery, fromDay, fromMonth, fromYear, toDay, toMonth, toYear]);
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      <PartenaireSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-20 lg:h-24 shrink-0 items-center gap-3 justify-between border-b border-gray-200 bg-white px-4 md:px-8">
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="flex shrink-0 rounded-md p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-
-          <div className="relative w-full max-w-lg">
-            <Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un médicament"
-              className="w-full rounded-full border-0 bg-emerald-50/60 py-3 pl-14 pr-4 text-base text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+    <>
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-8 lg:px-24 py-6 lg:py-10">
+          {/* Date filters */}
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <DateSelect
+              label="Du"
+              day={fromDay}
+              month={fromMonth}
+              year={fromYear}
+              onDayChange={setFromDay}
+              onMonthChange={setFromMonth}
+              onYearChange={setFromYear}
+            />
+            <DateSelect
+              label="Au"
+              day={toDay}
+              month={toMonth}
+              year={toYear}
+              onDayChange={setToDay}
+              onMonthChange={setToMonth}
+              onYearChange={setToYear}
             />
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/partenaire/notifications"
-              aria-label="Voir les notifications"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Notifications</span>
-              <Bell className="h-5 w-5" />
-            </Link>
-            <Link
-              href="/partenaire/profil"
-              aria-label="Accéder à mon compte"
-              className="flex items-center gap-2 rounded-full border border-emerald-600 px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
-              <span className="hidden sm:inline">Mon Compte</span>
-              <User className="h-5 w-5" />
-            </Link>
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-24 py-6 lg:py-10">
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <DateSelect label="Du" />
-            <DateSelect label="Au" />
-          </div>
-
-          <div className="mb-6 flex gap-0 border-b border-gray-200">
+          <div className="mb-6 border-b border-gray-200 overflow-x-auto max-w-full">
+            <div className="flex w-max sm:w-full">
             {tabs.map((tab) => {
-              const Icon = tab.icon;
               const isActive = activeTab === tab.key;
               return (
                 <Link
@@ -196,25 +243,33 @@ export default function PartenaireRecupereesPage() {
                     if (tab.key === "recuperees") e.preventDefault();
                     setActiveTab(tab.key);
                   }}
-                  className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap pb-4 px-2 text-sm sm:text-base lg:text-lg font-semibold transition-colors ${
+                  className={`flex items-center justify-center gap-2 whitespace-nowrap pb-3 px-6 text-sm sm:flex-1 sm:pb-4 sm:text-base lg:text-lg font-semibold transition-colors ${
                     isActive
                       ? "border-b-4 border-emerald-600 text-emerald-700"
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  <Icon className="h-7 w-7" />
-                  {tab.label}
+                  <img src={tab.img} alt={tab.label} className="h-5 w-5 sm:h-6 sm:w-6" />
+                  <span>{tab.label}</span>
                 </Link>
               );
             })}
+            </div>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-            {isLoading ? (
+          {isLoading ? (
+            <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
               <div className="px-8 py-8 text-sm text-gray-500">Chargement des commandes...</div>
-            ) : error ? (
-              <div className="px-8 py-8 text-sm text-red-600">{error}</div>
-            ) : (
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="flex items-center justify-center min-h-[calc(100vh-320px)]">
+              <div className="flex flex-col items-center justify-center">
+                <CheckCircle size={120} className="text-gray-400 mb-8" />
+                <p className="text-2xl text-gray-500 text-center">Aucune commande récupérée</p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             <table className="min-w-[520px] w-full table-auto text-sm lg:text-base">
               <thead>
                 <tr className="bg-gray-50">
@@ -233,23 +288,23 @@ export default function PartenaireRecupereesPage() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
+                {filteredOrders.map((order) => (
                   <tr
                     key={order.id}
-                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60 hover:border-l-4 hover:border-l-emerald-500 transition-all cursor-pointer"
+                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60  transition-all cursor-pointer"
                     onClick={() => router.push(`/partenaire/commandes/${order.id}?from=recuperees`)}
                   >
                     <td className="px-8 py-6 text-base font-mono text-gray-700">
-                      {order.id}
+                      {order.numero_commande}
                     </td>
                     <td className="px-8 py-6 text-base font-semibold text-gray-900">
-                      {order.patient}
+                      {order.patient.nom} {order.patient.prenom}
                     </td>
                     <td className="px-8 py-6 text-base text-gray-600">
                       {order.montant}
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <span className="inline-block rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700">
+                      <span className="inline-block rounded-full px-3 py-1 text-sm font-semibold" style={getStatusBadgeStyle(order.statut)}>
                         {order.statut}
                       </span>
                     </td>
@@ -257,10 +312,9 @@ export default function PartenaireRecupereesPage() {
                 ))}
               </tbody>
             </table>
-            )}
-          </div>
+            </div>
+          )}
         </main>
-      </div>
-    </div>
+    </>
   );
 }

@@ -3,25 +3,32 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { User, Lock, Eye, EyeOff } from "lucide-react";
+import { User, Lock, Eye, EyeOff, Mail, AtSign } from "lucide-react";
 import Link from "next/link";
-import { COUNTRY_CODES } from "@/lib/countryCodes";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 import { registerPatient } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
+import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@/lib/passwordPolicy";
+import { toast } from "sonner";
 
 export default function InscriptionPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
-    indicatif: COUNTRY_CODES[0].code,
-    telephone: "",
+    telephone: undefined as string | undefined,
     password: "",
     confirmPassword: "",
   });
+
+  const passwordRules = getPasswordRuleResults(formData.password);
+  const passwordStrength = getPasswordStrength(formData.password);
+  const passwordStrong = isPasswordStrong(formData.password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,28 +38,29 @@ export default function InscriptionPage() {
     }
 
     const fullName = formData.nom.trim();
-    if (!fullName || !formData.email.trim() || !formData.telephone.trim() || !formData.password) {
-      window.alert("Veuillez remplir tous les champs obligatoires.");
+    if (!fullName || !formData.email.trim() || !formData.telephone?.trim() || !formData.password) {
+      toast.warning("Veuillez remplir tous les champs obligatoires.");
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      window.alert("Les mots de passe ne correspondent pas.");
+      toast.warning("Les mots de passe ne correspondent pas.");
       return;
     }
 
-    if (formData.password.length < 8) {
-      window.alert("Le mot de passe doit contenir au moins 8 caracteres.");
+    if (!passwordStrong) {
+      setPasswordTouched(true);
+      toast.warning("Le mot de passe doit contenir au moins 8 caracteres, une majuscule, une minuscule, un chiffre et un caractere special.");
       return;
     }
 
     const nameParts = fullName.split(/\s+/).filter(Boolean);
     const prenom = nameParts[0] ?? fullName;
     const nom = nameParts.slice(1).join(" ") || nameParts[0] || fullName;
-    const telephone = `${formData.indicatif}${formData.telephone}`.replace(/\s+/g, "");
+    const telephone = formData.telephone ?? "";
 
     if (telephone.length > 20) {
-      window.alert("Le numero de telephone est trop long.");
+      toast.warning("Le numero de telephone est trop long.");
       return;
     }
 
@@ -74,13 +82,13 @@ export default function InscriptionPage() {
         profile: response.data.patient ?? null,
       });
 
-      window.alert(response.message ?? "Inscription réussie.");
+      toast.success(response.message ?? "Inscription réussie.");
       router.push("/client/accueil");
     } catch (error: unknown) {
       if (error instanceof ApiError) {
-        window.alert(error.message);
+        toast.error(error.message);
       } else {
-        window.alert("Une erreur est survenue pendant l'inscription.");
+        toast.error("Une erreur est survenue pendant l'inscription.");
       }
     } finally {
       setSubmitting(false);
@@ -112,7 +120,7 @@ export default function InscriptionPage() {
                 width={192}
                 height={96}
                 priority
-                className="mx-auto h-20 w-auto sm:h-24"
+                className="mx-auto h-20 w-auto "
               />
             </Link>
           </div>
@@ -125,7 +133,10 @@ export default function InscriptionPage() {
           {/* Formulaire */}
           <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             {/* Nom complet */}
-            <div>
+
+           <div className="relative flex items-center">
+              <User className="absolute left-4 text-gray-400" size={18} />
+
               <input
                 type="text"
                 placeholder="Nom complet"
@@ -133,13 +144,13 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, nom: e.target.value })
                 }
-                className="w-full rounded-md border border-black px-4 py-2.5 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
+                className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-4 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
             </div>
 
             {/* Email */}
             <div className="relative flex items-center">
-              <User className="absolute left-4 text-gray-400" size={18} />
+              <AtSign className="absolute left-4 text-gray-400" size={18} />
               <input
                 type="email"
                 placeholder="Adresse email"
@@ -147,31 +158,19 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full rounded-md border border-black py-2.5 pl-12 pr-4 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
+                className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-4 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
             </div>
 
             {/* Téléphone avec indicatif */}
-            <div className="relative flex gap-2">
-              <select
-                value={formData.indicatif}
-                onChange={e => setFormData({ ...formData, indicatif: e.target.value })}
-                className="w-[78px] rounded-md border border-black px-1.5 py-2.5 text-xs text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:w-[88px] sm:py-3"
-              >
-                {COUNTRY_CODES.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.flag} {c.code}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="tel"
+            <div className="flex rounded-md border bg-white border-black px-3 py-2.5 text-black transition-colors focus-within:border-toni-green-dark-2 sm:py-3">
+              <PhoneInput
+                international
+                defaultCountry="BJ"
                 placeholder="Numéro de téléphone"
                 value={formData.telephone}
-                onChange={(e) =>
-                  setFormData({ ...formData, telephone: e.target.value })
-                }
-                className="min-w-0 flex-1 rounded-md border border-black px-4 py-2.5 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
+                onChange={(value) => setFormData({ ...formData, telephone: value })}
+                className="bg-white"
               />
             </div>
 
@@ -185,7 +184,8 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full rounded-md border border-black py-2.5 pl-12 pr-12 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
+                onBlur={() => setPasswordTouched(true)}
+                className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
               <button
                 type="button"
@@ -197,6 +197,33 @@ export default function InscriptionPage() {
               </button>
             </div>
 
+            {(passwordTouched || formData.password.length > 0) && (
+              <div className="mt-2 space-y-2 rounded-md border border-gray-200 bg-white p-2.5">
+                <div>
+                  <div className="mb-1 flex items-center justify-between text-xs">
+                    <span className="text-gray-600">Robustesse</span>
+                    <span className="font-semibold text-gray-700">{passwordStrength.label}</span>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                    <div
+                      className={`h-full ${passwordStrength.colorClass} transition-all duration-200`}
+                      style={{ width: `${passwordStrength.percent}%` }}
+                    />
+                  </div>
+                </div>
+                <ul className="space-y-0.5">
+                  {passwordRules.map((rule) => (
+                    <li
+                      key={rule.id}
+                      className={`text-[11px] leading-tight ${rule.valid ? "text-emerald-600" : "text-red-500"}`}
+                    >
+                      {rule.valid ? "OK" : "KO"} - {rule.label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* Mot de passe confirmé */}
             <div className="relative flex items-center">
               <Lock className="absolute left-4 text-gray-400" size={18} />
@@ -207,14 +234,26 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, confirmPassword: e.target.value })
                 }
-                className="w-full rounded-md border border-black py-2.5 pl-12 pr-12 text-sm text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 sm:py-3 sm:text-base"
+                className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               />
             </div>
+
+            <p className="text-center text-xs text-gray-600 sm:text-sm">
+              En vous inscrivant, vous acceptez nos{" "}
+              <Link href="/terms-of-use" className="font-semibold text-toni-green-dark-2 underline hover:underline">
+                Conditions d&apos;utilisation
+              </Link>{" "}
+              et notre{" "}
+              <Link href="/privacy" className="font-semibold text-toni-green-dark-2 underline hover:underline">
+                Politique de confidentialité
+              </Link>
+              .
+            </p>
 
             {/* Bouton S'inscrire */}
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || !passwordStrong}
               className="w-full rounded-md bg-toni-green-dark-2 py-2.5 text-sm font-bold text-white transition hover:bg-toni-green-dark sm:py-3 sm:text-base"
             >
               {submitting ? "Inscription..." : "S\'inscrire"}
@@ -226,18 +265,6 @@ export default function InscriptionPage() {
             Déjà inscrit ?{" "}
             <Link href="/client/connexion" className="text-toni-green-dark-2 font-semibold hover:underline">
               Connectez-vous.
-            </Link>
-          </p>
-
-          {/* Texte légal */}
-          <p className="mt-3 text-center text-xs text-gray-500 sm:mt-4 sm:text-sm">
-            En vous inscrivant, vous acceptez nos{" "}
-            <Link href="#" className="text-toni-green-dark-2 hover:underline">
-              Conditions d&apos;utilisation
-            </Link>{" "}
-            et la{" "}
-            <Link href="#" className="text-toni-green-dark-2 hover:underline">
-              Politique de confidentialité.
             </Link>
           </p>
         </div>
