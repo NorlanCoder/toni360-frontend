@@ -33,6 +33,10 @@ interface OrderDetail {
   telephone: string;
   date: string;
   heure: string;
+  datePreparation: string | null;  // 👈 Ajouter
+  heurePreparation: string | null; // 👈 Ajouter
+  dateRecuperation: string | null; // 👈 Ajouter
+  heureRecuperation: string | null; // 👈 Ajouter
   paiement: "momo" | "visa" | "cash";
   pieceJointe: string | null;
   pieceJointeUrl: string | null;
@@ -73,46 +77,58 @@ export default function CommandeDetailPage() {
     fromSection === "recuperees" ? "recuperee" : "a-preparer"
   );
 
+  const toViewStatus = (s: string): OrderStatus => {
+    if (s === "RECUPEREE") return "recuperee";
+    if (s === "PRETE") return "prete";
+    return "a-preparer";
+  };
+
+  const mapToOrderDetail = (commande: PartnerCommande): OrderDetail => {
+    const createdAt = commande.created_at ? new Date(commande.created_at) : null;
+    const debutPreparation = commande.dates?.debut_preparation ? new Date(commande.dates.debut_preparation) : null;
+    const preteAt = commande.dates?.prete ? new Date(commande.dates.prete) : null;
+    const recuperationAt = commande.dates?.recuperation ? new Date(commande.dates.recuperation) : null;
+
+    const firstOrdonnanceUrl =
+      commande.produits.find((p) => p.ordonnance?.fichier_url)?.ordonnance?.fichier_url ?? null;
+    const pieceJointe = firstOrdonnanceUrl
+      ? (firstOrdonnanceUrl.split("/").pop() ?? null)
+      : null;
+
+    return {
+      id: commande.id,
+      cmdRef: commande.numero_commande,
+      patient: commande.patient?.nom_complet ?? "Patient inconnu",
+      telephone: commande.patient?.telephone ?? "-",
+      date: createdAt ? createdAt.toLocaleDateString("fr-FR") : "-",
+      heure: createdAt
+        ? createdAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+        : "-",
+      datePreparation: preteAt ? preteAt.toLocaleDateString("fr-FR") : null,
+      heurePreparation: preteAt
+        ? preteAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+        : null,
+      dateRecuperation: recuperationAt ? recuperationAt.toLocaleDateString("fr-FR") : null,
+      heureRecuperation: recuperationAt
+        ? recuperationAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+        : null,
+      paiement: "momo",
+      pieceJointe,
+      pieceJointeUrl: firstOrdonnanceUrl,
+      items: commande.produits.map((produit) => ({
+        medicament: produit.produit?.nom ?? "Médicament",
+        qte: produit.quantite ?? 0,
+        pu: produit.prix_unitaire ?? 0,
+        total: produit.prix_total ?? 0,
+        ordonnance_requise: !!produit.ordonnance_requise,
+        ordonnance_fournie: !!produit.ordonnance?.fichier_url,
+      })),
+      montantTotal: commande.montant_total ?? 0,
+      statut: toViewStatus(commande.statut),
+    };
+  };
+
   useEffect(() => {
-    const toViewStatus = (s: string): OrderStatus => {
-      if (s === "RECUPEREE") return "recuperee";
-      if (s === "PRETE") return "prete";
-      return "a-preparer";
-    };
-
-    const mapToOrderDetail = (commande: PartnerCommande): OrderDetail => {
-      const createdAt = commande.created_at ? new Date(commande.created_at) : null;
-      const firstOrdonnanceUrl =
-        commande.produits.find((p) => p.ordonnance?.fichier_url)?.ordonnance?.fichier_url ?? null;
-      const pieceJointe = firstOrdonnanceUrl
-        ? (firstOrdonnanceUrl.split("/").pop() ?? null)
-        : null;
-
-      return {
-        id: commande.id,
-        cmdRef: commande.numero_commande,
-        patient: commande.patient?.nom_complet ?? "Patient inconnu",
-        telephone: commande.patient?.telephone ?? "-",
-        date: createdAt ? createdAt.toLocaleDateString("fr-FR") : "-",
-        heure: createdAt
-          ? createdAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
-          : "-",
-        paiement: "momo",
-        pieceJointe,
-        pieceJointeUrl: firstOrdonnanceUrl,
-        items: commande.produits.map((produit) => ({
-          medicament: produit.produit?.nom ?? "Médicament",
-          qte: produit.quantite ?? 0,
-          pu: produit.prix_unitaire ?? 0,
-          total: produit.prix_total ?? 0,
-          ordonnance_requise: !!produit.ordonnance_requise,
-          ordonnance_fournie: !!produit.ordonnance?.fichier_url,
-        })),
-        montantTotal: commande.montant_total ?? 0,
-        statut: toViewStatus(commande.statut),
-      };
-    };
-
     const loadOrder = async () => {
       const session = getAuthSession();
       if (!session || session.userType !== "user" || !session.token || !id) {
@@ -149,14 +165,22 @@ export default function CommandeDetailPage() {
     setSubmittingReady(true);
     try {
       const readyResponse = await marquerPartnerCommandePrete(session.token, id);
-      setBackendStatus(readyResponse.data.commande.statut);
+      const updatedCommande = readyResponse.data.commande;
+      setBackendStatus(updatedCommande.statut);
       setStatut("prete");
+
+      // 👈 Recharger complètement la commande pour avoir les dates à jour
+      const refreshResponse = await getPartnerCommande(session.token, id);
+      const refreshedCommande = refreshResponse.data.commande;
+      setOrder(mapToOrderDetail(refreshedCommande));
+
     } catch (err: unknown) {
       toast.error(err instanceof ApiError ? err.message : "Impossible de marquer la commande prête.");
     } finally {
       setSubmittingReady(false);
     }
   };
+
 
   const handleRecuperer = async () => {
     const session = getAuthSession();
@@ -167,14 +191,22 @@ export default function CommandeDetailPage() {
     setSubmittingRecuperer(true);
     try {
       const recupResponse = await livrerPartnerCommande(session.token, id);
-      setBackendStatus(recupResponse.data.commande.statut);
+      const updatedCommande = recupResponse.data.commande;
+      setBackendStatus(updatedCommande.statut);
       setStatut("recuperee");
+
+      // 👈 Recharger complètement la commande pour avoir les dates à jour
+      const refreshResponse = await getPartnerCommande(session.token, id);
+      const refreshedCommande = refreshResponse.data.commande;
+      setOrder(mapToOrderDetail(refreshedCommande));
+
     } catch (err: unknown) {
       toast.error(err instanceof ApiError ? err.message : "Impossible de marquer la commande récupérée.");
     } finally {
       setSubmittingRecuperer(false);
     }
   };
+
 
   /* ── Early returns ── */
   if (isLoading) {
@@ -220,6 +252,7 @@ export default function CommandeDetailPage() {
         <div className="max-w-4xl w-full mx-auto flex flex-col gap-6">
 
           {/* ── Info card ── */}
+          {/* ── Info card ── */}
           <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex flex-col gap-1">
               <p className="text-sm text-gray-500">
@@ -229,12 +262,37 @@ export default function CommandeDetailPage() {
                 Téléphone : <span className="font-semibold text-gray-800">{order.telephone}</span>
               </p>
             </div>
+
             <div className="text-sm text-gray-500 text-center">
-              Commandée le :{" "}
-              <span className="font-semibold text-gray-800">
-                {order.date} à {order.heure}
-              </span>
+              {/* Date de commande */}
+              <div className="mb-2">
+                <span className="font-medium text-gray-700">Commandée le :</span>
+                <span className="font-semibold text-gray-800 ml-1">
+                  {order.date} à {order.heure}
+                </span>
+              </div>
+
+              {/* Date de préparation (si commande prête ou récupérée) */}
+              {(order.statut === "prete" || order.statut === "recuperee") && order.datePreparation && (
+                <div className="mb-2">
+                  <span className="font-medium">Prête le :</span>
+                  <span className="font-semibold text-gray-800 ml-1">
+                    {order.datePreparation} à {order.heurePreparation}
+                  </span>
+                </div>
+              )}
+
+              {/* Date de récupération (si commande récupérée) */}
+              {order.statut === "recuperee" && order.dateRecuperation && (
+                <div>
+                  <span className="font-medium">Récupérée le :</span>
+                  <span className="font-semibold text-gray-800 ml-1">
+                    {order.dateRecuperation} à {order.heureRecuperation}
+                  </span>
+                </div>
+              )}
             </div>
+
             <div className="flex flex-col items-end gap-1">
               <p className="text-xs text-gray-400 uppercase tracking-wide">Méthode de paiement</p>
               {order.paiement === "momo" && (
@@ -251,8 +309,15 @@ export default function CommandeDetailPage() {
             </div>
           </div>
 
-          {/* ── Pièce jointe ── */}
-          {order.pieceJointe && (
+
+          {/* ── Pièce jointe / Mode de récupération ── */}
+          {statut === "recuperee" ? (
+            <div className="flex items-center justify-end">
+              <span className="text-sm font-semibold text-emerald-600">
+                Mode de récupération : Récupération en pharmacie (présentation physique)
+              </span>
+            </div>
+          ) : order.pieceJointe ? (
             <div className="flex items-center justify-end gap-3">
               <span className="text-sm text-gray-500">Pièce jointe :</span>
               <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2">
@@ -268,7 +333,7 @@ export default function CommandeDetailPage() {
                 </button>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* ── Tableau médicaments ── */}
           <div>
@@ -343,8 +408,8 @@ export default function CommandeDetailPage() {
                   onClick={handleReady}
                   disabled={submittingReady || !canMarkReady}
                   className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full border-2 px-6 py-3 text-base font-semibold transition-colors ${!submittingReady && canMarkReady
-                      ? "border-emerald-600 text-emerald-600 bg-white hover:bg-emerald-50"
-                      : "border-gray-300 text-gray-400 bg-white cursor-not-allowed"
+                    ? "border-emerald-600 text-emerald-600 bg-white hover:bg-emerald-50"
+                    : "border-gray-300 text-gray-400 bg-white cursor-not-allowed"
                     }`}
                 >
                   {submittingReady && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -357,8 +422,8 @@ export default function CommandeDetailPage() {
                   onClick={handleRecuperer}
                   disabled={!canForceRecuperer || submittingRecuperer}
                   className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold text-white transition-colors ${canForceRecuperer && !submittingRecuperer
-                      ? "bg-emerald-600 hover:bg-emerald-700"
-                      : "bg-gray-300 cursor-not-allowed"
+                    ? "bg-emerald-600 hover:bg-emerald-700"
+                    : "bg-gray-300 cursor-not-allowed"
                     }`}
                 >
                   {submittingRecuperer && <Loader2 className="h-4 w-4 animate-spin" />}
