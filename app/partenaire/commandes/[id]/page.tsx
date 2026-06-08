@@ -312,8 +312,8 @@ export default function CommandeDetailPage() {
 
           {/* ── Pièce jointe / Mode de récupération ── */}
           {statut === "recuperee" ? (
-            <div className="flex items-center justify-end">
-              <span className="text-sm font-semibold text-emerald-600">
+            <div className="flex items-center justify-start">
+              <span className="text-sm  text-emerald-600">
                 Mode de récupération : Récupération en pharmacie (présentation physique)
               </span>
             </div>
