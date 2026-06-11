@@ -4,11 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { extractCollection, getPartnerStocks } from "@/lib/api/partner";
 import { toast } from "sonner";
 import ImportModal from "./components/ImportModal";
+import { useHeaderSearch } from "@/app/partenaire/_header-search-context";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type FilterKey = "tous" | "disponible" | "au-seuil" | "indisponible" | "desactives";
@@ -40,10 +42,21 @@ const filterMap: Record<FilterKey, Medicine["statut"] | null> = {
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireMedicamentsPage() {
+  const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("tous");
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
+  const { searchQuery, setShowSearch, setSearchPlaceholder, setSearchQuery } = useHeaderSearch();
+
+  useEffect(() => {
+    setShowSearch(true);
+    setSearchPlaceholder("Rechercher un médicament");
+    return () => {
+      setShowSearch(false);
+      setSearchQuery("");
+    };
+  }, [setShowSearch, setSearchPlaceholder, setSearchQuery]);
 
   const filters: { key: FilterKey; label: string }[] = [
     { key: "tous", label: "Tous" },
@@ -53,17 +66,18 @@ export default function PartenaireMedicamentsPage() {
     { key: "desactives", label: "Désactivés" },
   ];
 
-  const filteredMedicines =
-    activeFilter === "tous"
-      ? medicines
-      : medicines.filter((m) => m.statut === filterMap[activeFilter]);
+  const filteredMedicines = medicines
+    .filter((m) => activeFilter === "tous" || m.statut === filterMap[activeFilter])
+    .filter((m) =>
+      searchQuery.trim() === "" ||
+      m.nom.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   const moneyFormat = useMemo(
     () =>
-      new Intl.NumberFormat("fr-FR", {
-        style: "currency",
-        currency: "XOF",
-        maximumFractionDigits: 0,
+      ({
+        format: (value: number) =>
+          new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value) + " FCFA",
       }),
     [],
   );
@@ -116,6 +130,14 @@ export default function PartenaireMedicamentsPage() {
     <>
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
+          {/* Retour */}
+          <Link
+            href="/partenaire"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-toni-green-dark-2 hover:underline mb-4"
+          >
+            ← Retour au tableau de bord
+          </Link>
+
           {/* Import modal */}
           {showImportModal && (
             <ImportModal
@@ -126,15 +148,14 @@ export default function PartenaireMedicamentsPage() {
           <div className="mb-6 flex items-center gap-2 sm:gap-4">
             <Link
               href="/partenaire/medicaments/ajouter"
-              className="flex items-center gap-2 rounded-lg bg-emerald-700 px-3 sm:px-5 py-2 sm:py-3 text-sm sm:text-base font-bold text-white transition-colors hover:bg-emerald-800"
+              className="inline-flex items-center gap-2 overflow-hidden  text-sm sm:text-base font-bold text-emerald-700 transition-colors"
             >
-              <Image
-                src="/fluent.svg"
-                alt="Ajouter"
-                width={24}
-                height={24}
-              />
-              Ajouter un médicament
+              <span className="flex items-center justify-center bg-emerald-600 px-3 py-2.5 text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </span>
+              <span className="px-4 py-2.5 bg-emerald-50  hover:bg-emerald-100">Ajouter un médicament</span>
             </Link>
             
             <Link
@@ -155,7 +176,7 @@ export default function PartenaireMedicamentsPage() {
           </div>
 
           {/* Filter tabs */}
-          <div className="mb-6 flex flex-wrap justify-between gap-x-2  gap-y-3">
+          <div className="mb-6 flex flex-wrap  gap-x-2  gap-y-3">
             {filters.map((filter) => {
               const isActive = activeFilter === filter.key;
               return (
@@ -201,7 +222,8 @@ export default function PartenaireMedicamentsPage() {
                 {filteredMedicines.map((med) => (
                   <tr
                     key={med.id}
-                    className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50/40 transition-colors cursor-pointer"
+                    onClick={() => router.push(`/partenaire/medicaments/${med.id}`)}
+                    className="border-b border-gray-200 last:border-b-0 hover:bg-emerald-50/60 transition-colors cursor-pointer"
                   >
                     <td className="px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
                       {med.nom}

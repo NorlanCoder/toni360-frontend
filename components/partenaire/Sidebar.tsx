@@ -24,7 +24,7 @@ import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 /* ──────────────────── Nav items ─────────────────────── */
 const navItems = [
   { label: "Tableau de bord", icon: LayoutDashboard, href: "/partenaire/dashboard" },
-  { label: "Gestion de commande", icon: Package, href: "/partenaire/commandes" },
+  { label: "Gestion des commandes", icon: Package, href: "/partenaire/commandes" },
   // { label: "Gestion de Stocks", icon: Boxes, href: "/partenaire/stocks" },
   // { label: "Clients", icon: UserRound, href: "/client" },
   { label: "Gestion des employés", icon: Users, href: "/partenaire/employes" },
@@ -147,14 +147,14 @@ export default function PartenaireSidebar() {
             </div>
 
             {/* Footer drawer */}
-            <div className="px-5 pb-6 flex flex-col gap-1.5 text-xs text-gray-400 leading-relaxed">
-              <Link href="/partenaire/cgu" className="hover:underline hover:text-gray-600 transition-colors" onClick={onClose}>
+            <div className="px-5 pb-6 flex flex-col gap-1.5 text-xs text-toni-green-dark-2 leading-relaxed">
+              <Link href="/partenaire/cgu" className="hover:underline block transition-colors" onClick={onClose}>
                 Conditions générales d&apos;utilisation
               </Link>
-              <Link href="/politique-de-confidentialite" className="hover:underline hover:text-gray-600 transition-colors" onClick={onClose}>
+              <Link href="/partenaire/privacy" className="hover:underline block transition-colors" onClick={onClose}>
                 Politique de confidentialité
               </Link>
-              <Link href="/contact" className="hover:underline hover:text-gray-600 transition-colors" onClick={onClose}>
+              <Link href="/partenaire/contacts" className="hover:underline block transition-colors" onClick={onClose}>
                 Contactez-nous
               </Link>
             </div>
@@ -207,14 +207,14 @@ export default function PartenaireSidebar() {
           </nav>
         </div>
 
-        <div className="px-5 pb-6 flex flex-col gap-1.5 text-xs text-gray-400 leading-relaxed">
-          <Link href="/partenaire/cgu" className="hover:underline hover:text-gray-600 transition-colors">
+        <div className="px-5 pb-6 flex flex-col gap-1.5 text-xs text-toni-green-dark-2 leading-relaxed">
+          <Link href="/partenaire/cgu" className="hover:underline block transition-colors">
             Conditions générales d&apos;utilisation
           </Link>
-          <Link href="/politique-de-confidentialite" className="hover:underline hover:text-gray-600 transition-colors">
+          <Link href="/partenaire/privacy" className="hover:underline block transition-colors">
             Politique de confidentialité
           </Link>
-          <Link href="/contact" className="hover:underline hover:text-gray-600 transition-colors">
+          <Link href="/partenaire/contacts" className="hover:underline block transition-colors">
             Contactez-nous
           </Link>
         </div>

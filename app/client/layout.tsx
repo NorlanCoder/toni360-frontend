@@ -21,6 +21,8 @@ import { getClientNotificationCount } from "@/lib/api/client";
 import { PiListChecks } from "react-icons/pi";
 import { SearchProvider, useSearch } from "@/lib/search-context";
 import { CartProvider, useCart } from "@/lib/cart-context";
+import { useIdleTimeout } from "@/lib/useIdleTimeout";
+import { toast } from "sonner";
 
 
 const navItems = [
@@ -56,7 +58,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { query, setQuery, triggerSearch } = useSearch();
+  const { query, setQuery, triggerSearch, registerSearchInput } = useSearch();
   const { cartCount } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
@@ -86,6 +88,13 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
       router.replace("/client/connexion");
     }
   }, [router]);
+
+  // Déconnexion automatique après 15 minutes d'inactivité
+  useIdleTimeout(() => {
+    clearAuthSession();
+    toast.warning("Session expirée. Veuillez vous reconnecter.");
+    router.replace("/client/connexion");
+  });
 
   // Vider la barre de recherche quand on quitte la page d'accueil
   useEffect(() => {
@@ -160,13 +169,16 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
               <nav className="flex flex-col gap-0.5">
                 {navItems.map(({ label, href, icon: Icon }) => {
                   const active = pathname === href || pathname.startsWith(`${href}/`);
+                  const isLogout = href === "/client/deconnexion";
                   return (
                     <Link
                       key={href}
                       href={href}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
-                        active
+                        isLogout
+                          ? "text-red-600 font-medium hover:bg-red-50 hover:text-red-700"
+                          : active
                           ? "bg-[#E6F6F0] text-toni-green-dark-2 font-bold"
                           : "text-gray-600 font-medium hover:bg-gray-50 hover:text-gray-900"
                       }`}
@@ -191,13 +203,13 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
             {/* Footer drawer */}
             <div className="px-5 pb-6 text-xs text-toni-green-dark-2 leading-relaxed">
-              <Link href="/client/help/privacy" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
-                Politiques de confidentialité,
+              <Link href="/privacy" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
+                Politique de confidentialité,
               </Link>
-              <Link href="/client/help/return-policy" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
-                Conditions générales de retour,
+              <Link href="/terms-of-use" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
+                Conditions générales d&apos;utilisation,
               </Link>
-              <Link href="/client/contact" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
                 Contactez-nous
               </Link>
             </div>
@@ -217,12 +229,15 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           <nav className="flex flex-col gap-0.5">
             {navItems.map(({ label, href, icon: Icon }) => {
               const active = pathname === href || pathname.startsWith(`${href}/`);
+              const isLogout = href === "/client/deconnexion";
               return (
                 <Link
                   key={href}
                   href={href}
                   className={`flex items-center gap-3 px-4 py-2 text-xl transition-colors ${
-                    active
+                    isLogout
+                      ? "text-red-600 hover:bg-red-50 hover:text-red-700"
+                      : active
                       ? "bg-[#E6F6F0] text-toni-green-dark-2 font-bold"
                       : "text-gray-600  hover:bg-gray-50 hover:text-gray-900"
                   }`}
@@ -246,9 +261,9 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="px-5 pb-6 text-xs text-toni-green-dark-2 leading-relaxed">
-          <Link href="/client/help/privacy" className="hover:underline block">Politiques de confidentialité,</Link>
-          <Link href="/client/help/return-policy" className="hover:underline block">Conditions générales de retour,</Link>
-          <Link href="/client/contact" className="hover:underline block">Contactez-nous</Link>
+          <Link href="/privacy" className="hover:underline block">Politique de confidentialité,</Link>
+          <Link href="/terms-of-use" className="hover:underline block">Conditions générales d&apos;utilisation,</Link>
+          <Link href="/contacts" className="hover:underline block">Contactez-nous</Link>
         </div>
       </aside>
 
@@ -294,24 +309,29 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
           {/* Barre desktop : recherche + boutons */}
           <div className="hidden lg:flex lg:flex-row lg:items-center lg:justify-between gap-3">
-            <form
-              className="relative w-full lg:max-w-lg"
-              onSubmit={handleSearchSubmit}
-            >
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => handleSearchInput(e.target.value)}
-                placeholder="Rechercher un médicament..."
-                className="w-full rounded-full bg-toni-green-light border-none py-3 pl-6 pr-14 text-sm font-semibold text-gray-700 placeholder:text-gray-400 placeholder:font-semibold outline-none focus:ring-2 focus:ring-toni-green-dark-2"
-              />
-              <button
-                type="submit"
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full bg-toni-green-dark-2 p-2.5 text-white transition hover:bg-toni-green-dark"
+            {pathname !== "/client/dashboard/cart/checkout" ? (
+              <form
+                className="relative flex-1"
+                onSubmit={handleSearchSubmit}
               >
-                <Search size={18} />
-              </button>
-            </form>
+                <input
+                  ref={registerSearchInput}
+                  type="text"
+                  value={query}
+                  onChange={(e) => handleSearchInput(e.target.value)}
+                  placeholder="Rechercher un médicament..."
+                  className="w-full rounded-full bg-toni-green-light border-none py-3 pl-6 pr-14 text-sm font-semibold text-gray-700 placeholder:text-gray-400 placeholder:font-semibold outline-none focus:ring-2 focus:ring-toni-green-dark-2"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full bg-toni-green-dark-2 p-2.5 text-white transition hover:bg-toni-green-dark"
+                >
+                  <Search size={18} />
+                </button>
+              </form>
+            ) : (
+              <div className="flex-1" />
+            )}
 
             <div className="flex items-center gap-3 shrink-0">
               <Link
@@ -347,6 +367,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
             onSubmit={handleSearchSubmit}
           >
             <input
+              ref={registerSearchInput}
               type="text"
               value={query}
               onChange={(e) => handleSearchInput(e.target.value)}

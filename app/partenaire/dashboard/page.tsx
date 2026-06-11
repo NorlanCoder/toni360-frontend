@@ -252,7 +252,7 @@ export default function PartenaireDashboardPage() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
         {/* ─── CONTENT ─── */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-10 py-6 lg:py-8">
+        <main className="flex-1 m-auto max-w-4xl overflow-y-auto px-4 sm:px-8 lg:px-10 py-6 lg:py-8">
 
           {/* ── Row 1: 3 stat cards ── */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-5">
@@ -285,7 +285,7 @@ export default function PartenaireDashboardPage() {
               </div>
               {/* Arrow */}
               <div>
-                <ArrowButton bg="bg-red-600 hover:bg-red-700" />
+                <ArrowButton bg="bg-red-700" />
               </div>
             </Link>
 

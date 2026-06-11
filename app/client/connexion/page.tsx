@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Lock, Eye, EyeOff } from "lucide-react";
+import { Lock, Eye, EyeOff, AtSign } from "lucide-react";
 import Link from "next/link";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
@@ -15,7 +15,7 @@ import { toast } from "sonner";
 export default function ConnexionPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<"phone" | "email">("phone");
+  const [loginMethod, setLoginMethod] = useState<"phone" | "email">("email");
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     telephone: undefined as string | undefined,
@@ -54,7 +54,7 @@ export default function ConnexionPage() {
         token: response.data.token,
         tokenType: response.data.token_type,
         profile: profileResponse.data.patient ?? response.data.patient ?? null,
-      });
+      }, formData.rememberMe);
 
       toast.success(response.message ?? "Connexion réussie.");
       router.push("/client/accueil");
@@ -145,7 +145,8 @@ export default function ConnexionPage() {
                 />
               </div>
             ) : (
-              <div>
+              <div className="relative flex items-center">
+                <AtSign className="absolute left-4 text-gray-400" size={18} />
                 <input
                   type="email"
                   placeholder="Adresse email"
@@ -153,7 +154,7 @@ export default function ConnexionPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full rounded-md border border-black bg-white px-4 py-2.5 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
+                  className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-4 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
                 />
               </div>
             )}

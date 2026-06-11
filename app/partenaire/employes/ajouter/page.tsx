@@ -8,10 +8,53 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { createPartnerUser, getPartnerRoles, PartnerRole } from "@/lib/api/partner";
+import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@/lib/passwordPolicy";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
+import { Check, Eye, EyeOff, X } from "lucide-react";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
+
+/* ── Field-error helpers ── */
+type FieldErrors = Partial<Record<"nom" | "email" | "telephone" | "role" | "motDePasse", string>>;
+
+const EMAIL_RE = /^[^\s@]+@[^^\s@]+\.[^\s@]+$/;
+
+function validateFields(
+  nom: string,
+  email: string,
+  telephone: string | undefined,
+  role: string,
+  motDePasse: string,
+  passwordStrong: boolean,
+): FieldErrors {
+  const errors: FieldErrors = {};
+  const parts = nom.trim().split(/\s+/).filter(Boolean);
+  if (!nom.trim()) {
+    errors.nom = "Le nom complet est obligatoire.";
+  } else if (parts.length < 2) {
+    errors.nom = "Veuillez saisir le nom ET le prénom (ex : AGOSSOU Jonathan).";
+  }
+  if (!email.trim()) {
+    errors.email = "L'adresse e-mail est obligatoire.";
+  } else if (!EMAIL_RE.test(email.trim())) {
+    errors.email = "Format d'e-mail invalide (ex : jean@exemple.com).";
+  }
+  const num = (telephone ?? "").trim();
+  if (!num) {
+    errors.telephone = "Le numéro de téléphone est obligatoire.";
+  } else if ((num.replace(/\D/g, "").length) < 10) {
+    errors.telephone = "Le numéro de téléphone doit contenir au moins 10 chiffres.";
+  }
+  if (!role) {
+    errors.role = "Veuillez sélectionner un rôle.";
+  }
+  if (!motDePasse) {
+    errors.motDePasse = "Le mot de passe est obligatoire.";
+  } else if (!passwordStrong) {
+    errors.motDePasse = "Le mot de passe ne respecte pas les critères de sécurité ci-dessous.";
+  }
+  return errors;
+}
 
 const ASSIGNABLE_ROLE_CODES = [
   "GESTIONNAIRE_OPERATIONNEL",
@@ -39,7 +82,12 @@ export default function PartenaireAjouterEmployePage() {
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
   const [roles, setRoles] = useState<PartnerRole[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  const clearError = (field: keyof FieldErrors) =>
+    setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next; });
 
   /* ── Form state ── */
   const [nom, setNom] = useState("");
@@ -47,6 +95,10 @@ export default function PartenaireAjouterEmployePage() {
   const [telephone, setTelephone] = useState<string | undefined>(undefined);
   const [role, setRole] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
+
+  const passwordRules = getPasswordRuleResults(motDePasse);
+  const passwordStrength = getPasswordStrength(motDePasse);
+  const passwordStrong = isPasswordStrong(motDePasse);
 
   useEffect(() => {
     const loadRoles = async () => {
@@ -91,14 +143,18 @@ export default function PartenaireAjouterEmployePage() {
       return;
     }
 
-    const [nomPart, ...prenomParts] = nom.trim().split(" ");
-    const prenomPart = prenomParts.join(" ") || nomPart;
-    const numero = (telephone ?? "").trim();
-
-    if (!nomPart || !prenomPart || !email || !numero || !role || motDePasse.length < 8) {
-      toast.warning("Veuillez remplir correctement tous les champs.");
+    const errors = validateFields(nom, email, telephone, role, motDePasse, passwordStrong);
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      if (errors.motDePasse) setPasswordTouched(true);
       return;
     }
+    setFieldErrors({});
+
+    const parts = nom.trim().split(/\s+/).filter(Boolean);
+    const prenomPart = parts[0];
+    const nomPart = parts.slice(1).join(" ");
+    const numero = (telephone ?? "").trim();
 
     setIsSubmitting(true);
     try {
@@ -114,7 +170,27 @@ export default function PartenaireAjouterEmployePage() {
 
       setShowModal(true);
     } catch (err: unknown) {
-      toast.error(err instanceof ApiError ? err.message : "Erreur lors de la création de l'employé.");
+      if (err instanceof ApiError) {
+        // Map API field errors when available
+        const detail = (err as ApiError & { errors?: Record<string, string[]> }).errors;
+        if (detail) {
+          const mapped: FieldErrors = {};
+          if (detail.nom || detail.prenom) mapped.nom = (detail.nom ?? detail.prenom ?? [])[0];
+          if (detail.email) mapped.email = detail.email[0];
+          if (detail.telephone) mapped.telephone = detail.telephone[0];
+          if (detail.role_id) mapped.role = detail.role_id[0];
+          if (detail.password) mapped.motDePasse = detail.password[0];
+          if (Object.keys(mapped).length > 0) {
+            setFieldErrors(mapped);
+          } else {
+            toast.error(err.message);
+          }
+        } else {
+          toast.error(err.message);
+        }
+      } else {
+        toast.error("Erreur lors de la création de l'employé.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -124,6 +200,16 @@ export default function PartenaireAjouterEmployePage() {
     <div className="flex flex-1 flex-col overflow-hidden">
         {/* ─── CONTENT ─── */}
         <main className="flex-1 overflow-y-auto px-2 sm:px-6 lg:px-32 py-4 sm:py-8 lg:py-16">
+          {/* Retour */}
+          <div className="mb-4 lg:mb-6 mx-auto w-full max-w-[920px]">
+            <Link
+              href="/partenaire/employes"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-toni-green-dark-2 hover:underline"
+            >
+              ← Retour aux employés
+            </Link>
+          </div>
+
           <form
             onSubmit={handleSubmit}
             className="mx-auto w-full max-w-[920px] rounded-xl bg-white p-4 sm:p-8"
@@ -136,11 +222,18 @@ export default function PartenaireAjouterEmployePage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="AGOSSOU"
+                  placeholder="AGOSSOU Jonathan"
                   value={nom}
-                  onChange={(e) => setNom(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  onChange={(e) => { setNom(e.target.value); clearError("nom"); }}
+                  className={`w-full rounded-md border bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
+                    fieldErrors.nom
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                  }`}
                 />
+                {fieldErrors.nom && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.nom}</p>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-base font-medium text-gray-600">
@@ -150,9 +243,16 @@ export default function PartenaireAjouterEmployePage() {
                   type="email"
                   placeholder="jonathan@gmail.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  onChange={(e) => { setEmail(e.target.value); clearError("email"); }}
+                  className={`w-full rounded-md border bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
+                    fieldErrors.email
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                  }`}
                 />
+                {fieldErrors.email && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>
+                )}
               </div>
             </div>
 
@@ -162,15 +262,22 @@ export default function PartenaireAjouterEmployePage() {
                 <label className="mb-1 block text-base font-medium text-gray-600">
                   Téléphone
                 </label>
-                <div className="rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 focus-within:border-emerald-500 focus-within:outline-none focus-within:ring-1 focus-within:ring-emerald-500">
+                <div className={`rounded-md border bg-white px-3 py-2.5 text-base text-gray-800 focus-within:outline-none focus-within:ring-1 ${
+                  fieldErrors.telephone
+                    ? "border-red-500 focus-within:border-red-500 focus-within:ring-red-500"
+                    : "border-gray-300 focus-within:border-emerald-500 focus-within:ring-emerald-500"
+                }`}>
                   <PhoneInput
                     international
                     defaultCountry="BJ"
                     placeholder="Numéro de téléphone"
                     value={telephone}
-                    onChange={setTelephone}
+                    onChange={(val) => { setTelephone(val); clearError("telephone"); }}
                   />
                 </div>
+                {fieldErrors.telephone && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.telephone}</p>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-base font-medium text-gray-600">
@@ -178,14 +285,21 @@ export default function PartenaireAjouterEmployePage() {
                 </label>
                 <select
                   value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  onChange={(e) => { setRole(e.target.value); clearError("role"); }}
+                  className={`w-full rounded-md border bg-white px-3 py-2.5 text-base text-gray-800 focus:outline-none focus:ring-1 ${
+                    fieldErrors.role
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                  }`}
                 >
                   <option value="">Sélectionnez un rôle</option>
                   {roles.map((item) => (
                     <option key={item.id} value={item.id}>{getRoleDisplayLabel(item)}</option>
                   ))}
                 </select>
+                {fieldErrors.role && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors.role}</p>
+                )}
               </div>
             </div>
 
@@ -200,9 +314,17 @@ export default function PartenaireAjouterEmployePage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="***************"
                     value={motDePasse}
-                    onChange={(e) => setMotDePasse(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 pr-10 text-base text-gray-800 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    onChange={(e) => { setMotDePasse(e.target.value); clearError("motDePasse"); }}
+                    onBlur={() => setPasswordTouched(true)}
+                    className={`w-full rounded-md border bg-white px-3 py-2.5 pr-10 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
+                      fieldErrors.motDePasse
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                    }`}
                   />
+                  {fieldErrors.motDePasse && (
+                    <p className="mt-1 text-xs text-red-600">{fieldErrors.motDePasse}</p>
+                  )}
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
@@ -216,6 +338,34 @@ export default function PartenaireAjouterEmployePage() {
                     )}
                   </button>
                 </div>
+
+                {(passwordTouched || motDePasse.length > 0) && (
+                  <div className="mt-2 space-y-2 rounded-md border border-gray-200 bg-white p-2.5">
+                    <div>
+                      <div className="mb-1 flex items-center justify-between text-xs">
+                        <span className="text-gray-600">Robustesse</span>
+                        <span className="font-semibold text-gray-700">{passwordStrength.label}</span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                        <div
+                          className={`h-full ${passwordStrength.colorClass} transition-all duration-200`}
+                          style={{ width: `${passwordStrength.percent}%` }}
+                        />
+                      </div>
+                    </div>
+                    <ul className="space-y-0.5">
+                      {passwordRules.map((rule) => (
+                        <li
+                          key={rule.id}
+                          className={`flex items-center gap-1.5 text-[11px] leading-tight ${rule.valid ? "text-emerald-600" : "text-red-500"}`}
+                        >
+                          {rule.valid ? <Check size={12} className="shrink-0" /> : <X size={12} className="shrink-0" />}
+                          {rule.label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -223,7 +373,7 @@ export default function PartenaireAjouterEmployePage() {
             <div className="mt-6 sm:mt-10 flex justify-end">
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !passwordStrong}
                 className="w-full sm:w-auto rounded-full bg-emerald-700 px-4 sm:px-10 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white transition-colors hover:bg-emerald-800"
               >
                 {isSubmitting ? "Ajout en cours..." : "Ajouter cet employé"}

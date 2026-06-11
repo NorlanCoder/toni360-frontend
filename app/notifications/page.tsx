@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Home, User, Package, Bell, ShoppingCart, HelpCircle, LogOut, BellOff, Trash2 } from "lucide-react";
+import { Home, User, Package, Bell, ShoppingCart, HelpCircle, LogOut, BellOff, Trash2, X } from "lucide-react";
 import Link from "next/link";
 
 interface Notification {
@@ -63,8 +63,37 @@ export default function NotificationsPage() {
     setNotifications(notifications.map((notif) => ({ ...notif, isRead: true })));
   };
 
+  const [selectedNotif, setSelectedNotif] = useState<Notification | null>(null);
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* ── Modal détail ── */}
+      {selectedNotif && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setSelectedNotif(null)}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setSelectedNotif(null)}
+              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition"
+              aria-label="Fermer"
+            >
+              <X size={22} />
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full border-2 border-toni-green-dark-2 flex items-center justify-center bg-white shrink-0">
+                <img src="/images/icon.png" alt="Toni360" className="w-6 h-6 object-contain" />
+              </div>
+              <h2 className="font-bold text-gray-900 text-base pr-6">{selectedNotif.title}</h2>
+            </div>
+            <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{selectedNotif.description}</p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -119,7 +148,7 @@ export default function NotificationsPage() {
           {/* Footer Links in Sidebar */}
           <div className="flex flex-col gap-2 text-sm text-toni-green-dark-2 mt-6">
             <Link href="/confidentialite" className="hover:underline">
-              Politiques de confidentialité,
+              Politique de confidentialité,
             </Link>
             <Link href="/retour" className="hover:underline">
               Conditions générales de retour,
@@ -148,7 +177,8 @@ export default function NotificationsPage() {
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className="bg-white rounded-lg p-6 flex items-start gap-4 shadow-sm border border-gray-200"
+                    onClick={() => setSelectedNotif(notification)}
+                    className="cursor-pointer bg-white rounded-lg p-6 flex items-start gap-4 shadow-sm border border-gray-200 hover:shadow-md transition"
                   >
                     {/* Logo */}
                     <div className="flex-shrink-0">
@@ -169,7 +199,7 @@ export default function NotificationsPage() {
 
                     {/* Delete Button */}
                     <button
-                      onClick={() => handleDeleteNotification(notification.id)}
+                      onClick={(e) => { e.stopPropagation(); handleDeleteNotification(notification.id); }}
                       className="flex-shrink-0 text-red-600 hover:text-red-700 transition"
                     >
                       <Trash2 size={20} />

@@ -14,12 +14,26 @@ function isBrowser(): boolean {
   return typeof window !== "undefined";
 }
 
-export function saveAuthSession(session: AuthSession): void {
+/**
+ * Sauvegarde la session d'authentification.
+ * - rememberMe = true  → localStorage  (persiste après fermeture du navigateur)
+ * - rememberMe = false → sessionStorage (effacé à la fermeture de l'onglet)
+ */
+export function saveAuthSession(session: AuthSession, rememberMe = false): void {
   if (!isBrowser()) {
     return;
   }
 
-  localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+  const storage = rememberMe ? localStorage : sessionStorage;
+  // Nettoyer l'autre stockage pour éviter les doublons
+  const otherStorage = rememberMe ? sessionStorage : localStorage;
+  otherStorage.removeItem(AUTH_SESSION_KEY);
+
+  storage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+
+  // Réinitialiser le timer d'inactivité pour éviter une déconnexion immédiate
+  // si l'utilisateur se reconnecte après une longue absence.
+  localStorage.setItem("toni360.last_activity", Date.now().toString());
 }
 
 export function getAuthSession(): AuthSession | null {
@@ -27,7 +41,8 @@ export function getAuthSession(): AuthSession | null {
     return null;
   }
 
-  const raw = localStorage.getItem(AUTH_SESSION_KEY);
+  // Vérifier localStorage en priorité (remember me activé), puis sessionStorage
+  const raw = localStorage.getItem(AUTH_SESSION_KEY) ?? sessionStorage.getItem(AUTH_SESSION_KEY);
   if (!raw) {
     return null;
   }
@@ -42,12 +57,14 @@ export function getAuthSession(): AuthSession | null {
       parsed.tokenType.trim() === ""
     ) {
       localStorage.removeItem(AUTH_SESSION_KEY);
+      sessionStorage.removeItem(AUTH_SESSION_KEY);
       return null;
     }
 
     return parsed as AuthSession;
   } catch {
     localStorage.removeItem(AUTH_SESSION_KEY);
+    sessionStorage.removeItem(AUTH_SESSION_KEY);
     return null;
   }
 }
@@ -58,6 +75,7 @@ export function clearAuthSession(): void {
   }
 
   localStorage.removeItem(AUTH_SESSION_KEY);
+  sessionStorage.removeItem(AUTH_SESSION_KEY);
 }
 
 export function redirectToLoginBySession(session: AuthSession | null): void {

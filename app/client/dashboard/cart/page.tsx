@@ -22,6 +22,7 @@ import {
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 import { useCart } from "@/lib/cart-context";
+import { useSearch } from "@/lib/search-context";
 
 type CartItem = {
   id: string;
@@ -69,6 +70,7 @@ function ClientCartPageContent() {
   const [hasLocalized, setHasLocalized] = useState(false);
   const autoSearchAttemptedRef = useRef(false);
   const { refreshCart, clearLocalCart, updateCount } = useCart();
+  const { focusSearchInput } = useSearch();
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -336,6 +338,16 @@ function ClientCartPageContent() {
             <p className="mt-3 text-sm text-gray-400 text-center">
               Recherchez un médicament pour commencer
             </p>
+            <button
+              type="button"
+              onClick={() => {
+                router.push("/client/accueil");
+                setTimeout(focusSearchInput, 300);
+              }}
+              className="mt-6 rounded-full bg-[#00955F] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#007a4e] transition"
+            >
+              Rechercher un médicament
+            </button>
           </div>
         </div>
       ) : (

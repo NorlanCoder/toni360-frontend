@@ -3,27 +3,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React from 'react';
-import { getAuthSession } from '@/lib/api/session';
 
-const BASE_NAV_LINKS = [
+const NAV_LINKS = [
     { label: "A propos", href: "/about" },
     { label: "Contacts", href: "/contacts" },
     { label: "FAQ", href: "/faq" },
-    { label: "Conditions générales d'utilisation", href: "/terms-of-use", cguControlled: true },
-    { label: "Politiques de confidentialité", href: "/privacy" },
+    { label: "Conditions générales d'utilisation", href: "/terms-of-use" },
+    { label: "Politique de confidentialité", href: "/privacy" },
 ];
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-
-    const session = getAuthSession();
-    const isPartenaire = session?.userType === "user";
-
-    const navLinks = BASE_NAV_LINKS.map((link) =>
-        link.cguControlled
-            ? { ...link, href: isPartenaire ? "/partenaire/cgu" : "/terms-of-use" }
-            : link
-    );
 
     return (
         <div>
@@ -49,14 +39,14 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                     {/* Navigation horizontale */}
                     <nav className="w-full px-4 md:px-12 pb-0 overflow-x-auto">
                         <ul className="max-w-7xl mx-auto flex gap-5 md:gap-12 text-sm md:text-xl text-gray-600 whitespace-nowrap md:flex-wrap md:justify-between">
-                            {navLinks.map((link) => {
+                            {NAV_LINKS.map((link) => {
                                 const isActive = pathname === link.href;
                                 return (
                                     <li key={link.label}>
                                         <Link
                                             href={link.href}
                                             className={`inline-block pb-3 transition font-medium ${isActive
-                                                ? "text-green-600 font-semibold border-b-2 border-green-500"
+                                                ? "text-toni-green-dark-2 font-semibold border-b-2 border-toni-green-dark"
                                                 : "hover:text-gray-900"
                                                 }`}
                                         >

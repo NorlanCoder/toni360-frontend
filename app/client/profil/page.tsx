@@ -163,8 +163,8 @@ export default function ProfilPage() {
                     <input
                       type="email"
                       value={formData.email}
-                      disabled
-                      className="w-full px-4 py-3 border-2 font-bold border-gray-200 rounded-lg text-base text-gray-400 bg-gray-50 cursor-not-allowed"
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full px-4 py-3 border-2 font-bold border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
                     />
                   </div>
 

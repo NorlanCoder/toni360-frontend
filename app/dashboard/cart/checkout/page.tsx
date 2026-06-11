@@ -77,7 +77,7 @@ export default function CartPage() {
         {/* Bottom links */}
         <div className="mt-auto pt-6 px-2 flex flex-col gap-1">
           <Link href="/privacy" className="text-base text-[#0fa37f] hover:underline">
-            Politiques de confidentialité,
+            Politique de confidentialité,
           </Link>
           <Link href="/terms-of-use" className="text-base text-[#0fa37f] hover:underline">
             Conditions générales de retour,
@@ -185,12 +185,12 @@ export default function CartPage() {
 
                 {/* Price */}
                 <p className="text-lg text-gray-600 text-center">
-                  {formatPrice(item.price)} XOF CFA
+                  {formatPrice(item.price)} FCFA
                 </p>
 
                 {/* Total */}
                 <p className="text-lg font-semibold text-gray-800 text-center">
-                  {formatPrice(item.qty * item.price)} XOF CFA
+                  {formatPrice(item.qty * item.price)} FCFA
                 </p>
 
                 {/* Delete */}
@@ -208,7 +208,7 @@ export default function CartPage() {
           <div className="flex items-center justify-between bg-[#e8faf3] rounded-xl px-8 py-5 mt-6">
             <h3 className="text-xl font-bold text-gray-800">Montant total</h3>
             <p className="text-xl font-bold text-gray-800">
-              {formatPrice(total)} XOF CFA
+              {formatPrice(total)} FCFA
             </p>
           </div>
 

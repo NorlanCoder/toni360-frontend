@@ -17,7 +17,7 @@ export default function Hero() {
   const isPatient = session?.userType === "patient";
 
   const patientHref = isPatient ? "/client/accueil" : "/client/connexion";
-  const partnerHref = isPartner ? "/partenaire/dashboard" : "/partenaire/inscription";
+  const partnerHref = isPartner ? "/partenaire/dashboard" : "/partenaire/connexion";
   const patientLabel = isPatient ? "Mon espace patient" : "Trouvez vos médicaments";
   const partnerLabel = isPartner ? "Mon tableau de bord" : "Devenez partenaire";
 
@@ -68,7 +68,7 @@ export default function Hero() {
           </Link>
           <span className="hidden sm:inline">•</span>
           <Link href="/privacy" className="hover:text-white/80 transition underline">
-            Politiques de confidentialité
+            Politique de confidentialité
           </Link>
           <span className="hidden sm:inline">•</span>
           <Link href="/contacts" className="hover:text-white/80 transition underline">

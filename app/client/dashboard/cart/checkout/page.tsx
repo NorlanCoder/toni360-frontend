@@ -2,10 +2,9 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { Eye, FileText, MapPin, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Eye, FileText, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import {
-  annulerCommande,
+import { annulerCommande,
   createCommande,
   getCommande,
   getPanier,
@@ -18,6 +17,7 @@ import {
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 import { useCart } from "@/lib/cart-context";
+import PharmacieHeader from "@/components/client/PharmacieHeader";
 
 interface CartItem {
   id: string;
@@ -444,7 +444,26 @@ function CartPageContent() {
       const holdCommandeId = creation.data.commande.id;
       const holdCommandeNumero = creation.data.commande.numero_commande;
 
+      // Mettre en attente AVANT l'upload : l'upload change le statut vers
+      // ORDONNANCE_EN_VERIFICATION, ce qui bloquerait mettreEnAttente.
       await mettreEnAttenteCommande(token, holdCommandeId);
+
+      if (creation.data.necessite_ordonnance && ordonnanceFile) {
+        try {
+          await uploadOrdonnances(holdCommandeId, ordonnanceFile);
+        } catch (uploadError) {
+          // La commande est déjà en attente, on mémorise le retry pour l'ordonnance.
+          setUploadRetryCandidateId(holdCommandeId);
+          setUploadRetryCandidateNumero(holdCommandeNumero);
+          setOrdonnanceFile(null);
+          if (uploadError instanceof ApiError) {
+            toast.warning("Commande mise en attente, mais l'ordonnance n'a pas pu être envoyée. Veuillez la joindre depuis « Mes commandes ».");
+          }
+          clearLocalCart();
+          router.push(`/client/orders?commande=${encodeURIComponent(holdCommandeNumero)}`);
+          return;
+        }
+      }
 
       clearLocalCart();
       router.push(`/client/orders?commande=${encodeURIComponent(holdCommandeNumero)}`);
@@ -458,76 +477,33 @@ function CartPageContent() {
   };
 
   const formatPrice = (value: number | null | undefined) =>
-    Number(value ?? 0).toLocaleString("fr-FR").replace(/,/g, " ");
+    Math.round(Number(value ?? 0))
+      .toString()
+      .replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
 
   const total = items.reduce((sum, item) => sum + item.qty * item.price, 0);
   const hasPrescription = prescriptionCount > 0;
-  const mapsUrl = pharmacyAdresse
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pharmacyAdresse)}`
-    : "#";
 
   return (
     <section className="mx-auto w-full max-w-6xl px-3 pb-6 sm:px-6 sm:pb-8">
 
       {/* ── Header pharmacie ── */}
-      <div className="rounded-2xl bg-gradient-to-r from-[#004B2F] to-[#00B16F] px-6 py-6 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-center">
-        {/* Colonne 1 : nom + adresse */}
-        <div>
-          <h2 className="text-xl font-bold text-white sm:text-2xl leading-snug">
-            <span className="block">{pharmacyName.split(' ')[0]}</span>
-            <span className="block">
-              {pharmacyName.split(' ').slice(1).join(' ')}
-            </span>
-          </h2>
-          {pharmacyAdresse && (
-            <p className="mt-1 text-sm text-green-100 leading-snug">{pharmacyAdresse}</p>
-          )}
-        </div>
-
-        {/* Colonne 2 : email + téléphone (centré) */}
-        <div className="flex flex-col gap-3 sm:items-center sm:text-center">
-          {pharmacyEmail && (
-            <a
-              href={`mailto:${pharmacyEmail}`}
-              className="text-white text-sm font-medium hover:underline"
-            >
-              {pharmacyEmail}
-            </a>
-          )}
-          {pharmacyTelephone && (
-            <a
-              href={`tel:${pharmacyTelephone}`}
-              className="text-white text-sm font-medium hover:underline"
-            >
-              {pharmacyTelephone}
-            </a>
-          )}
-        </div>
-
-        {/* Colonne 3 : bouton itinéraire (aligné à droite) */}
-        <div className="flex sm:justify-end">
-          {pharmacyAdresse && (
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-toni-green-dark-2 hover:bg-gray-50 transition shrink-0"
-            >
-              <MapPin size={16} />
-              Itinéraire
-            </a>
-          )}
-        </div>
-      </div>
+      <PharmacieHeader
+        nom={pharmacyName}
+        adresse={pharmacyAdresse}
+        telephone={pharmacyTelephone}
+        email={pharmacyEmail}
+        className="rounded-xl px-3 py-3"
+      />
 
       {/* ── Table produits ── */}
       <div className="overflow-hidden bg-white">
 
         {/* En-têtes colonnes (desktop) */}
-        <div className="hidden sm:grid sm:grid-cols-[1fr_180px_150px_150px_44px] gap-2 px-6 py-3 text-base font-bold text-[#B5B5B5] border-b border-[#66666680]">
+        <div className="hidden sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr_44px] gap-2 px-6 py-3 text-base font-bold text-[#B5B5B5] border-b border-[#66666680]">
           <span>Nom du produit</span>
           <span className="text-center">Qté</span>
-          <span>Prix</span>
+          <span>P.U</span>
           <span>Total</span>
           <span />
         </div>
@@ -535,7 +511,7 @@ function CartPageContent() {
         {items.map((item, idx) => (
           <div
             key={item.id}
-            className={`flex flex-col gap-3 px-6 py-4 sm:grid sm:grid-cols-[1fr_180px_150px_150px_44px] sm:gap-2 sm:items-center ${idx < items.length - 1 ? "border-b border-[#66666680]" : ""
+            className={`flex flex-col gap-3 px-6 py-4 sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr_44px] sm:gap-2 sm:items-center ${idx < items.length - 1 ? "border-b border-[#66666680]" : ""
               }`}
           >
             {/* Nom */}
@@ -583,14 +559,14 @@ function CartPageContent() {
 
             {/* Prix */}
             <span className="text-sm text-gray-700 whitespace-nowrap">
-              <span className="sm:hidden text-gray-400 mr-1">Prix :</span>
-              {formatPrice(item.price)} XOF CFA
+              <span className="sm:hidden text-gray-400 mr-1">P.U :</span>
+              {formatPrice(item.price)} FCFA
             </span>
 
             {/* Total */}
             <span className="text-sm text-gray-700 whitespace-nowrap">
               <span className="sm:hidden text-gray-400 mr-1">Total :</span>
-              {formatPrice(item.qty * item.price)} XOF CFA
+              {formatPrice(item.qty * item.price)} FCFA
             </span>
 
             {/* Delete */}
@@ -610,7 +586,7 @@ function CartPageContent() {
         <div className="flex items-center justify-between bg-[#D7EFDA] px-6 py-5">
           <span className="text-lg md:text-2xl font-bold text-gray-900">Montant total</span>
           <span className="text-lg md:text-2xl font-bold text-gray-900">
-            {formatPrice(total)} XOF CFA
+            {formatPrice(total)} FCFA
           </span>
         </div>
       </div>

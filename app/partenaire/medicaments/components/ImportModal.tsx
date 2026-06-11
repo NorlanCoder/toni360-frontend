@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import { X, FileUp, CheckCircle, AlertCircle, Download, FileText, FileSpreadsheet } from "lucide-react";
 import {
@@ -272,7 +273,16 @@ export default function ImportModal({ onClose, onSuccess }: ImportModalProps) {
                 <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                   <p>
-                    {result.incoherences} médicament(s) ont été envoyés en vérification de similitude. Consultez la page <strong>Incohérences</strong> pour les traiter.
+                    {result.incoherences}{" "}
+                    {result.incoherences > 1 ? "médicaments sont" : "médicament est"} en cours de
+                    normalisation. Veuillez consulter la{" "}
+                    <Link
+                      href="/partenaire/medicaments/incoherences"
+                      className="font-semibold underline hover:text-amber-900"
+                    >
+                      page de normalisation des produits
+                    </Link>{" "}
+                    afin de les traiter.
                   </p>
                 </div>
               )}

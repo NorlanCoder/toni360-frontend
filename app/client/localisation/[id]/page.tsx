@@ -2,11 +2,12 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { getLocalisationDetail, LocalisationResultat } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import PharmacieHeader from "@/components/client/PharmacieHeader";
 
 interface PharmacieBloc {
   pharmacieId: string;
@@ -115,7 +116,10 @@ function LocalisationDetailContent() {
     void load();
   }, [token, rechercheId, router]);
 
-  const formatPrice = (v: number) => Number(v).toLocaleString("fr-FR").replace(/,/g, " ");
+  const formatPrice = (v: number) =>
+    Math.round(Number(v))
+      .toString()
+      .replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
 
   if (loading) {
     return (
@@ -156,63 +160,25 @@ function LocalisationDetailContent() {
       ) : (
         <div className="flex flex-col gap-6">
           {pharmacies.map((ph) => {
-            const mapsUrl = ph.pharmacieAdresse
-              ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ph.pharmacieAdresse)}`
-              : "#";
             const total = ph.produits.reduce((sum, p) => sum + p.prix * p.qteDemandee, 0);
 
             return (
               <div key={ph.pharmacieId}>
-                {/* Header pharmacie — même design que commande */}
-                <div className="rounded-t-2xl bg-gradient-to-r from-[#004B2F] to-[#00B16F] px-6 py-6 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-center">
-                  {/* Colonne 1 : nom + adresse */}
-                  <div>
-                    <h2 className="text-xl font-bold text-white sm:text-2xl leading-snug">
-                      <span className="block">{ph.pharmacieNom.split(" ")[0]}</span>
-                      <span className="block">{ph.pharmacieNom.split(" ").slice(1).join(" ")}</span>
-                    </h2>
-                    {ph.pharmacieAdresse && (
-                      <p className="mt-1 text-sm text-green-100 leading-snug">{ph.pharmacieAdresse}</p>
-                    )}
-                    <p className="mt-1 text-xs text-green-200">
-                      {ph.distanceKm.toFixed(1)} km
-                    </p>
-                  </div>
-
-                  {/* Colonne 2 : téléphone */}
-                  <div className="flex flex-col gap-3 sm:items-center sm:text-center">
-                    {ph.pharmacieTelephone && (
-                      <a
-                        href={`tel:${ph.pharmacieTelephone}`}
-                        className="text-white text-sm font-medium hover:underline"
-                      >
-                        {ph.pharmacieTelephone}
-                      </a>
-                    )}
-                  </div>
-
-                  {/* Colonne 3 : bouton itinéraire */}
-                  <div className="flex sm:justify-end">
-                    {ph.pharmacieAdresse && (
-                      <a
-                        href={mapsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-toni-green-dark-2 hover:bg-gray-50 transition shrink-0"
-                      >
-                        <MapPin size={16} />
-                        Itinéraire
-                      </a>
-                    )}
-                  </div>
-                </div>
+                {/* Header pharmacie */}
+                <PharmacieHeader
+                  nom={ph.pharmacieNom}
+                  adresse={ph.pharmacieAdresse}
+                  telephone={ph.pharmacieTelephone}
+                  distanceKm={ph.distanceKm}
+                  className="rounded-t-2xl px-6 py-6"
+                />
 
                 {/* Table produits — même design que commande */}
                 <div className="rounded-b-2xl overflow-hidden bg-white border border-t-0 border-gray-200">
-                  <div className="hidden sm:grid sm:grid-cols-[1fr_80px_120px_120px] gap-2 px-6 py-3 text-base font-bold text-[#B5B5B5] border-b border-[#66666680]">
+                  <div className="hidden sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr] gap-2 px-6 py-3 text-base font-bold text-[#B5B5B5] border-b border-[#66666680]">
                     <span>Nom du produit</span>
                     <span className="text-center">Qté</span>
-                    <span>Prix unit.</span>
+                    <span>P.U</span>
                     <span>Total</span>
                   </div>
 
@@ -221,7 +187,7 @@ function LocalisationDetailContent() {
                       key={item.id}
                       className={idx < ph.produits.length - 1 ? "border-b border-[#66666680]" : ""}
                     >
-                      <div className="flex flex-col gap-2 px-6 py-4 sm:grid sm:grid-cols-[1fr_80px_120px_120px] sm:items-center sm:gap-2">
+                      <div className="flex flex-col gap-2 px-6 py-4 sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr] sm:items-center sm:gap-2">
                         <div>
                           <p className="font-semibold text-gray-900">{item.nom}</p>
                           {item.type && item.type !== "Produit" && (
@@ -235,13 +201,13 @@ function LocalisationDetailContent() {
                         </span>
 
                         <span className="text-sm text-gray-700 whitespace-nowrap">
-                          <span className="sm:hidden text-gray-400 mr-1">Prix :</span>
-                          {formatPrice(item.prix)} XOF
+                          <span className="sm:hidden text-gray-400 mr-1">P.U :</span>
+                          {formatPrice(item.prix)} FCFA
                         </span>
 
                         <span className="text-sm text-gray-700 whitespace-nowrap">
                           <span className="sm:hidden text-gray-400 mr-1">Total :</span>
-                          {formatPrice(item.prix * item.qteDemandee)} XOF
+                          {formatPrice(item.prix * item.qteDemandee)} FCFA
                         </span>
                       </div>
                     </div>
@@ -251,7 +217,7 @@ function LocalisationDetailContent() {
                   <div className="flex items-center justify-between bg-[#D7EFDA] px-6 py-5">
                     <span className="text-lg md:text-2xl font-bold text-gray-900">Montant estimé</span>
                     <span className="text-lg md:text-2xl font-bold text-gray-900">
-                      {formatPrice(total)} XOF CFA
+                      {formatPrice(total)} FCFA
                     </span>
                   </div>
                 </div>

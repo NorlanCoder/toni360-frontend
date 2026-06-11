@@ -275,6 +275,7 @@ export interface PatientNotificationItem {
   titre: string;
   message: string;
   is_read: boolean;
+  data?: Record<string, unknown>;
 }
 
 export interface NotificationsResponse {
@@ -720,6 +721,20 @@ export async function getHistoriqueLocalisations(token: string): Promise<Histori
 export async function getLocalisationDetail(token: string, id: string): Promise<LocalisationDetailResponse> {
   return apiRequest<LocalisationDetailResponse>(`/patient/recherche/${id}`, {
     method: "GET",
+    token,
+  });
+}
+
+export async function deleteLocalisation(token: string, id: string): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>(`/patient/recherche/${id}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export async function deleteAllLocalisations(token: string): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>("/patient/recherche/all", {
+    method: "DELETE",
     token,
   });
 }

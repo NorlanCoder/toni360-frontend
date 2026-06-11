@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown, Eye, Loader2, PackageCheck, Trash2 } from "lucide-react";
+import { ChevronDown, Eye, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   annulerCommande,
@@ -41,6 +41,7 @@ const IN_PROGRESS_PATIENT_STATUSES = new Set([
   "en_cours",
   "payee",
   "en_preparation",
+  "prete",
 ]);
 
 const TERMINATED_PATIENT_STATUSES = new Set([
@@ -80,16 +81,14 @@ function ClientOrdersContent() {
   const [toMonth, setToMonth] = useState(String(_today.getMonth() + 1));
   const [toYear, setToYear] = useState(String(_today.getFullYear()));
 
-  const initTab = useMemo((): "Terminees" | "En attente" | "Recuperees" | "En cours" | "Prete" => {
+  const initTab = useMemo((): "En attente" | "En cours" | "Recuperees" => {
     const tab = searchParams.get("tab");
-    if (tab === "en_cours") return "En cours";
-    if (tab === "prete") return "Prete";
+    if (tab === "en_cours" || tab === "prete") return "En cours";
     if (tab === "recuperees") return "Recuperees";
-    if (tab === "terminees") return "Terminees";
     return "En attente";
   }, [searchParams]);
 
-  const [activeTab, setActiveTab] = useState<"Terminees" | "En attente" | "Recuperees" | "En cours" | "Prete">(initTab);
+  const [activeTab, setActiveTab] = useState<"En attente" | "En cours" | "Recuperees">(initTab);
   const [loadingQrOrderId] = useState<string | null>(null);
   const [validatingOrderId, setValidatingOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -189,11 +188,7 @@ function ClientOrdersContent() {
       return IN_PROGRESS_PATIENT_STATUSES.has(order.statusKey);
     }
 
-    if (activeTab === "Prete") {
-      return order.statusKey === "prete";
-    }
-
-    return TERMINATED_PATIENT_STATUSES.has(order.statusKey);
+    return false;
   });
 
   const handleCancel = async (orderId: string) => {
@@ -450,9 +445,7 @@ function ClientOrdersContent() {
             {[
               { label: "En attente", value: "En attente" as const, img: "/images/attente.svg" },
               { label: "En cours", value: "En cours" as const, icon: Loader2 },
-              { label: "Prête", value: "Prete" as const, icon: PackageCheck },
               { label: "Récupérées", value: "Recuperees" as const, img: "/images/location-2.svg" },
-              { label: "Terminées", value: "Terminees" as const, img: "/images/terminee.svg" },
             ].map((tab) => (
               <button
                 key={tab.value}
@@ -510,7 +503,7 @@ function ClientOrdersContent() {
                         En cours
                       </span>
                     )}
-                    {activeTab === "Prete" && (
+                    {order.statusKey === "prete" && (
                       <span className="rounded-full bg-teal-100 px-3 py-1.5 text-xs font-semibold text-teal-600 sm:px-4 sm:text-sm">
                         Prête
                       </span>
@@ -520,7 +513,7 @@ function ClientOrdersContent() {
                         Récupérée
                       </span>
                     )}
-                    {activeTab === "Terminees" && (
+                    {order.statusKey === "recuperee" && activeTab !== "Recuperees" && (
                       <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500 sm:px-4 sm:text-sm">
                         Terminée
                       </span>
@@ -561,7 +554,7 @@ function ClientOrdersContent() {
                     )}
 
                     {/* Bouton voir QR — masqué pour Terminées */}
-                    {activeTab !== "Terminees" && QR_VISIBLE_PATIENT_STATUSES.has(order.statusKey) && (
+                    {order.statusKey !== "recuperee" && QR_VISIBLE_PATIENT_STATUSES.has(order.statusKey) && (
                       <button
                         onClick={() => handleShowQr(order)}
                         disabled={loadingQrOrderId === order.id}
@@ -581,7 +574,7 @@ function ClientOrdersContent() {
                     </Link>
 
                      {/* Bouton supprimer — masqué pour Terminées */}
-                    {activeTab !== "Terminees" && (
+                    {order.statusKey !== "recuperee" && (
                       <button
                         onClick={() => handleCancel(order.id)}
                         className="text-red-500 hover:text-red-600 transition"

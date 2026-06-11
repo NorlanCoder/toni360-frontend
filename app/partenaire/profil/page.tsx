@@ -4,15 +4,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, Pencil, Upload } from "lucide-react";
+import { ExternalLink, Upload } from "lucide-react";
 import { getPartnerProfile } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
-import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import { clearAuthSession, getAuthSession, saveAuthSession } from "@/lib/api/session";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import type { Value as E164Number } from "react-phone-number-input";
 
-import { downloadPartnerLicence, getPartnerHoraires, getPartnerNotificationCount, getPartnerPharmacieProfile, type HoraireOuvertureItem, updatePartnerHoraires, updatePartnerPharmacieProfile, uploadPartnerLicence } from "@/lib/api/partner";
+import { downloadPartnerLicence, getPartnerHoraires, getPartnerNotificationCount, getPartnerPharmacieProfile, type HoraireOuvertureItem, updatePartnerHoraires, updatePartnerPharmacieProfile, uploadPartnerLicence, updatePartnerUser } from "@/lib/api/partner";
 import { hasPermission } from "@/lib/auth/authorization";
 import { toast } from "sonner";
 
@@ -35,9 +35,13 @@ export default function PartenaireProfil() {
   const [notificationCount, setNotificationCount] = useState(0);
 
   const [nom, setNom] = useState("");
+  const [prenomUser, setPrenomUser] = useState("");
+  const [nomUser, setNomUser] = useState("");
+  const [partnerUserId, setPartnerUserId] = useState<string | null>(null);
   const [adresse, setAdresse] = useState("");
   const [telephone, setTelephone] = useState<E164Number | undefined>(undefined);
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [licenceUrl, setLicenceUrl] = useState<string | null>(null);
   const [hasLicence, setHasLicence] = useState(false);
   const [licenceFile, setLicenceFile] = useState<File | null>(null);
@@ -68,6 +72,9 @@ export default function PartenaireProfil() {
         ]);
 
         const user = userResponse.data.user;
+        setPartnerUserId(user?.id ?? null);
+        setPrenomUser(user?.prenom ?? "");
+        setNomUser(user?.nom ?? "");
         const name = user.nom_complet || `${user.prenom ?? ""} ${user.nom ?? ""}`.trim();
         if (name) {
           setDisplayName(name);
@@ -125,12 +132,46 @@ export default function PartenaireProfil() {
 
     setIsSaving(true);
     try {
-      await updatePartnerPharmacieProfile(session.token, {
+      const payload: Record<string, unknown> = {
         nom,
         adresse,
         telephone: telephone ?? "",
         email,
-      });
+      };
+      if (password && password.trim().length > 0) {
+        payload.password = password;
+      }
+        await updatePartnerPharmacieProfile(session.token, payload as any);
+        // Update current partner user (pharmacien) name if provided
+        if (partnerUserId) {
+          try {
+            await updatePartnerUser(session.token, partnerUserId, {
+              prenom: prenomUser,
+              nom: nomUser,
+            });
+          } catch (err: unknown) {
+            // Non-fatal: show warning but don't block the pharmacy update
+            toast.error(err instanceof ApiError ? (err as ApiError).message : "Impossible de mettre à jour le nom de l'utilisateur.");
+          }
+        }
+
+        // Refresh and save auth session so header and other pages reflect changes immediately
+        try {
+          const refreshed = await getPartnerProfile(session.token);
+          const current = getAuthSession();
+          const remember = !!(typeof window !== "undefined" && localStorage.getItem("toni360.auth.session"));
+          if (current) {
+            const updatedSession = {
+              ...current,
+              profile: refreshed.data.user ?? (current.profile as any),
+            };
+            saveAuthSession(updatedSession, remember);
+            const name = (refreshed.data.user?.nom_complet) || `${refreshed.data.user?.prenom ?? ""} ${refreshed.data.user?.nom ?? ""}`.trim();
+            if (name) setDisplayName(name);
+          }
+        } catch {
+          // ignore refresh errors; best-effort only
+        }
       toast.success("Modifications enregistrées.");
     } catch (err: unknown) {
       toast.error(err instanceof ApiError ? err.message : "Erreur de mise à jour.");
@@ -173,6 +214,15 @@ export default function PartenaireProfil() {
     <div className="flex flex-1 flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 lg:px-10 py-6 lg:py-8">
 
+          <div className="mb-4">
+            <Link
+              href="/partenaire"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-toni-green-dark-2 hover:underline"
+            >
+              ← Retour au tableau de bord
+            </Link>
+          </div>
+
           <div className="mb-8 flex items-center justify-center gap-5 sm:gap-8">
             <Link
               href="/partenaire/profil"
@@ -191,7 +241,33 @@ export default function PartenaireProfil() {
 
           <div className="rounded-2xl border border-emerald-200 bg-white p-6 sm:p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 md:gap-x-12 gap-y-5 md:gap-y-7 max-w-[1000px] mx-auto">
+            
+
               <div>
+                <label className="block text-[15px] text-gray-500 mb-[8px]">Prénom (pharmacien)</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={prenomUser}
+                    onChange={(e) => setPrenomUser(e.target.value)}
+                    className="w-full pl-4 pr-10 py-[14px] bg-gray-50 border border-gray-200 rounded-[8px] text-[17px] text-gray-700 outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[15px] text-gray-500 mb-[8px]">Nom (pharmacien)</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={nomUser}
+                    onChange={(e) => setNomUser(e.target.value)}
+                    className="w-full pl-4 pr-10 py-[14px] bg-gray-50 border border-gray-200 rounded-[8px] text-[17px] text-gray-700 outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+                <div>
                 <label className="block text-[15px] text-gray-500 mb-[8px]">Nom de la pharmacie</label>
                 <div className="relative">
                   <input
@@ -200,7 +276,7 @@ export default function PartenaireProfil() {
                     onChange={(e) => setNom(e.target.value)}
                     className="w-full pl-4 pr-10 py-[14px] bg-gray-50 border border-gray-200 rounded-[8px] text-[17px] text-gray-700 outline-none focus:border-emerald-500"
                   />
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 w-[14px] h-[14px] text-gray-400" strokeWidth={1.8} />
+                  
                 </div>
               </div>
 
@@ -213,7 +289,7 @@ export default function PartenaireProfil() {
                     onChange={(e) => setAdresse(e.target.value)}
                     className="w-full pl-4 pr-10 py-[14px] bg-gray-50 border border-gray-200 rounded-[8px] text-[17px] text-gray-700 outline-none focus:border-emerald-500"
                   />
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 w-[14px] h-[14px] text-gray-400" strokeWidth={1.8} />
+                  
                 </div>
               </div>
 
@@ -240,7 +316,21 @@ export default function PartenaireProfil() {
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-4 pr-10 py-[14px] bg-gray-50 border border-gray-200 rounded-[8px] text-[17px] text-gray-700 outline-none focus:border-emerald-500"
                   />
-                  <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 w-[14px] h-[14px] text-gray-400" strokeWidth={1.8} />
+                  
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[15px] text-gray-500 mb-[8px]">Mot de passe <span className="text-xs text-gray-400">(laisser vide pour ne pas changer)</span></label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Nouveau mot de passe"
+                    className="w-full pl-4 pr-10 py-[14px] bg-gray-50 border border-gray-200 rounded-[8px] text-[17px] text-gray-700 outline-none focus:border-emerald-500"
+                  />
+                  
                 </div>
               </div>
 
@@ -344,7 +434,7 @@ export default function PartenaireProfil() {
                         setHoraires(updated);
                       }}
                       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-                        h.est_ferme ? "bg-gray-300" : "bg-emerald-500"
+                        h.est_ferme ? "bg-gray-300" : "bg-toni-green-dark"
                       }`}
                     >
                       <span

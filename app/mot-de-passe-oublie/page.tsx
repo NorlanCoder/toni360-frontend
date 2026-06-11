@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { forgotPassword } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
+import { AtSign } from "lucide-react";
 
 export default function MotDePasseOubliePage() {
   const [email, setEmail] = useState("");
@@ -66,7 +67,7 @@ export default function MotDePasseOubliePage() {
 
           {/* Titre */}
           <h2 className="mb-3 text-center text-3xl text-gray-800 sm:text-4xl">
-            Mot de passe oublié
+            Mot de passe oublié ?
           </h2>
           <p className="mb-8 text-center text-sm text-gray-500 sm:text-base">
             Saisissez votre adresse email. Nous vous enverrons un lien pour réinitialiser votre mot de passe.
@@ -92,13 +93,14 @@ export default function MotDePasseOubliePage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
+              <div className="relative flex items-center">
+                <AtSign className="absolute left-4 text-gray-400" size={18} />
                 <input
                   type="email"
                   placeholder="Votre adresse email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-md border border-black bg-white px-4 py-2.5 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
+                  className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-4 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
                   autoComplete="email"
                 />
               </div>
@@ -117,10 +119,7 @@ export default function MotDePasseOubliePage() {
           {/* Liens retour */}
           <div className="mt-6 flex flex-col items-center gap-2 text-sm text-gray-600 sm:mt-8">
             <Link href="/client/connexion" className="font-semibold hover:underline" style={{ color: "#137551" }}>
-              ← Retour à la connexion client
-            </Link>
-            <Link href="/partenaire/connexion" className="font-semibold hover:underline" style={{ color: "#137551" }}>
-              ← Retour à la connexion partenaire
+              ← Retour à la connexion patient
             </Link>
           </div>
         </div>

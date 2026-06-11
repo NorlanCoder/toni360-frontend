@@ -51,7 +51,7 @@ export default function ConnexionPage() {
         token: response.data.token,
         tokenType: response.data.token_type,
         profile: response.data.patient ?? null,
-      });
+      }, formData.rememberMe);
 
       toast.success(response.message ?? "Connexion réussie.");
       router.push("/client/accueil");
