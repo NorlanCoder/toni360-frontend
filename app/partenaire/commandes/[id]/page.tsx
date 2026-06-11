@@ -85,9 +85,11 @@ export default function CommandeDetailPage() {
 
   const mapToOrderDetail = (commande: PartnerCommande): OrderDetail => {
     const createdAt = commande.created_at ? new Date(commande.created_at) : null;
-    const debutPreparation = commande.dates?.debut_preparation ? new Date(commande.dates.debut_preparation) : null;
-    const preteAt = commande.dates?.prete ? new Date(commande.dates.prete) : null;
-    const recuperationAt = commande.dates?.recuperation ? new Date(commande.dates.recuperation) : null;
+    const preteAt: Date | null = null;
+    const recuperationAt: Date | null = null;
+
+    const formatDate = (date: Date | null) => date ? date.toLocaleDateString("fr-FR") : null;
+    const formatTime = (date: Date | null) => date ? date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : null;
 
     const firstOrdonnanceUrl =
       commande.produits.find((p) => p.ordonnance?.fichier_url)?.ordonnance?.fichier_url ?? null;
@@ -104,14 +106,10 @@ export default function CommandeDetailPage() {
       heure: createdAt
         ? createdAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
         : "-",
-      datePreparation: preteAt ? preteAt.toLocaleDateString("fr-FR") : null,
-      heurePreparation: preteAt
-        ? preteAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
-        : null,
-      dateRecuperation: recuperationAt ? recuperationAt.toLocaleDateString("fr-FR") : null,
-      heureRecuperation: recuperationAt
-        ? recuperationAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
-        : null,
+      datePreparation: formatDate(preteAt),
+      heurePreparation: formatTime(preteAt),
+      dateRecuperation: formatDate(recuperationAt),
+      heureRecuperation: formatTime(recuperationAt),
       paiement: "momo",
       pieceJointe,
       pieceJointeUrl: firstOrdonnanceUrl,

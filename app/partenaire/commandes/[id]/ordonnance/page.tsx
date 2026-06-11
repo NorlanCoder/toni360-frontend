@@ -8,6 +8,7 @@ import {
   getPartnerCommande,
   validerPartnerOrdonnance,
   rejeterPartnerOrdonnance,
+  notifierPartnerPatient,
 } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
 import { toast } from "sonner";
