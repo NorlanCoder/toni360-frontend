@@ -59,7 +59,7 @@ export default function NotificationsPage() {
           description: notification.message,
           isRead: notification.is_read,
           commande_id: typeof notification.data?.commande_id === "string" ? notification.data.commande_id : undefined,
-          numero_commande: typeof notification.data?.numero === "string" ? notification.data.numero : undefined,
+          numero_commande: typeof notification.data?.numero_commande === "string" ? notification.data.numero_commande : undefined,
         })),
       );
 

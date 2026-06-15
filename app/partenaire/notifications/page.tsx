@@ -52,7 +52,7 @@ export default function PartenaireNotificationsPage() {
           description: n.message,
           isRead: n.is_read,
           commande_id: typeof n.data?.commande_id === "string" ? n.data.commande_id : undefined,
-          numero_commande: typeof n.data?.numero === "string" ? n.data.numero : undefined,
+          numero_commande: typeof n.data?.numero_commande === "string" ? n.data.numero_commande : undefined,
         })),
       );
 
