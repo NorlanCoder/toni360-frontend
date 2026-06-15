@@ -9,6 +9,7 @@ import {
   getPartnerCommande,
   livrerPartnerCommande,
   marquerPartnerCommandePrete,
+  notifierPartnerPatient,
   PartnerCommande,
 } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
@@ -71,6 +72,7 @@ export default function CommandeDetailPage() {
 
   const [submittingReady, setSubmittingReady] = useState(false);
   const [submittingRecuperer, setSubmittingRecuperer] = useState(false);
+  const [submittingOrdonnance, setSubmittingOrdonnance] = useState(false);
 
   const fromSection = searchParams.get("from");
   const [statut, setStatut] = useState<OrderStatus>(
@@ -223,6 +225,28 @@ export default function CommandeDetailPage() {
   /* ── Computed flags ── */
   const canMarkReady = READY_ALLOWED_STATUSES.has(backendStatus);
   const canForceRecuperer = new Set(["PRETE", "PAYEE", "EN_PREPARATION", "EN_COURS"]).has(backendStatus);
+  const showDemanderOrdonnance = backendStatus === "EN_COURS";
+
+  const handleDemanderOrdonnance = async () => {
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token || !id) {
+      toast.error("Session partenaire invalide.");
+      return;
+    }
+    setSubmittingOrdonnance(true);
+    try {
+      await notifierPartnerPatient(
+        session.token,
+        id,
+        "Votre commande nécessite une ordonnance. Veuillez soumettre votre ordonnance pour que nous puissions traiter votre commande."
+      );
+      toast.success("Notification envoyée au patient pour l'ordonnance.");
+    } catch (err: unknown) {
+      toast.error(err instanceof ApiError ? err.message : "Impossible d'envoyer la notification.");
+    } finally {
+      setSubmittingOrdonnance(false);
+    }
+  };
 
   /* ═══════════════════════ RENDER ═══════════════════════ */
   return (
@@ -400,6 +424,19 @@ export default function CommandeDetailPage() {
               </>
             ) : (
               <>
+                {/* Demander ordonnance — gris outline, visible seulement en EN_COURS */}
+                {showDemanderOrdonnance && (
+                  <button
+                    type="button"
+                    onClick={handleDemanderOrdonnance}
+                    disabled={submittingOrdonnance}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold text-gray-600 bg-gray-200 hover:bg-gray-300 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {submittingOrdonnance && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Demander ordonnance
+                  </button>
+                )}
+
                 {/* Prête — vert outline */}
                 <button
                   type="button"
