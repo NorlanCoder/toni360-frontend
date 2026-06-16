@@ -176,7 +176,7 @@ export default function PartenaireDashboardPage() {
         ]);
 
         const compteurs = compteursResponse?.data;
-        setAPreparerCount((compteurs?.a_traiter ?? 0) + (compteurs?.en_preparation ?? 0));
+        setAPreparerCount(compteurs?.en_cours ?? 0);
         setEnAttenteCount(compteurs?.prete ?? 0);
         setRecupereesCount(compteurs?.recuperee ?? 0);
         setStockTotal(stockStats?.data.total_unites ?? 0);

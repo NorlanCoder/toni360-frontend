@@ -53,6 +53,7 @@ export interface PartnerCommandeCompteursResponse {
     ordonnance_rejetee: number;
     en_attente_paiement: number;
     payee: number;
+    en_cours: number;
     en_preparation: number;
     prete: number;
     recuperee: number;
