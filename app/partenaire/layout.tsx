@@ -18,6 +18,7 @@ export default function PartenaireLayout({ children }: { children: React.ReactNo
     pathname === "/partenaire" ||
     pathname.startsWith("/partenaire/connexion") ||
     pathname.startsWith("/partenaire/inscription") ||
+    pathname.startsWith("/partenaire/verification") ||
     pathname.startsWith("/partenaire/deconnexion") ||
     pathname.startsWith("/partenaire/cgu") ||
     pathname.startsWith("/partenaire/privacy") ||

@@ -8,6 +8,7 @@ import Link from "next/link";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { getPartnerProfile, loginPartner } from "@/lib/api/auth";
+import { PARTNER_SESSION_KEY } from "@/app/partenaire/verification/page";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
 import { getPartnerHomeRoute } from "@/lib/auth/authorization";
@@ -49,14 +50,24 @@ export default function ConnexionPartenairePage() {
         password: formData.password,
       });
 
-      const profileResponse = await getPartnerProfile(response.data.token);
+      // Vérification OTP requise
+      if (response.requires_verification) {
+        sessionStorage.setItem(PARTNER_SESSION_KEY, loginMethod === "email" ? formData.email.trim() : (formData.telephone ?? ""));
+        toast.info(response.message ?? "Un code de vérification vous a été envoyé.");
+        router.push(
+          `/partenaire/verification?email=${encodeURIComponent(response.email ?? "")}&purpose=${response.purpose ?? "email_verification"}`
+        );
+        return;
+      }
+
+      const profileResponse = await getPartnerProfile(response.data!.token!);
 
       const session = {
         userType: "user" as const,
-        token: response.data.token,
-        tokenType: response.data.token_type,
-        profile: profileResponse.data.user ?? response.data.user ?? null,
-        permissions: profileResponse.data.permissions ?? response.data.permissions ?? [],
+        token: response.data!.token!,
+        tokenType: response.data!.token_type ?? "Bearer",
+        profile: profileResponse.data.user ?? null,
+        permissions: profileResponse.data.permissions ?? response.data!.permissions ?? [],
       };
       saveAuthSession(session, formData.rememberMe);
 

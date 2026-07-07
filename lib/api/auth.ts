@@ -30,9 +30,13 @@ interface LoginPayload {
 export interface AuthApiResponse {
   success: boolean;
   message?: string;
-  data: {
-    token: string;
-    token_type: string;
+  // Champs présents quand une vérification OTP est requise
+  requires_verification?: boolean;
+  email?: string;           // Email masqué (ex: pa***@gmail.com)
+  purpose?: string;         // 'email_verification' | 'login'
+  data?: {
+    token?: string;
+    token_type?: string;
     patient?: unknown;
     user?: unknown;
     permissions?: string[];
@@ -180,8 +184,10 @@ export interface PasswordResetResponse {
   message: string;
 }
 
-export async function forgotPassword(email: string): Promise<PasswordResetResponse> {
-  const json = buildJsonRequest({ email });
+export type PasswordResetFrom = "client" | "partenaire";
+
+export async function forgotPassword(email: string, from: PasswordResetFrom): Promise<PasswordResetResponse> {
+  const json = buildJsonRequest({ email, from });
   return apiRequest<PasswordResetResponse>("/auth/forgot-password", {
     method: "POST",
     body: json.body,
@@ -192,11 +198,63 @@ export async function forgotPassword(email: string): Promise<PasswordResetRespon
 export async function resetPassword(payload: {
   token: string;
   email: string;
+  from: PasswordResetFrom;
   password: string;
   password_confirmation: string;
 }): Promise<PasswordResetResponse> {
   const json = buildJsonRequest(payload);
   return apiRequest<PasswordResetResponse>("/auth/reset-password", {
+    method: "POST",
+    body: json.body,
+    headers: json.headers,
+  });
+}
+
+// ─── OTP ─────────────────────────────────────────────────────────────────────
+
+export interface OtpVerifyResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    token?: string;
+    token_type?: string;
+    patient?: unknown;
+  };
+}
+
+export interface OtpResendResponse {
+  success: boolean;
+  message?: string;
+  retry_after_seconds?: number;
+}
+
+export async function verifyOtp(payload: {
+  login: string;  // email ou téléphone
+  code: string;
+  purpose: string;
+  actor_type?: string;
+}): Promise<OtpVerifyResponse> {
+  const json = buildJsonRequest(payload);
+  const path = payload.actor_type === 'user'
+    ? "/user/auth/verify-otp"
+    : "/patient/auth/verify-otp";
+  return apiRequest<OtpVerifyResponse>(path, {
+    method: "POST",
+    body: json.body,
+    headers: json.headers,
+  });
+}
+
+export async function resendOtp(payload: {
+  login: string;  // email ou téléphone
+  purpose: string;
+  actor_type?: string;
+}): Promise<OtpResendResponse> {
+  const json = buildJsonRequest(payload);
+  const path = payload.actor_type === 'user'
+    ? "/user/auth/resend-otp"
+    : "/patient/auth/resend-otp";
+  return apiRequest<OtpResendResponse>(path, {
     method: "POST",
     body: json.body,
     headers: json.headers,

@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import React from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import React, { Suspense } from "react";
 
-const NAV_LINKS = [
+const BASE_NAV_LINKS = [
   { label: "À propos", href: "/partenaire/about" },
   { label: "Contacts", href: "/partenaire/contacts" },
   { label: "FAQ", href: "/partenaire/faq" },
@@ -12,12 +12,23 @@ const NAV_LINKS = [
   { label: "Politique de confidentialité", href: "/partenaire/privacy" },
 ];
 
-export default function PartenairePublicLayout({
+function PartenairePublicLayoutContent({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const from = searchParams.get('from') ?? '';
+
+  const logoHref = from === 'pharmacie-inscription'
+    ? '/partenaire/connexion'
+    : '/partenaire/dashboard';
+
+  const NAV_LINKS = BASE_NAV_LINKS.map(link => ({
+    ...link,
+    href: from ? `${link.href}?from=${from}` : link.href,
+  }));
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -25,7 +36,7 @@ export default function PartenairePublicLayout({
       <header className="bg-white">
         {/* Top bar : logo + titre */}
         <div className="max-w-8xl mx-auto px-4 pt-4 pb-2 md:pt-6 md:pb-3 flex items-center gap-3">
-          <Link href="/partenaire/dashboard">
+          <Link href={logoHref}>
             <img
               src="/images/logo.png"
               alt="Toni360"
@@ -43,7 +54,7 @@ export default function PartenairePublicLayout({
         <nav className="w-full px-4 md:px-12 pb-0 overflow-x-auto">
           <ul className="max-w-7xl mx-auto flex gap-5 md:gap-12 text-sm md:text-xl text-gray-600 whitespace-nowrap md:flex-wrap md:justify-between">
             {NAV_LINKS.map((link) => {
-              const isActive = pathname === link.href;
+              const isActive = pathname === link.href.split('?')[0];
               return (
                 <li key={link.label}>
                   <Link
@@ -66,5 +77,17 @@ export default function PartenairePublicLayout({
       {/* ──────────── CONTENU PRINCIPAL ──────────── */}
       <div className="max-w-8xl mx-auto px-4 py-10 w-full">{children}</div>
     </div>
+  );
+}
+
+export default function PartenairePublicLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <PartenairePublicLayoutContent>{children}</PartenairePublicLayoutContent>
+    </Suspense>
   );
 }

@@ -8,6 +8,7 @@ import Link from "next/link";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { getPatientProfile, loginPatient } from "@/lib/api/auth";
+import { SESSION_KEY } from "@/app/client/verification/page";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
 import { toast } from "sonner";
@@ -47,13 +48,23 @@ export default function ConnexionPage() {
         password: formData.password,
       });
 
-      const profileResponse = await getPatientProfile(response.data.token);
+      // Vérification OTP requise (email non vérifié)
+      if (response.requires_verification) {
+        sessionStorage.setItem(SESSION_KEY, loginMethod === "email" ? formData.email.trim() : (formData.telephone ?? ""));
+        toast.info(response.message ?? "Un code de vérification vous a été envoyé.");
+        router.push(
+          `/client/verification?email=${encodeURIComponent(response.email ?? "")}&purpose=${response.purpose ?? "email_verification"}`
+        );
+        return;
+      }
+
+      const profileResponse = await getPatientProfile(response.data!.token!);
 
       saveAuthSession({
         userType: "patient",
-        token: response.data.token,
-        tokenType: response.data.token_type,
-        profile: profileResponse.data.patient ?? response.data.patient ?? null,
+        token: response.data!.token!,
+        tokenType: response.data!.token_type ?? "Bearer",
+        profile: profileResponse.data.patient ?? response.data!.patient ?? null,
       }, formData.rememberMe);
 
       toast.success(response.message ?? "Connexion réussie.");
@@ -193,7 +204,7 @@ export default function ConnexionPage() {
                 />
                 <span className="text-sm text-gray-700">Se souvenir de moi</span>
               </label>
-              <Link href="/mot-de-passe-oublie" className="text-sm text-gray-700 hover:text-toni-green-dark-2 sm:text-right">
+              <Link href="/mot-de-passe-oublie?from=client" className="text-sm text-gray-700 hover:text-toni-green-dark-2 sm:text-right">
                 Mot de passe oublié ?
               </Link>
             </div>

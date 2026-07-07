@@ -177,7 +177,7 @@ function LocalisationDetailContent() {
                 <div className="rounded-b-2xl overflow-hidden bg-white border border-t-0 border-gray-200">
                   <div className="hidden sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr] gap-2 px-6 py-3 text-base font-bold text-[#B5B5B5] border-b border-[#66666680]">
                     <span>Nom du produit</span>
-                    <span className="text-center">Qté</span>
+                    <span className="text-left">Qté</span>
                     <span>P.U</span>
                     <span>Total</span>
                   </div>
@@ -195,7 +195,7 @@ function LocalisationDetailContent() {
                           )}
                         </div>
 
-                        <span className="text-sm text-gray-700 sm:text-center">
+                        <span className="text-sm text-gray-700 sm:text-left">
                           <span className="sm:hidden text-gray-400 mr-1">Qté :</span>
                           {item.qteDemandee}
                         </span>

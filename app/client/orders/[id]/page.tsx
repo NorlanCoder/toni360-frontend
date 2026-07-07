@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import { ArrowLeft, Eye, FileText, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -56,11 +57,13 @@ function OrderDetailContent() {
   const [pendingHold, setPendingHold] = useState(false);
   const [pendingValider, setPendingValider] = useState(false);
   const [pendingVerif, setPendingVerif] = useState(false);
+  const [pendingUploadOrdonnance, setPendingUploadOrdonnance] = useState(false);
   const [verificationDone, setVerificationDone] = useState(false);
   const [adjustedItems, setAdjustedItems] = useState<Record<string, { oldQty: number; newQty: number }>>({});
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const ordonnanceUploadModeRef = useRef<"missing" | "replace">("missing");
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -131,10 +134,10 @@ function OrderDetailContent() {
       const supprimes = res.data?.produits_supprimes ?? [];
       const ajustes = res.data?.produits_ajustes ?? [];
       if (supprimes.length > 0) {
-        toast.warning(`${supprimes.length} produit(s) retiré(s) : ${supprimes.map((p) => p.nom).join(", ")}.`);
+        toast.warning(`${supprimes.length} ${supprimes.length > 1 ? "produits retirés" : "produit retiré"} : ${supprimes.map((p) => p.nom).join(", ")}.`);
       }
       if (ajustes.length > 0) {
-        toast.warning(`${ajustes.length} produit(s) ajusté(s) : ${ajustes.map((p) => `${p.nom} (${p.quantite_demandee}→${p.quantite_ajustee})`).join(", ")}.`);
+        toast.warning(`${ajustes.length} ${ajustes.length > 1 ? "produits ajustés" : "produit ajusté"} : ${ajustes.map((p) => `${p.nom} (${p.quantite_demandee}→${p.quantite_ajustee})`).join(", ")}.`);
       }
       if (supprimes.length === 0 && ajustes.length === 0) {
         toast.success("Tous les produits sont disponibles !");
@@ -159,9 +162,13 @@ function OrderDetailContent() {
     }
   };
 
-  const uploadOrdonnances = async (file: File) => {
+  const uploadOrdonnances = async (file: File, mode: "missing" | "replace") => {
     if (!token) return;
-    for (const item of missingPrescriptionItems) {
+    const targetItems = mode === "replace"
+      ? items.filter((i) => i.requiresPrescription && i.hasOrdonnance)
+      : missingPrescriptionItems;
+
+    for (const item of targetItems) {
       try {
         await uploadOrdonnanceForProduitCommande(token, item.id, file);
       } catch (error) {
@@ -176,7 +183,74 @@ function OrderDetailContent() {
     }
   };
 
-  const anyPending = pendingAnnuler || pendingHold || pendingValider || pendingItemId !== null;
+  const resetOrdonnanceLocalSelection = () => {
+    setOrdonnanceFile(null);
+    if (ordonnancePreviewUrl) URL.revokeObjectURL(ordonnancePreviewUrl);
+    setOrdonnancePreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    ordonnanceUploadModeRef.current = "missing";
+  };
+
+  const handleUploadOrdonnance = async (file: File, mode: "missing" | "replace" = "missing") => {
+    if (!token || pendingUploadOrdonnance) return;
+
+    const targetItems = mode === "replace"
+      ? items.filter((i) => i.requiresPrescription && i.hasOrdonnance)
+      : missingPrescriptionItems;
+
+    if (targetItems.length === 0) {
+      toast.warning("Aucun produit éligible pour cette action.");
+      return;
+    }
+
+    setPendingUploadOrdonnance(true);
+    try {
+      await uploadOrdonnances(file, mode);
+      toast.success(mode === "replace" ? "Ordonnance modifiée et enregistrée." : "Ordonnance envoyée et enregistrée.");
+      resetOrdonnanceLocalSelection();
+      await loadCommande();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        toast.error(error.message);
+      } else {
+        toast.error("L'ordonnance n'a pas pu être envoyée.");
+      }
+    } finally {
+      setPendingUploadOrdonnance(false);
+    }
+  };
+
+  const handleOrdonnanceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) return;
+
+    const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".pdf"];
+    const MAX_SIZE = 5 * 1024 * 1024;
+    const ext = "." + (file.name.split(".").pop() ?? "").toLowerCase();
+    const mimeOk = file.type ? ALLOWED_TYPES.includes(file.type) : false;
+    const extOk = ALLOWED_EXTENSIONS.includes(ext);
+
+    if (!mimeOk && !extOk) {
+      toast.error("Format non supporté. Seuls JPG, PNG et PDF sont acceptés.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_SIZE) {
+      toast.error(`Fichier trop volumineux (${(file.size / 1024 / 1024).toFixed(1)} Mo). Max : 5 Mo.`);
+      e.target.value = "";
+      return;
+    }
+
+    if (ordonnancePreviewUrl) URL.revokeObjectURL(ordonnancePreviewUrl);
+    setOrdonnancePreviewUrl(URL.createObjectURL(file));
+    setOrdonnanceFile(file);
+    void handleUploadOrdonnance(file, ordonnanceUploadModeRef.current);
+  };
+
+  const anyPending =
+    pendingAnnuler || pendingHold || pendingValider || pendingUploadOrdonnance || pendingItemId !== null;
 
   const handleValider = async () => {
     if (!token || anyPending) return;
@@ -188,19 +262,6 @@ function OrderDetailContent() {
 
     setPendingValider(true);
     try {
-      if (ordonnanceFile) {
-        try {
-          await uploadOrdonnances(ordonnanceFile);
-          toast.success("Ordonnance soumise ! La pharmacie va vérifier votre ordonnance.");
-          router.push("/client/orders");
-          return;
-        } catch {
-          setOrdonnanceFile(null);
-          toast.error("L'ordonnance n'a pas pu être envoyée. Sélectionnez un nouveau fichier et réessayez.");
-          return;
-        }
-      }
-
       await validerCommande(token, commandeId);
       router.push(`/client/orders/${commandeId}/qrcode`);
     } catch (error) {
@@ -262,7 +323,7 @@ function OrderDetailContent() {
       <div className="overflow-hidden bg-white">
         <div className={`hidden gap-2 px-6 py-3 text-base font-bold text-[#B5B5B5] border-b border-[#66666680] ${isEnAttenteClient && !verificationDone ? "sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr_40px]" : "sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr]"}`}>
           <span>Nom du produit</span>
-          <span className="text-center">Qté</span>
+          <span className="text-left">Qté</span>
           <span>P.U</span>
           <span>Total</span>
           {isEnAttenteClient && !verificationDone && <span />}
@@ -288,7 +349,7 @@ function OrderDetailContent() {
                 </p>
               </div>
 
-              <div className="flex sm:justify-center">
+              <div className="flex sm:justify-start">
                 {isEnAttenteClient && !verificationDone ? (
                   <div className="inline-flex items-center rounded-full border border-gray-200 px-2 py-1">
                     <button
@@ -322,7 +383,7 @@ function OrderDetailContent() {
                             <span className="text-orange-500 cursor-help">
                               {item.qty}
                               <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/adj:block whitespace-nowrap rounded-lg bg-gray-800 px-3 py-2 text-xs text-white z-10 shadow-lg">
-                                Quantité réduite&nbsp;: {adjustedItems[item.id].oldQty} demandé(s), seulement {adjustedItems[item.id].newQty} disponible(s)
+                                Quantité réduite&nbsp;: {adjustedItems[item.id].oldQty} {adjustedItems[item.id].oldQty > 1 ? "demandés" : "demandé"}, seulement {adjustedItems[item.id].newQty} {adjustedItems[item.id].newQty > 1 ? "disponibles" : "disponible"}
                               </span>
                             </span>
                           )
@@ -353,7 +414,7 @@ function OrderDetailContent() {
                     </button>
                   </div>
                 ) : (
-                  <span className="text-sm text-gray-700 text-center">
+                  <span className="text-sm text-gray-700 text-left">
                     <span className="sm:hidden text-gray-400 mr-1">Qté :</span>
                     {item.qty}
                   </span>
@@ -440,6 +501,19 @@ function OrderDetailContent() {
                 <button
                   type="button"
                   onClick={() => {
+                    if (!canValidate) return;
+                    ordonnanceUploadModeRef.current = "replace";
+                    fileInputRef.current?.click();
+                  }}
+                  disabled={pendingUploadOrdonnance || !canValidate}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Modifier"
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
                     if (isPdf) {
                       window.open(url, "_blank", "noopener,noreferrer");
                     } else {
@@ -489,11 +563,21 @@ function OrderDetailContent() {
         );
       })()}
 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".jpg,.jpeg,.png,.pdf"
+        className="hidden"
+        onChange={handleOrdonnanceFileChange}
+      />
+
       {/* Section ordonnance — uniquement si des produits manquent une ordonnance et commande active */}
       {hasMissingPrescription && canValidate && (
         <div className="mt-5 flex flex-col gap-2">
           <p className="text-sm text-gray-600 mb-1">
-            {missingPrescriptionItems.length} médicament(s) nécessitent une ordonnance.
+            {missingPrescriptionItems.length > 1
+              ? `${missingPrescriptionItems.length} médicaments de cette commande nécessitent une ordonnance.`
+              : `${missingPrescriptionItems.length} médicament de cette commande nécessite une ordonnance.`}
           </p>
 
           {/* Fichier sélectionné : prévisualisation */}
@@ -528,6 +612,7 @@ function OrderDetailContent() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
+                  disabled={pendingUploadOrdonnance}
                   className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition"
                   title="Remplacer"
                 >
@@ -535,12 +620,8 @@ function OrderDetailContent() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setOrdonnanceFile(null);
-                    if (ordonnancePreviewUrl) URL.revokeObjectURL(ordonnancePreviewUrl);
-                    setOrdonnancePreviewUrl(null);
-                    if (fileInputRef.current) fileInputRef.current.value = "";
-                  }}
+                  onClick={resetOrdonnanceLocalSelection}
+                  disabled={pendingUploadOrdonnance}
                   className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-red-500 transition"
                   title="Supprimer"
                 >
@@ -551,45 +632,24 @@ function OrderDetailContent() {
           ) : (
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                ordonnanceUploadModeRef.current = "missing";
+                fileInputRef.current?.click();
+              }}
+              disabled={pendingUploadOrdonnance}
               className="flex items-center gap-3 text-sm font-medium text-gray-700 hover:text-toni-green-dark-2 transition"
             >
               <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-toni-green-dark-2 text-white shrink-0">
-                <Plus size={18} />
+                {pendingUploadOrdonnance ? (
+                  <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                ) : (
+                  <Plus size={18} />
+                )}
               </span>
-              Ajouter une ordonnance
+              {pendingUploadOrdonnance ? "Envoi en cours..." : "Ajouter une ordonnance"}
             </button>
           )}
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".jpg,.jpeg,.png,.pdf"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0] ?? null;
-              if (!file) return;
-              const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
-              const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".pdf"];
-              const MAX_SIZE = 5 * 1024 * 1024;
-              const ext = "." + (file.name.split(".").pop() ?? "").toLowerCase();
-              const mimeOk = file.type ? ALLOWED_TYPES.includes(file.type) : false;
-              const extOk = ALLOWED_EXTENSIONS.includes(ext);
-              if (!mimeOk && !extOk) {
-                toast.error("Format non supporté. Seuls JPG, PNG et PDF sont acceptés.");
-                e.target.value = "";
-                return;
-              }
-              if (file.size > MAX_SIZE) {
-                toast.error(`Fichier trop volumineux (${(file.size / 1024 / 1024).toFixed(1)} Mo). Max : 5 Mo.`);
-                e.target.value = "";
-                return;
-              }
-              if (ordonnancePreviewUrl) URL.revokeObjectURL(ordonnancePreviewUrl);
-              setOrdonnancePreviewUrl(URL.createObjectURL(file));
-              setOrdonnanceFile(file);
-            }}
-          />
           <p className="text-xs text-gray-400 mt-1">
             Formats acceptés : JPG, PNG, PDF — Taille max : 5 Mo
           </p>
@@ -676,12 +736,12 @@ function OrderDetailContent() {
             ) : "Terminer"}
           </button>
 
-          <a
+          <Link
             href="/client/orders"
             className="flex-1 rounded-full bg-gray-200 py-3 text-base font-bold text-gray-500 transition hover:bg-gray-300 text-center"
           >
             Garder en attente
-          </a>
+          </Link>
 
           <button
             type="button"

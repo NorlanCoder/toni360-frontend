@@ -22,7 +22,7 @@ export default function ReturnPolicyPage() {
                   <li key={index}>
                     <a
                       href={`#section-${index + 1}`}
-                      className="text-green-600 hover:text-green-700 font-medium text-lg md:text-xl leading-snug block"
+                      className="text-[#00A669] font-medium text-lg md:text-xl leading-snug block"
                     >
                       {index + 1}- {section}
                     </a>
@@ -62,10 +62,10 @@ export default function ReturnPolicyPage() {
                 Toni360 est une application compatible avec différents systèmes
                 d&apos;exploitation (iOS, Android) qui permet à ses utilisateurs
                 de localiser les pharmacies les plus proches d&apos;eux,
-                disposant d&apos;un ou des produit(s) pharmaceutique(s)
+                disposant de produits pharmaceutiques
                 qu&apos;ils recherchent. L&apos;Application permet également aux
-                Utilisateurs de passer directement la commande d&apos;un ou des
-                produit(s) pharmaceutique(s) auprès des pharmacies.
+                Utilisateurs de passer directement la commande de produits
+                pharmaceutiques auprès des pharmacies.
               </p>
             </div>
 

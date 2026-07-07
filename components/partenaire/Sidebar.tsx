@@ -32,7 +32,7 @@ const navItems = [
   // { label: "Incohérences", icon: AlertTriangle, href: "/partednaire/medicaments/incoherences" },
   { label: "Historique des actions", icon: History, href: "/partenaire/employes/historique" },
   { label: "Notifications", icon: Bell, href: "/partenaire/notifications" },
-  { label: "Centre d'aide", icon: HelpCircle, href: "/about" },
+  { label: "Centre d'aide", icon: HelpCircle, href: "/partenaire/about?from=pharmacie-parcours" },
 ];
 
 /* Finds the most specific matching nav item for the current path */
@@ -151,10 +151,10 @@ export default function PartenaireSidebar() {
               <Link href="/partenaire/cgu" className="hover:underline block transition-colors" onClick={onClose}>
                 Conditions générales d&apos;utilisation
               </Link>
-              <Link href="/partenaire/privacy" className="hover:underline block transition-colors" onClick={onClose}>
+              <Link href="/partenaire/privacy?from=pharmacie-parcours" className="hover:underline block transition-colors" onClick={onClose}>
                 Politique de confidentialité
               </Link>
-              <Link href="/partenaire/contacts" className="hover:underline block transition-colors" onClick={onClose}>
+              <Link href="/partenaire/contacts?from=pharmacie-parcours" className="hover:underline block transition-colors" onClick={onClose}>
                 Contactez-nous
               </Link>
             </div>
@@ -211,10 +211,10 @@ export default function PartenaireSidebar() {
           <Link href="/partenaire/cgu" className="hover:underline block transition-colors">
             Conditions générales d&apos;utilisation
           </Link>
-          <Link href="/partenaire/privacy" className="hover:underline block transition-colors">
+          <Link href="/partenaire/privacy?from=pharmacie-parcours" className="hover:underline block transition-colors">
             Politique de confidentialité
           </Link>
-          <Link href="/partenaire/contacts" className="hover:underline block transition-colors">
+          <Link href="/partenaire/contacts?from=pharmacie-parcours" className="hover:underline block transition-colors">
             Contactez-nous
           </Link>
         </div>

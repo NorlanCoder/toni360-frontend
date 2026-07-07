@@ -77,10 +77,10 @@ export default function CartPage() {
         {/* Bottom links */}
         <div className="mt-auto pt-6 px-2 flex flex-col gap-1">
           <Link href="/privacy" className="text-base text-[#0fa37f] hover:underline">
-            Politique de confidentialité,
+            Politique de confidentialité
           </Link>
           <Link href="/terms-of-use" className="text-base text-[#0fa37f] hover:underline">
-            Conditions générales de retour,
+            Conditions générales de retour
           </Link>
           <Link href="/contact" className="text-base text-[#0fa37f] hover:underline">
             Contactez-nous

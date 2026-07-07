@@ -8,6 +8,8 @@ import { getPatientProfile } from "@/lib/api/auth";
 import { updatePatientProfile, deletePatientAccount } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession, saveAuthSession } from "@/lib/api/session";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
 export default function ProfilPage() {
   const [activeTab, setActiveTab] = useState<"info" | "delete">("info");
@@ -16,7 +18,7 @@ export default function ProfilPage() {
   const [formData, setFormData] = useState({
     nomComplet: "",
     email: "",
-    telephone: "",
+    telephone: undefined as string | undefined,
     ville: "",
   });
   const [deletePassword, setDeletePassword] = useState("");
@@ -42,7 +44,7 @@ export default function ProfilPage() {
           ...prev,
           nomComplet,
           email: patient.email,
-          telephone: patient.telephone,
+          telephone: patient.telephone ?? undefined,
           ville: patient.ville ?? "",
         }));
       } catch (error) {
@@ -73,7 +75,7 @@ export default function ProfilPage() {
         nom,
         prenom,
         email: formData.email,
-        telephone: formData.telephone,
+        telephone: (formData.telephone ?? "").trim(),
         ville: formData.ville || null,
       });
 
@@ -171,12 +173,15 @@ export default function ProfilPage() {
                   {/* Numéro de téléphone */}
                   <div>
                     <label className="block font-bold  text-base text-gray-500 mb-2">Numéro de téléphone</label>
-                    <input
-                      type="tel"
-                      value={formData.telephone}
-                      onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
-                      className="w-full px-4 py-3 border-2 font-bold  border-gray-400 rounded-lg text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
-                    />
+                    <div className="w-full rounded-lg border-2 border-gray-400 bg-white px-4 py-3 text-base text-gray-900 focus-within:ring-2 focus-within:ring-toni-green-dark-2">
+                      <PhoneInput
+                        international
+                        defaultCountry="BJ"
+                        placeholder="Numéro de téléphone"
+                        value={formData.telephone}
+                        onChange={(value) => setFormData({ ...formData, telephone: value })}
+                      />
+                    </div>
                   </div>
 
                   {/* Ville */}

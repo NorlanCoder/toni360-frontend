@@ -32,7 +32,7 @@ const navItems = [
   { label: "Mes localisations", href: "/client/localisation", icon: MapPin },
   { label: "Notifications", href: "/client/notifications", icon: Bell },
   { label: "Mon Panier", href: "/client/dashboard/cart", icon: ShoppingCart },
-  { label: "Centre d'aide", href: "/faq", icon: HelpCircle },
+  { label: "Centre d'aide", href: "/faq?from=patient-parcours", icon: HelpCircle },
   { label: "Déconnexion", href: "/client/deconnexion", icon: LogOut },
 ];
 
@@ -40,7 +40,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname();
 
   const isPublicClientPage =
-    pathname.startsWith("/client/connexion") || pathname.startsWith("/client/inscription");
+    pathname.startsWith("/client/connexion") ||
+    pathname.startsWith("/client/inscription") ||
+    pathname.startsWith("/client/verification");
 
   if (isPublicClientPage) {
     return <>{children}</>;
@@ -203,11 +205,11 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
             {/* Footer drawer */}
             <div className="px-5 pb-6 text-xs text-toni-green-dark-2 leading-relaxed">
-              <Link href="/privacy" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
-                Politique de confidentialité,
+              <Link href="/privacy?from=patient-parcours" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
+                Politique de confidentialité
               </Link>
-              <Link href="/terms-of-use" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
-                Conditions générales d&apos;utilisation,
+              <Link href="/terms-of-use?from=patient-parcours" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
+                Conditions générales d&apos;utilisation
               </Link>
               <Link href="/" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
                 Contactez-nous
@@ -261,9 +263,9 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="px-5 pb-6 text-xs text-toni-green-dark-2 leading-relaxed">
-          <Link href="/privacy" className="hover:underline block">Politique de confidentialité,</Link>
-          <Link href="/terms-of-use" className="hover:underline block">Conditions générales d&apos;utilisation,</Link>
-          <Link href="/contacts" className="hover:underline block">Contactez-nous</Link>
+          <Link href="/privacy?from=patient-parcours" className="hover:underline block">Politique de confidentialité</Link>
+          <Link href="/terms-of-use?from=patient-parcours" className="hover:underline block">Conditions générales d&apos;utilisation</Link>
+          <Link href="/contacts?from=patient-parcours" className="hover:underline block">Contactez-nous</Link>
         </div>
       </aside>
 
@@ -308,7 +310,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Barre desktop : recherche + boutons */}
-          <div className="hidden lg:flex lg:flex-row lg:items-center lg:justify-between gap-3">
+          <div className="hidden lg:flex lg:flex-row lg:items-center lg:justify-between gap-14">
             {pathname !== "/client/dashboard/cart/checkout" ? (
               <form
                 className="relative flex-1"

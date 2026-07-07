@@ -9,7 +9,7 @@ import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { registerPartner } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
-import { saveAuthSession } from "@/lib/api/session";
+import { PARTNER_SESSION_KEY } from "@/app/partenaire/verification/page";
 import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@/lib/passwordPolicy";
 import { toast } from "sonner";
 
@@ -104,16 +104,18 @@ export default function DevenirPartenairePage() {
         licence_pharmaceutique: formData.licence ?? undefined,
       });
 
-      saveAuthSession({
-        userType: "user",
-        token: response.data.token,
-        tokenType: response.data.token_type,
-        profile: response.data.user ?? null,
-        permissions: response.data.permissions ?? [],
-      });
+      if (response.requires_verification) {
+        sessionStorage.setItem(PARTNER_SESSION_KEY, formData.email.trim());
+        toast.success(response.message ?? "Inscription réussie. Vérifiez votre email.");
+        router.push(
+          `/partenaire/verification?email=${encodeURIComponent(response.email ?? "")}&purpose=email_verification`
+        );
+        return;
+      }
 
+      // Fallback
       toast.success(response.message ?? "Inscription réussie.");
-      router.push("/partenaire/dashboard");
+      router.push("/partenaire/connexion");
     } catch (error: unknown) {
       if (error instanceof ApiError) {
         toast.error(error.message);
@@ -275,7 +277,7 @@ export default function DevenirPartenairePage() {
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-              {(passwordTouched || formData.heureOuvrables.length > 0) && (
+              {(passwordTouched || formData.heureOuvrables.length > 0) && !passwordValid && (
                 <div className="space-y-2">
                   <div>
                     <div className="mb-1 flex items-center justify-between text-xs">
@@ -546,7 +548,7 @@ export default function DevenirPartenairePage() {
           <p className="mt-6 text-center text-sm text-gray-600">
             En vous inscrivant, vous acceptez nos{" "}
             <Link
-              href="/partenaire/cgu"
+              href="/partenaire/cgu?from=pharmacie-inscription"
               className="font-semibold underline hover:underline"
               style={{ color: "#137551" }}
             >
@@ -554,7 +556,7 @@ export default function DevenirPartenairePage() {
             </Link>{" "}
             et notre{" "}
             <Link
-              href="/privacy"
+              href="/partenaire/privacy?from=pharmacie-inscription"
               className="font-semibold underline hover:underline"
               style={{ color: "#137551" }}
             >

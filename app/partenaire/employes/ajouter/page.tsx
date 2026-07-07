@@ -339,7 +339,7 @@ export default function PartenaireAjouterEmployePage() {
                   </button>
                 </div>
 
-                {(passwordTouched || motDePasse.length > 0) && (
+                {(passwordTouched || motDePasse.length > 0) && !passwordStrong && (
                   <div className="mt-2 space-y-2 rounded-md border border-gray-200 bg-white p-2.5">
                     <div>
                       <div className="mb-1 flex items-center justify-between text-xs">

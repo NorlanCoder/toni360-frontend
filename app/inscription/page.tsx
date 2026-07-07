@@ -184,7 +184,7 @@ export default function InscriptionPage() {
                 </button>
               </div>
 
-              {(passwordTouched || formData.password.length > 0) && (
+              {(passwordTouched || formData.password.length > 0) && !passwordValid && (
                 <div className="space-y-2 pl-1">
                   <div>
                     <div className="mb-1 flex items-center justify-between text-xs">

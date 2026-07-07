@@ -8,6 +8,7 @@ import Link from "next/link";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { registerPatient } from "@/lib/api/auth";
+import { SESSION_KEY } from "@/app/client/verification/page";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
 import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@/lib/passwordPolicy";
@@ -75,13 +76,16 @@ export default function InscriptionPage() {
         password_confirmation: formData.password,
       });
 
-      saveAuthSession({
-        userType: "patient",
-        token: response.data.token,
-        tokenType: response.data.token_type,
-        profile: response.data.patient ?? null,
-      });
+      if (response.requires_verification) {
+        sessionStorage.setItem(SESSION_KEY, formData.email.trim());
+        toast.success(response.message ?? "Inscription réussie. Vérifiez votre email.");
+        router.push(
+          `/client/verification?email=${encodeURIComponent(response.email ?? "")}&purpose=email_verification`
+        );
+        return;
+      }
 
+      // Fallback (ne devrait pas arriver)
       toast.success(response.message ?? "Inscription réussie.");
       router.push("/client/accueil");
     } catch (error: unknown) {
@@ -197,7 +201,7 @@ export default function InscriptionPage() {
               </button>
             </div>
 
-            {(passwordTouched || formData.password.length > 0) && (
+            {(passwordTouched || formData.password.length > 0) && !passwordStrong && (
               <div className="mt-2 space-y-2 rounded-md border border-gray-200 bg-white p-2.5">
                 <div>
                   <div className="mb-1 flex items-center justify-between text-xs">
@@ -240,11 +244,11 @@ export default function InscriptionPage() {
 
             <p className="text-center text-xs text-gray-600 sm:text-sm">
               En vous inscrivant, vous acceptez nos{" "}
-              <Link href="/terms-of-use" className="font-semibold text-toni-green-dark-2 underline hover:underline">
+              <Link href="/terms-of-use?from=patient-inscription" className="font-semibold text-toni-green-dark-2 underline hover:underline">
                 Conditions d&apos;utilisation
               </Link>{" "}
               et notre{" "}
-              <Link href="/privacy" className="font-semibold text-toni-green-dark-2 underline hover:underline">
+              <Link href="/privacy?from=patient-inscription" className="font-semibold text-toni-green-dark-2 underline hover:underline">
                 Politique de confidentialité
               </Link>
               .

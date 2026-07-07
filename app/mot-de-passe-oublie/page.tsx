@@ -1,27 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
 import { forgotPassword } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { AtSign } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
-export default function MotDePasseOubliePage() {
+function MotDePasseOublieContent() {
+  const searchParams = useSearchParams();
+  const rawFrom = searchParams.get("from");
+  const from = rawFrom === "client" || rawFrom === "partenaire" ? rawFrom : null;
+  const isPartenaire = from === "partenaire";
+
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!from) {
+      toast.error("Lien invalide: espace d'origine manquant. Revenez sur la page de connexion de votre module.");
+      return;
+    }
     if (!email.trim()) {
       toast.warning("Veuillez saisir votre adresse email.");
       return;
     }
     setSubmitting(true);
     try {
-      const res = await forgotPassword(email.trim());
+      const res = await forgotPassword(email.trim(), from);
       setSent(true);
       toast.success(res.message ?? "Email envoyé !");
     } catch (error: unknown) {
@@ -41,7 +51,7 @@ export default function MotDePasseOubliePage() {
       <div className="relative hidden lg:block lg:w-3/5">
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/images/ph6.png')" }}
+          style={{ backgroundImage: isPartenaire ? "url('/images/imgc.jpg')" : "url('/images/ph6.png')" }}
         />
       </div>
 
@@ -66,12 +76,18 @@ export default function MotDePasseOubliePage() {
           </div>
 
           {/* Titre */}
-          <h2 className="mb-3 text-center text-3xl text-gray-800 sm:text-4xl">
-            Mot de passe oublié ?
-          </h2>
-          <p className="mb-8 text-center text-sm text-gray-500 sm:text-base">
-            Saisissez votre adresse email. Nous vous enverrons un lien pour réinitialiser votre mot de passe.
-          </p>
+          {!sent &&
+            <>
+              <h2 className="mb-3 text-center text-3xl text-gray-800 sm:text-4xl">
+                Mot de passe oublié ?
+              </h2>
+              <p className="mb-8 text-center text-sm text-gray-500 sm:text-base">
+                Saisissez votre adresse email. Nous vous enverrons un lien pour réinitialiser votre mot de passe.
+              </p>
+
+            </>
+
+          }
 
           {sent ? (
             <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
@@ -107,7 +123,7 @@ export default function MotDePasseOubliePage() {
 
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || !from}
                 className="w-full rounded-md py-2.5 text-sm font-bold text-white transition hover:opacity-90 sm:py-3 sm:text-base"
                 style={{ backgroundColor: "#137551" }}
               >
@@ -116,14 +132,32 @@ export default function MotDePasseOubliePage() {
             </form>
           )}
 
+          {!from && (
+            <p className="mt-4 text-center text-xs text-red-600">
+              Espace non identifié. Ouvrez d&apos;abord la page de connexion Patient ou Partenaire.
+            </p>
+          )}
+
           {/* Liens retour */}
           <div className="mt-6 flex flex-col items-center gap-2 text-sm text-gray-600 sm:mt-8">
-            <Link href="/client/connexion" className="font-semibold hover:underline" style={{ color: "#137551" }}>
-              ← Retour à la connexion patient
+            <Link
+              href={isPartenaire ? "/partenaire/connexion" : "/client/connexion"}
+              className="font-semibold hover:underline"
+              style={{ color: "#137551" }}
+            >
+              {isPartenaire ? "← Retour à la connexion partenaire" : "← Retour à la connexion patient"}
             </Link>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MotDePasseOubliePage() {
+  return (
+    <Suspense fallback={null}>
+      <MotDePasseOublieContent />
+    </Suspense>
   );
 }

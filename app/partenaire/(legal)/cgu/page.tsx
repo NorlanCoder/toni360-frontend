@@ -22,7 +22,7 @@ export default function PartenaireCguPage() {
                 <li key={index}>
                   <a
                     href={`#section-${index + 1}`}
-                    className="text-green-600 hover:text-green-700 font-medium text-lg md:text-xl leading-snug block"
+                    className="text-[#00A669] font-medium text-lg md:text-xl leading-snug block"
                   >
                     {index + 1}- {section}
                   </a>
@@ -63,17 +63,17 @@ export default function PartenaireCguPage() {
             <p className="text-gray-700 leading-relaxed mb-3 text-lg md:text-xl">
               Toni360 est une application compatible avec différents systèmes
               d&apos;exploitation (iOS, Android) qui permet à ses Utilisateurs de
-              localiser les pharmacies les plus proches d&apos;eux, disposant d&apos;un ou
-              des produit(s) pharmaceutique(s) qu&apos;ils recherchent. L&apos;Application
+              localiser les pharmacies les plus proches d&apos;eux, disposant de
+              produits pharmaceutiques qu&apos;ils recherchent. L&apos;Application
               permet également aux Utilisateurs de passer directement la commande
-              d&apos;un ou des produit(s) pharmaceutique(s) auprès des pharmacies.
+              de produits pharmaceutiques auprès des pharmacies.
             </p>
             <p className="text-gray-700 leading-relaxed text-lg md:text-xl">
               L&apos;Utilisateur est toute personne qui utilise l&apos;Application afin de
-              localiser des pharmacies plus proche d&apos;elle, disposant d&apos;un ou des
-              produit(s) pharmaceutique(s) dont elle a besoin ; ou toute personne
-              qui utilise l&apos;Application pour passer la commande d&apos;un ou des
-              produit(s) pharmaceutique(s) auprès d&apos;une pharmacie.
+              localiser des pharmacies plus proche d&apos;elle, disposant de produits
+              pharmaceutiques dont elle a besoin ; ou toute personne qui utilise
+              l&apos;Application pour passer la commande de produits
+              pharmaceutiques auprès d&apos;une pharmacie.
             </p>
           </div>
 

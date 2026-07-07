@@ -190,7 +190,7 @@ export default function ConnexionPage() {
                 />
                 <span className="text-gray-700">Se souvenir de moi</span>
               </label>
-              <Link href="/mot-de-passe-oublie" className="text-gray-700 hover:text-toni-green-dark-2">
+              <Link href="/mot-de-passe-oublie?from=client" className="text-gray-700 hover:text-toni-green-dark-2">
                 Mot de passe oublié ?
               </Link>
             </div>
