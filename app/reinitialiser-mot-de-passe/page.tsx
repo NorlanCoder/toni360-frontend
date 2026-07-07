@@ -17,7 +17,8 @@ function ResetPasswordForm() {
   const token = searchParams.get("token") ?? "";
   const email = searchParams.get("email") ?? "";
   const rawFrom = searchParams.get("from");
-  const from = rawFrom === "client" || rawFrom === "partenaire" ? rawFrom : null;
+  const normalizedFrom = rawFrom === "pharmacie" ? "partenaire" : rawFrom;
+  const from = normalizedFrom === "client" || normalizedFrom === "partenaire" ? normalizedFrom : null;
   const redirectPath = from === "partenaire" ? "/partenaire/connexion" : "/client/connexion";
 
   const [showPassword, setShowPassword] = useState(false);
@@ -222,7 +223,8 @@ export default function ReinitialiserMotDePassePage() {
 function ReinitialiserMotDePasseContent() {
   const searchParams = useSearchParams();
   const rawFrom = searchParams.get("from");
-  const from = rawFrom === "client" || rawFrom === "partenaire" ? rawFrom : "client";
+  const normalizedFrom = rawFrom === "pharmacie" ? "partenaire" : rawFrom;
+  const from = normalizedFrom === "client" || normalizedFrom === "partenaire" ? normalizedFrom : "client";
 
   return (
     <div className="flex min-h-screen">

@@ -12,8 +12,10 @@ import { useSearchParams } from "next/navigation";
 function MotDePasseOublieContent() {
   const searchParams = useSearchParams();
   const rawFrom = searchParams.get("from");
-  const from = rawFrom === "client" || rawFrom === "partenaire" ? rawFrom : null;
-  const isPartenaire = from === "partenaire";
+  const normalizedFrom = rawFrom === "pharmacie" ? "partenaire" : rawFrom;
+  const from = normalizedFrom === "client" || normalizedFrom === "partenaire" ? normalizedFrom : null;
+  const isPharmacie = from === "partenaire";
+  const originLabel = isPharmacie ? "pharmacie" : "patient";
 
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -51,7 +53,7 @@ function MotDePasseOublieContent() {
       <div className="relative hidden lg:block lg:w-3/5">
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: isPartenaire ? "url('/images/imgc.jpg')" : "url('/images/ph6.png')" }}
+          style={{ backgroundImage: isPharmacie ? "url('/images/imgc.jpg')" : "url('/images/ph6.png')" }}
         />
       </div>
 
@@ -134,18 +136,18 @@ function MotDePasseOublieContent() {
 
           {!from && (
             <p className="mt-4 text-center text-xs text-red-600">
-              Espace non identifié. Ouvrez d&apos;abord la page de connexion Patient ou Partenaire.
+              Espace non identifié. Ouvrez d&apos;abord la page de connexion Patient ou Pharmacie.
             </p>
           )}
 
           {/* Liens retour */}
           <div className="mt-6 flex flex-col items-center gap-2 text-sm text-gray-600 sm:mt-8">
             <Link
-              href={isPartenaire ? "/partenaire/connexion" : "/client/connexion"}
+              href={isPharmacie ? "/partenaire/connexion" : "/client/connexion"}
               className="font-semibold hover:underline"
               style={{ color: "#137551" }}
             >
-              {isPartenaire ? "← Retour à la connexion partenaire" : "← Retour à la connexion patient"}
+              {`← Retour à la connexion ${originLabel}`}
             </Link>
           </div>
         </div>

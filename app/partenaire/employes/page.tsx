@@ -146,17 +146,18 @@ export default function PartenaireEmployesPage() {
 
           {/* Action bar */}
           <div className="mb-6 flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-3 sm:gap-4">
+   
+
             <Link
               href="/partenaire/employes/ajouter"
-              className="flex items-center gap-2 rounded-lg bg-emerald-700 px-3 sm:px-5 py-2 sm:py-3 text-sm sm:text-base font-bold text-white transition-colors hover:bg-emerald-800"
+              className="inline-flex items-center gap-2 overflow-hidden  text-sm sm:text-base font-bold text-emerald-700 transition-colors"
             >
-              <Image
-                src="/fluent.svg"
-                alt="Ajouter"
-                width={24}
-                height={24}
-              />
-              Ajouter un employé
+              <span className="flex items-center justify-center bg-emerald-600 px-3 py-2.5 text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </span>
+              <span className="px-4 py-2.5 bg-emerald-50  hover:bg-emerald-100">Ajouter un employé</span>
             </Link>
 
             {/* Search */}

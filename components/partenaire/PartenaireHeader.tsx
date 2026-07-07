@@ -26,7 +26,7 @@ export default function PartenaireHeader() {
 
   const session = useMemo(() => getAuthSession(), []);
   const profile = session?.profile as { prenom?: string; nom?: string } | null;
-  const displayName = profile?.prenom || profile?.nom || "";
+  const displayName = profile?.nom || profile?.prenom || "";
   const showWelcome = pathname === "/partenaire/dashboard";
   const [notifCount, setNotifCount] = useState(0);
   const router = useRouter();

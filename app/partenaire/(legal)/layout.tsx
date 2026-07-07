@@ -46,7 +46,7 @@ function PartenairePublicLayoutContent({
             />
           </Link>
           <span className="text-lg md:text-3xl text-black font-light">
-            Centre d&apos;aide Partenaire
+            Centre d&apos;aide
           </span>
         </div>
 

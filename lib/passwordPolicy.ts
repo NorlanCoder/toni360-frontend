@@ -6,11 +6,12 @@ export interface PasswordRuleResult {
 
 export function getPasswordRuleResults(password: string): PasswordRuleResult[] {
   return [
-    { id: "length", label: "Au moins 8 caracteres", valid: password.length >= 8 },
-    { id: "uppercase", label: "Au moins une majuscule", valid: /[A-Z]/.test(password) },
-    { id: "lowercase", label: "Au moins une minuscule", valid: /[a-z]/.test(password) },
+    { id: "length", label: "Au moins 8 caractères", valid: password.length >= 8 },
+    { id: "uppercase", label: "Au moins une majuscule", valid: /\p{Lu}/u.test(password) },
+    { id: "lowercase", label: "Au moins une minuscule", valid: /\p{Ll}/u.test(password) },
     { id: "digit", label: "Au moins un chiffre", valid: /\d/.test(password) },
-    { id: "special", label: "Au moins un caractere special", valid: /[^A-Za-z0-9]/.test(password) },
+    // Strictement ponctuation/symbole Unicode: espace et lettres accentuées ne comptent pas.
+    { id: "special", label: "Au moins un symbole", valid: /[\p{P}\p{S}]/u.test(password) },
   ];
 }
 

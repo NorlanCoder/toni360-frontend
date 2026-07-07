@@ -10,7 +10,7 @@ import { ApiError } from "@/lib/api/errors";
 import { createPartnerUser, getPartnerRoles, PartnerRole } from "@/lib/api/partner";
 import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@/lib/passwordPolicy";
 import { toast } from "sonner";
-import { Check, Eye, EyeOff, X } from "lucide-react";
+import { Check, ChevronDown, Eye, EyeOff, X } from "lucide-react";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 
@@ -222,7 +222,7 @@ export default function PartenaireAjouterEmployePage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="AGOSSOU Jonathan"
+                  placeholder="Prénom + Nom"
                   value={nom}
                   onChange={(e) => { setNom(e.target.value); clearError("nom"); }}
                   className={`w-full rounded-md border bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
@@ -241,7 +241,7 @@ export default function PartenaireAjouterEmployePage() {
                 </label>
                 <input
                   type="email"
-                  placeholder="jonathan@gmail.com"
+                  placeholder="monemail@gmail.com"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); clearError("email"); }}
                   className={`w-full rounded-md border bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
@@ -283,20 +283,26 @@ export default function PartenaireAjouterEmployePage() {
                 <label className="mb-1 block text-base font-medium text-gray-600">
                   Rôle
                 </label>
-                <select
-                  value={role}
-                  onChange={(e) => { setRole(e.target.value); clearError("role"); }}
-                  className={`w-full rounded-md border bg-white px-3 py-2.5 text-base text-gray-800 focus:outline-none focus:ring-1 ${
-                    fieldErrors.role
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                      : "border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
-                  }`}
-                >
-                  <option value="">Sélectionnez un rôle</option>
-                  {roles.map((item) => (
-                    <option key={item.id} value={item.id}>{getRoleDisplayLabel(item)}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={role}
+                    onChange={(e) => { setRole(e.target.value); clearError("role"); }}
+                    className={`w-full appearance-none rounded-md border bg-white pl-3 pr-12 py-2.5 text-base text-gray-800 focus:outline-none focus:ring-1 ${
+                      fieldErrors.role
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                    }`}
+                  >
+                    <option value="">Sélectionnez un rôle</option>
+                    {roles.map((item) => (
+                      <option key={item.id} value={item.id}>{getRoleDisplayLabel(item)}</option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={18}
+                    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-700"
+                  />
+                </div>
                 {fieldErrors.role && (
                   <p className="mt-1 text-xs text-red-600">{fieldErrors.role}</p>
                 )}
