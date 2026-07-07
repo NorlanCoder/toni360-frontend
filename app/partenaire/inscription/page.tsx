@@ -14,6 +14,19 @@ import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@
 import { toast } from "sonner";
 
 export default function DevenirPartenairePage() {
+  type FormErrorKey =
+    | "nomPharmacie"
+    | "titulairePrenom"
+    | "titulaireNom"
+    | "adresseComplete"
+    | "telephone"
+    | "email"
+    | "heureOuvrables"
+    | "villeExercice"
+    | "confirmPassword"
+    | "licence"
+    | "general";
+
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [fileName, setFileName] = useState("");
@@ -22,6 +35,7 @@ export default function DevenirPartenairePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
+  const [formErrors, setFormErrors] = useState<Partial<Record<FormErrorKey, string>>>({});
 
   const [formData, setFormData] = useState({
     nomPharmacie: "",
@@ -40,6 +54,52 @@ export default function DevenirPartenairePage() {
   const passwordStrength = getPasswordStrength(formData.heureOuvrables);
   const passwordValid = isPasswordStrong(formData.heureOuvrables);
 
+  const mapApiErrorsToForm = (details: unknown, fallbackMessage: string): Partial<Record<FormErrorKey, string>> => {
+    const mapped: Partial<Record<FormErrorKey, string>> = {};
+
+    const payload = details as { errors?: Record<string, unknown> } | undefined;
+    const rawErrors = payload?.errors;
+
+    const keyMap: Record<string, FormErrorKey> = {
+      pharmacie_nom: "nomPharmacie",
+      titulaire_prenom: "titulairePrenom",
+      titulaire_nom: "titulaireNom",
+      adresse: "adresseComplete",
+      telephone: "telephone",
+      email: "email",
+      password: "heureOuvrables",
+      password_confirmation: "confirmPassword",
+      licence_pharmaceutique: "licence",
+      role: "general",
+    };
+
+    if (rawErrors && typeof rawErrors === "object") {
+      Object.entries(rawErrors).forEach(([apiKey, value]) => {
+        const targetKey = keyMap[apiKey] ?? "general";
+        const firstMessage = Array.isArray(value)
+          ? value.find((item) => typeof item === "string")
+          : typeof value === "string"
+            ? value
+            : null;
+
+        if (firstMessage && !mapped[targetKey]) {
+          mapped[targetKey] = firstMessage;
+        }
+      });
+    }
+
+    if (Object.keys(mapped).length === 0) {
+      mapped.general = fallbackMessage;
+    }
+
+    return mapped;
+  };
+
+  const inputClass = (field: FormErrorKey) =>
+    `w-full bg-white px-4 py-3.5 border rounded-lg outline-none transition-colors text-gray-700 text-sm placeholder-gray-400 ${
+      formErrors[field] ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-[#137551]"
+    }`;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -47,48 +107,62 @@ export default function DevenirPartenairePage() {
       return;
     }
 
-    if (
-      !formData.nomPharmacie.trim() ||
-      !formData.titulairePrenom.trim() ||
-      !formData.titulaireNom.trim() ||
-      !formData.adresseComplete.trim() ||
-      !formData.telephone?.trim() ||
-      !formData.email.trim() ||
-      !formData.heureOuvrables.trim() ||
-      !formData.confirmPassword.trim()
-    ) {
-      toast.warning("Veuillez remplir les champs obligatoires.");
-      return;
+    const nextErrors: Partial<Record<FormErrorKey, string>> = {};
+
+    if (!formData.titulairePrenom.trim()) {
+      nextErrors.titulairePrenom = "Le prénom du titulaire est obligatoire.";
+    }
+    if (!formData.titulaireNom.trim()) {
+      nextErrors.titulaireNom = "Le nom du titulaire est obligatoire.";
+    }
+    if (!formData.nomPharmacie.trim()) {
+      nextErrors.nomPharmacie = "Le nom officiel de la pharmacie est obligatoire.";
+    }
+    if (!formData.adresseComplete.trim()) {
+      nextErrors.adresseComplete = "L'adresse complète est obligatoire.";
+    }
+    if (!formData.telephone?.trim()) {
+      nextErrors.telephone = "Le numéro de téléphone est obligatoire.";
+    }
+    if (!formData.email.trim()) {
+      nextErrors.email = "L'adresse mail est obligatoire.";
+    }
+    if (!formData.heureOuvrables.trim()) {
+      nextErrors.heureOuvrables = "Le mot de passe est obligatoire.";
+    }
+    if (!formData.confirmPassword.trim()) {
+      nextErrors.confirmPassword = "La confirmation du mot de passe est obligatoire.";
     }
 
-    if (formData.heureOuvrables !== formData.confirmPassword) {
-      toast.warning("Les mots de passe ne correspondent pas.");
-      return;
+    if (formData.heureOuvrables && formData.confirmPassword && formData.heureOuvrables !== formData.confirmPassword) {
+      nextErrors.confirmPassword = "Les mots de passe ne correspondent pas.";
     }
 
-    if (!passwordValid) {
+    if (formData.heureOuvrables && !passwordValid) {
       setPasswordTouched(true);
-      toast.warning("Le mot de passe doit contenir au moins 8 caracteres, une majuscule, une minuscule, un chiffre et un caractere special.");
-      return;
+      nextErrors.heureOuvrables = "Le mot de passe doit respecter toutes les règles de sécurité.";
     }
 
     const telephone = formData.telephone ?? "";
 
     if (telephone.length > 20) {
-      toast.warning("Le numero de telephone est trop long.");
-      return;
+      nextErrors.telephone = "Le numéro de téléphone est trop long.";
     }
 
     if (!formData.licence) {
-      toast.warning("Veuillez soumettre votre licence pharmaceutique.");
+      nextErrors.licence = "Veuillez soumettre votre licence pharmaceutique.";
+    }
+
+    if (formData.licence && formData.licence.size > 5 * 1024 * 1024) {
+      nextErrors.licence = "La licence ne doit pas dépasser 5 Mo.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFormErrors(nextErrors);
       return;
     }
 
-    if (formData.licence.size > 5 * 1024 * 1024) {
-      toast.warning("La licence ne doit pas depasser 5 Mo.");
-      return;
-    }
-
+    setFormErrors({});
     setSubmitting(true);
     try {
       const response = await registerPartner({
@@ -118,9 +192,9 @@ export default function DevenirPartenairePage() {
       router.push("/partenaire/connexion");
     } catch (error: unknown) {
       if (error instanceof ApiError) {
-        toast.error(error.message);
+        setFormErrors(mapApiErrorsToForm(error.details, error.message));
       } else {
-        toast.error("Une erreur est survenue pendant l'inscription.");
+        setFormErrors({ general: "Une erreur est survenue pendant l'inscription." });
       }
     } finally {
       setSubmitting(false);
@@ -152,7 +226,7 @@ export default function DevenirPartenairePage() {
     <div className="min-h-screen flex items-center justify-center bg-white px-4 py-12">
       <div className="w-full max-w-[900px] flex flex-col items-center">
         {/* Logo */}
-        <div className="mb-4">
+        <Link href={'/'} className="mb-4">
           <Image
             src="/images/logo.png"
             alt="Toni360"
@@ -161,7 +235,7 @@ export default function DevenirPartenairePage() {
             className="mx-auto"
             priority
           />
-        </div>
+        </Link>
 
         {/* Titre */}
         <h1
@@ -185,8 +259,9 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, titulairePrenom: e.target.value })
                 }
-                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className={inputClass("titulairePrenom")}
               />
+              {formErrors.titulairePrenom && <p className="mt-1 text-xs text-red-600">{formErrors.titulairePrenom}</p>}
             </div>
 
             {/* Nom du titulaire */}
@@ -198,8 +273,9 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, titulaireNom: e.target.value })
                 }
-                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className={inputClass("titulaireNom")}
               />
+              {formErrors.titulaireNom && <p className="mt-1 text-xs text-red-600">{formErrors.titulaireNom}</p>}
             </div>
 
             
@@ -213,8 +289,9 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, nomPharmacie: e.target.value })
                 }
-                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className={inputClass("nomPharmacie")}
               />
+              {formErrors.nomPharmacie && <p className="mt-1 text-xs text-red-600">{formErrors.nomPharmacie}</p>}
             </div>
 
 
@@ -227,20 +304,24 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, adresseComplete: e.target.value })
                 }
-                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className={inputClass("adresseComplete")}
               />
+              {formErrors.adresseComplete && <p className="mt-1 text-xs text-red-600">{formErrors.adresseComplete}</p>}
             </div>
 
             {/* Téléphone avec indicatif */}
-            <div className="flex items-center border bg-white text-black border-gray-300 rounded-lg overflow-hidden px-3 py-3 transition-colors focus-within:border-[#137551]">
-              <PhoneInput
-                international
-                defaultCountry="BJ"
-                placeholder="numéro de téléphone"
-                value={formData.telephone}
-                onChange={(value) => setFormData({ ...formData, telephone: value })}
-                className="bg-white"
-              />
+            <div>
+              <div className={`flex items-center border bg-white text-black rounded-lg overflow-hidden px-3 py-3 transition-colors ${formErrors.telephone ? "border-red-500 focus-within:border-red-500" : "border-gray-300 focus-within:border-[#137551]"}`}>
+                <PhoneInput
+                  international
+                  defaultCountry="BJ"
+                  placeholder="numéro de téléphone"
+                  value={formData.telephone}
+                  onChange={(value) => setFormData({ ...formData, telephone: value })}
+                  className="bg-white"
+                />
+              </div>
+              {formErrors.telephone && <p className="mt-1 text-xs text-red-600">{formErrors.telephone}</p>}
             </div>
 
             {/* Adresse mail */}
@@ -252,8 +333,9 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full bg-white px-4 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className={inputClass("email")}
               />
+              {formErrors.email && <p className="mt-1 text-xs text-red-600">{formErrors.email}</p>}
             </div>
 
             {/* Mot de pass */}
@@ -267,7 +349,7 @@ export default function DevenirPartenairePage() {
                     setFormData({ ...formData, heureOuvrables: e.target.value })
                   }
                   onBlur={() => setPasswordTouched(true)}
-                  className="w-full bg-white px-4 py-3.5 pr-12 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                  className={`${inputClass("heureOuvrables")} pr-12`}
                 />
                 <button
                   type="button"
@@ -304,6 +386,7 @@ export default function DevenirPartenairePage() {
                   </ul>
                 </div>
               )}
+              {formErrors.heureOuvrables && <p className="text-xs text-red-600">{formErrors.heureOuvrables}</p>}
             </div>
 
             {/* Ville d'exercice */}
@@ -313,7 +396,7 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, villeExercice: e.target.value })
                 }
-                className="w-full appearance-none bg-white px-4 pr-10 py-3.5 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm"
+                className={`w-full appearance-none bg-white px-4 pr-10 py-3.5 border rounded-lg outline-none transition-colors text-gray-700 text-sm ${formErrors.villeExercice ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-[#137551]"}`}
               >
                 <option value="">Ville d&apos;exercice</option>
                 <optgroup label="Alibori">
@@ -422,6 +505,7 @@ export default function DevenirPartenairePage() {
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </div>
+              {formErrors.villeExercice && <p className="mt-1 text-xs text-red-600">{formErrors.villeExercice}</p>}
             </div>
 
             {/* Confirmer le mot de passe */}
@@ -433,7 +517,7 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, confirmPassword: e.target.value })
                 }
-                className="w-full bg-white px-4 py-3.5 pr-12 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#137551] text-gray-700 text-sm placeholder-gray-400"
+                className={`${inputClass("confirmPassword")} pr-12`}
               />
               <button
                 type="button"
@@ -443,6 +527,7 @@ export default function DevenirPartenairePage() {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
+            {formErrors.confirmPassword && <p className="mt-1 text-xs text-red-600">{formErrors.confirmPassword}</p>}
           </div>
 
           {/* Soumission licence pharmaceutique */}
@@ -508,6 +593,7 @@ export default function DevenirPartenairePage() {
             ) : (
               <p className="text-xs text-gray-400 mt-1">PDF, JPG ou PNG — max 5 Mo</p>
             )}
+            {formErrors.licence && <p className="mt-1 text-xs text-red-600">{formErrors.licence}</p>}
           </div>
 
           {/* Modal prévisualisation licence */}
@@ -567,6 +653,7 @@ export default function DevenirPartenairePage() {
 
           {/* Bouton S'inscrire */}
           <div className="mt-8">
+            {formErrors.general && <p className="mb-3 text-sm text-red-600">{formErrors.general}</p>}
             <button
               type="submit"
               disabled={submitting || !passwordValid}

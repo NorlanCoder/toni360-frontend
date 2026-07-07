@@ -335,9 +335,7 @@ function ClientCartPageContent() {
             <div className="text-2xl text-gray-500 text-center">
               Votre panier est vide
             </div>
-            <p className="mt-3 text-sm text-gray-400 text-center">
-              Recherchez un médicament pour commencer
-            </p>
+           
             <button
               type="button"
               onClick={() => {

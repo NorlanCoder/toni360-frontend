@@ -17,6 +17,10 @@ export default function LocalisationListPage() {
   const router = useRouter();
   const [recherches, setRecherches] = useState<LocalisationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPageLoading, setIsPageLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -34,21 +38,70 @@ export default function LocalisationListPage() {
       router.replace("/client/connexion");
       return;
     }
-    const load = async () => {
+
+    const loadPage = async (page: number) => {
+      const pageLoad = page !== 1;
+      if (pageLoad) {
+        setIsPageLoading(true);
+      }
+
       try {
-        const res = await getHistoriqueLocalisations(token);
-        setRecherches(res.data?.data ?? []);
+        const res = await getHistoriqueLocalisations(token, page);
+        const payload = res.data;
+        setRecherches(payload?.data ?? []);
+        setCurrentPage(payload?.current_page ?? page);
+        setLastPage(payload?.last_page ?? 1);
+        setTotal(payload?.total ?? 0);
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
           clearAuthSession();
           router.replace("/client/connexion");
         }
       } finally {
+        setIsPageLoading(false);
         setIsLoading(false);
       }
     };
-    void load();
-  }, [token, router]);
+
+    void loadPage(currentPage);
+
+    return () => {
+      setIsPageLoading(false);
+    };
+  }, [token, router, currentPage]);
+
+  const loadSpecificPage = (page: number) => {
+    if (page < 1 || page > lastPage || page === currentPage || isPageLoading) {
+      return;
+    }
+    setCurrentPage(page);
+  };
+
+  const loadPreviousPage = () => {
+    loadSpecificPage(currentPage - 1);
+  };
+
+  const loadNextPage = () => {
+    loadSpecificPage(currentPage + 1);
+  };
+
+  const localisationsValides = useMemo(() => {
+    return recherches.filter((recherche) => {
+      const statut = String(recherche.statut ?? "").toLowerCase();
+      const resultats = recherche.resultats ?? [];
+
+      // Conserver uniquement les localisations trouvées et exploitables.
+      if (statut === "refusee") {
+        return false;
+      }
+
+      if (resultats.length === 0) {
+        return false;
+      }
+
+      return resultats.some((res) => Boolean(res.pharmacie_id) && Boolean(res.produit_id));
+    });
+  }, [recherches]);
 
   const handleDelete = async (id: string) => {
     if (!token || deletingId) return;
@@ -57,6 +110,7 @@ export default function LocalisationListPage() {
     try {
       await deleteLocalisation(token, id);
       setRecherches((prev) => prev.filter((r) => r.id !== id));
+      setTotal((prev) => Math.max(prev - 1, 0));
       toast.success("Localisation supprimée.");
     } catch (error) {
       if (error instanceof ApiError) toast.error(error.message);
@@ -72,6 +126,9 @@ export default function LocalisationListPage() {
     try {
       await deleteAllLocalisations(token);
       setRecherches([]);
+      setTotal(0);
+      setCurrentPage(1);
+      setLastPage(1);
       toast.success("Toutes les localisations ont été supprimées.");
     } catch (error) {
       if (error instanceof ApiError) toast.error(error.message);
@@ -96,7 +153,7 @@ export default function LocalisationListPage() {
       {/* En-tête */}
       <div className="flex items-center justify-between mb-2">
         <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Mes localisations</h1>
-        {recherches.length > 0 && (
+        {localisationsValides.length > 0 && (
           <button
             type="button"
             onClick={() => setConfirmDeleteAll(true)}
@@ -110,11 +167,11 @@ export default function LocalisationListPage() {
       </div>
 
       {/* Message de rétention discret */}
-      <p className="mb-5 text-[11px] text-gray-400 leading-relaxed">
+      <p className="mb-5 text-base text-gray-400 leading-relaxed">
         Les localisations enregistrées sont automatiquement supprimées après 12 mois.
       </p>
 
-      {recherches.length === 0 ? (
+      {localisationsValides.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
           <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
             <Search size={28} className="text-gray-400" />
@@ -125,7 +182,7 @@ export default function LocalisationListPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {recherches.map((r) => {
+          {localisationsValides.map((r) => {
             const nomsReels = Array.from(
               new Set((r.resultats ?? []).map((res) => res.produit?.nom).filter(Boolean) as string[])
             );
@@ -202,6 +259,37 @@ export default function LocalisationListPage() {
         </div>
       )}
 
+      {lastPage > 1 && (
+        <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-3">
+          <button
+            type="button"
+            onClick={loadPreviousPage}
+            disabled={currentPage <= 1 || isPageLoading}
+            className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Précédent
+          </button>
+
+          <p className="text-sm text-gray-500">
+            Page <span className="font-semibold text-gray-700">{currentPage}</span> / {lastPage}
+            {total > 0 && <span className="ml-2 text-gray-400">({total} localisations)</span>}
+          </p>
+
+          <button
+            type="button"
+            onClick={loadNextPage}
+            disabled={currentPage >= lastPage || isPageLoading}
+            className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Suivant
+          </button>
+        </div>
+      )}
+
+      {isPageLoading && (
+        <div className="mt-3 text-center text-sm text-gray-500">Chargement de la page…</div>
+      )}
+
       {/* Modal confirmation suppression individuelle */}
       {confirmDeleteId && (
         <div
@@ -246,7 +334,7 @@ export default function LocalisationListPage() {
           >
             <p className="text-base font-semibold text-gray-900 mb-2">Supprimer toutes les localisations ?</p>
             <p className="text-sm text-gray-400 mb-5">
-              Les {recherches.length} localisation{recherches.length > 1 ? "s" : ""} seront définitivement supprimée{recherches.length > 1 ? "s" : ""}.
+              Les {localisationsValides.length} localisation{localisationsValides.length > 1 ? "s" : ""} seront définitivement supprimée{localisationsValides.length > 1 ? "s" : ""}.
             </p>
             <div className="flex gap-3">
               <button

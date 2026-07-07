@@ -21,9 +21,29 @@ interface Notification {
   id: string;
   title: string;
   description: string;
+  createdAt?: string;
   isRead: boolean;
   commande_id?: string;
   numero_commande?: string;
+}
+
+function formatNotificationDateTime(value?: string) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 
 export default function NotificationsPage() {
@@ -57,6 +77,7 @@ export default function NotificationsPage() {
           id: notification.id,
           title: notification.titre,
           description: notification.message,
+          createdAt: notification.created_at,
           isRead: notification.is_read,
           commande_id: typeof notification.data?.commande_id === "string" ? notification.data.commande_id : undefined,
           numero_commande: typeof notification.data?.numero_commande === "string" ? notification.data.numero_commande : undefined,
@@ -159,7 +180,14 @@ export default function NotificationsPage() {
               <div className="w-10 h-10 rounded-full border-2 border-toni-green-dark-2 flex items-center justify-center bg-white shrink-0">
                 <img src="/images/icon.png" alt="Toni360" className="w-6 h-6 object-contain" />
               </div>
-              <h2 className="font-bold text-gray-900 text-base pr-6">{selectedNotif.title}</h2>
+              <div className="pr-6">
+                <h2 className="font-bold text-gray-900 text-base">{selectedNotif.title}</h2>
+                {formatNotificationDateTime(selectedNotif.createdAt) && (
+                  <p className="mt-1 text-xs text-gray-400">
+                    {formatNotificationDateTime(selectedNotif.createdAt)}
+                  </p>
+                )}
+              </div>
             </div>
             <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{selectedNotif.description}</p>
             {selectedNotif.commande_id && (
@@ -224,6 +252,7 @@ export default function NotificationsPage() {
                 key={notification.id}
                 title={notification.title}
                 description={notification.description}
+                timestamp={formatNotificationDateTime(notification.createdAt) ?? undefined}
                 isRead={notification.isRead}
                 onOpen={() => {
                   setSelectedNotif(notification);

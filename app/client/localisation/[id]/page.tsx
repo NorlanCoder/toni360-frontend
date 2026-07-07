@@ -146,11 +146,7 @@ function LocalisationDetailContent() {
       <h1 className="mb-1 text-xl font-bold text-gray-900 sm:text-2xl">Détail de la localisation</h1>
       <p className="mb-5 text-sm text-gray-400">{dateLabel}</p>
 
-      {/* Critères recherchés */}
-      <div className="mb-5 rounded-2xl border border-gray-200 bg-gray-50 px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Médicaments recherchés</p>
-        <p className="text-sm font-medium text-gray-800">{criteres}</p>
-      </div>
+     
 
       {pharmacies.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-16 text-center">

@@ -83,7 +83,7 @@ export default function PartenaireHeader() {
         ) : (
           showWelcome && (
             <p className="text-base sm:text-xl font-semibold text-gray-800 truncate">
-              Bienvenu{displayName ? `, Dr. ${displayName}` : ""}
+              Bienvenue{displayName ? `, Dr. ${displayName}` : ""}
             </p>
           )
         )}

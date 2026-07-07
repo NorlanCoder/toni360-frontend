@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Eye, FileText, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -40,6 +40,7 @@ export default function OrderDetailPage() {
 function OrderDetailContent() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const commandeId = String(params.id);
 
   const [items, setItems] = useState<OrderItem[]>([]);
@@ -120,6 +121,26 @@ function OrderDetailContent() {
 
   const canValidate = commandeStatut === "en_attente_paiement" || commandeStatut === "en_attente_client";
   const isEnAttenteClient = commandeStatut === "en_attente_client";
+  const isEnCoursStatus = ["en_cours", "payee", "en_preparation", "prete"].includes(commandeStatut);
+
+  const returnTab = useMemo(() => {
+    const fromUrl = searchParams.get("tab");
+    if (fromUrl === "en_cours" || fromUrl === "recuperees" || fromUrl === "en_attente") {
+      return fromUrl;
+    }
+
+    if (commandeStatut === "recuperee") {
+      return "recuperees";
+    }
+
+    if (isEnCoursStatus) {
+      return "en_cours";
+    }
+
+    return "en_attente";
+  }, [searchParams, commandeStatut, isEnCoursStatus]);
+
+  const ordersListUrl = `/client/orders?tab=${returnTab}`;
 
   const handleVerifierDisponibilite = async () => {
     if (!token || pendingVerif) return;
@@ -128,7 +149,7 @@ function OrderDetailContent() {
       const res = await verifierDisponibiliteCommande(token, commandeId);
       if (res.data?.commande_annulee) {
         toast.error("Tous les produits sont en rupture de stock. La commande a été annulée.");
-        router.push("/client/orders");
+        router.push(ordersListUrl);
         return;
       }
       const supprimes = res.data?.produits_supprimes ?? [];
@@ -263,7 +284,7 @@ function OrderDetailContent() {
     setPendingValider(true);
     try {
       await validerCommande(token, commandeId);
-      router.push(`/client/orders/${commandeId}/qrcode`);
+      router.push(`/client/orders/${commandeId}/qrcode?tab=en_cours`);
     } catch (error) {
       if (error instanceof ApiError) toast.error(error.message);
     } finally {
@@ -277,7 +298,7 @@ function OrderDetailContent() {
     try {
       await annulerCommande(token, commandeId);
       toast.success("Commande annulée.");
-      router.push("/client/orders");
+      router.push(ordersListUrl);
     } catch (error) {
       if (error instanceof ApiError) toast.error(error.message);
     } finally {
@@ -299,7 +320,7 @@ function OrderDetailContent() {
       {/* Retour */}
       <button
         type="button"
-        onClick={() => router.push("/client/orders")}
+        onClick={() => router.push(ordersListUrl)}
         className="flex items-center gap-2 mb-4 text-sm font-medium text-[#00955F] hover:underline"
       >
         <ArrowLeft size={16} />
@@ -498,19 +519,20 @@ function OrderDetailContent() {
               </div>
               {/* Actions */}
               <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!canValidate) return;
-                    ordonnanceUploadModeRef.current = "replace";
-                    fileInputRef.current?.click();
-                  }}
-                  disabled={pendingUploadOrdonnance || !canValidate}
-                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Modifier"
-                >
-                  <Pencil size={15} />
-                </button>
+                {canValidate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      ordonnanceUploadModeRef.current = "replace";
+                      fileInputRef.current?.click();
+                    }}
+                    disabled={pendingUploadOrdonnance}
+                    className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Modifier"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -737,7 +759,7 @@ function OrderDetailContent() {
           </button>
 
           <Link
-            href="/client/orders"
+            href={ordersListUrl}
             className="flex-1 rounded-full bg-gray-200 py-3 text-base font-bold text-gray-500 transition hover:bg-gray-300 text-center"
           >
             Garder en attente
@@ -780,7 +802,7 @@ function OrderDetailContent() {
               if (!token || anyPending) return;
               // Si déjà EN_ATTENTE_CLIENT, pas besoin d'appel API — juste retourner.
               if (isEnAttenteClient) {
-                router.push("/client/orders");
+                router.push(ordersListUrl);
                 return;
               }
               setPendingHold(true);
@@ -788,7 +810,7 @@ function OrderDetailContent() {
                 const { mettreEnAttenteCommande } = await import("@/lib/api/client");
                 await mettreEnAttenteCommande(token, commandeId);
                 toast.success("Commande mise en attente.");
-                router.push("/client/orders");
+                router.push(ordersListUrl);
               } catch (error) {
                 if (error instanceof ApiError) toast.error(error.message);
               } finally {
