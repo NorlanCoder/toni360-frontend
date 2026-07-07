@@ -131,11 +131,17 @@ export default function InscriptionPage() {
         password_confirmation: formData.password,
       });
 
+      const token = response.data?.token;
+      if (!token) {
+        setFieldErrors({ nom: response.message ?? "Réponse d'inscription invalide: token manquant." });
+        return;
+      }
+
       saveAuthSession({
         userType: "patient",
-        token: response.data.token,
-        tokenType: response.data.token_type,
-        profile: response.data.patient ?? null,
+        token,
+        tokenType: response.data?.token_type ?? "Bearer",
+        profile: response.data?.patient ?? null,
       });
 
       router.push("/client/accueil");

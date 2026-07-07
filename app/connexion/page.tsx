@@ -46,11 +46,17 @@ export default function ConnexionPage() {
         password: formData.password,
       });
 
+      const token = response.data?.token;
+      if (!token) {
+        toast.error(response.message ?? "Réponse de connexion invalide: token manquant.");
+        return;
+      }
+
       saveAuthSession({
         userType: "patient",
-        token: response.data.token,
-        tokenType: response.data.token_type,
-        profile: response.data.patient ?? null,
+        token,
+        tokenType: response.data?.token_type ?? "Bearer",
+        profile: response.data?.patient ?? null,
       }, formData.rememberMe);
 
       toast.success(response.message ?? "Connexion réussie.");
