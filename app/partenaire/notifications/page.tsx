@@ -174,7 +174,7 @@ export default function PartenaireNotificationsPage() {
           <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
             {nonReadCount > 0 ? (
               <p className="text-sm text-gray-600 shrink-0">
-                {nonReadCount} notification{nonReadCount > 1 ? "s" : ""} non lue{nonReadCount > 1 ? "s" : ""}
+                {nonReadCount} notification{nonReadCount !== 1 ? "s" : ""} non lue{nonReadCount !== 1 ? "s" : ""}
               </p>
             ) : (
               <span />

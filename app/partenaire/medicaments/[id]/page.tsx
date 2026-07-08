@@ -7,6 +7,7 @@ import { ChevronDown } from "lucide-react";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import {
+  addPartnerStockQuantity,
   deactivatePartnerProduit,
   getPartnerProduit,
   getPartnerProduitFormes,
@@ -23,6 +24,69 @@ function formatPrix(raw: string): string {
   const [intPart, decPart] = raw.split(",");
   const formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
   return decPart !== undefined ? `${formatted},${decPart}` : formatted;
+}
+
+function StockQuantityModal({
+  show,
+  quantite,
+  onQuantiteChange,
+  onConfirm,
+  onCancel,
+  isSubmitting,
+  produitNom,
+}: {
+  show: boolean;
+  quantite: string;
+  onQuantiteChange: (value: string) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isSubmitting: boolean;
+  produitNom: string;
+}) {
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={onCancel}>
+      <div className="mx-4 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-emerald-700 px-6 py-4 text-center">
+          <h2 className="text-lg font-bold text-white">Ajouter au stock</h2>
+        </div>
+        <div className="px-6 py-6">
+          <p className="text-sm text-gray-700">
+            Ajouter une quantité au stock du médicament <span className="font-semibold">{produitNom}</span>.
+          </p>
+          <div className="mt-4">
+            <label className="mb-1 block text-sm text-gray-500">Quantité à ajouter</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={formatMilliers(quantite)}
+              onChange={(e) => onQuantiteChange(onlyDigits(e.target.value))}
+              placeholder="Ex: 100"
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+          </div>
+          <div className="mt-6 flex items-center justify-center gap-4">
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={isSubmitting || Number(quantite) < 1}
+              className="rounded-full bg-emerald-600 px-8 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {isSubmitting ? "Ajout..." : "Ajouter"}
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="rounded-full border border-gray-300 bg-gray-200 px-8 py-2 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-300"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function onlyPrixChars(value: string): string {
@@ -127,6 +191,7 @@ export default function PartenaireMedicamentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showStockModal, setShowStockModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [produit, setProduit] = useState<PartnerProduit | null>(null);
@@ -137,6 +202,7 @@ export default function PartenaireMedicamentDetailPage() {
   const [forme, setForme] = useState("");
   const [prix, setPrix] = useState("");
   const [stockActuel, setStockActuel] = useState("0");
+  const [stockAAjouter, setStockAAjouter] = useState("0");
   const [seuil, setSeuil] = useState("0");
   const [formes, setFormes] = useState<string[]>(FORMES_DEFAUT);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
@@ -227,9 +293,57 @@ export default function PartenaireMedicamentDetailPage() {
     try {
       await deactivatePartnerProduit(session.token, id);
       setShowDeleteModal(false);
-      router.push("/partenaire/medicaments");
+      setProduit((current) => current ? { ...current, is_active: false } : current);
+      toast.success("Médicament désactivé. Le stock n'est plus disponible à la vente.");
     } catch (err: unknown) {
-      toast.error(err instanceof ApiError ? err.message : "Suppression impossible.");
+      toast.error(err instanceof ApiError ? err.message : "Désactivation impossible.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleActive = async () => {
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token || !id || !produit) {
+      toast.error("Session partenaire invalide.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await updatePartnerProduit(session.token, id, { is_active: !produit.is_active });
+      setProduit((current) => current ? { ...current, is_active: !current.is_active } : current);
+      toast.success(produit.is_active ? "Médicament désactivé." : "Médicament réactivé.");
+    } catch (err: unknown) {
+      toast.error(err instanceof ApiError ? err.message : "Impossible de modifier l'état du produit.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAddStock = async () => {
+    const session = getAuthSession();
+    const quantite = Number(stockAAjouter);
+
+    if (!session || session.userType !== "user" || !session.token || !id) {
+      toast.error("Session partenaire invalide.");
+      return;
+    }
+
+    if (!Number.isFinite(quantite) || quantite < 1) {
+      toast.warning("Veuillez saisir une quantité valide.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await addPartnerStockQuantity(session.token, id, quantite);
+      setStockActuel((prev) => String(Number(prev.replace(/\s/g, "")) + quantite));
+      setShowStockModal(false);
+      setStockAAjouter("0");
+      toast.success("Quantité ajoutée au stock avec succès.");
+    } catch (err: unknown) {
+      toast.error(err instanceof ApiError ? err.message : "Ajout au stock impossible.");
     } finally {
       setIsSubmitting(false);
     }
@@ -249,6 +363,15 @@ export default function PartenaireMedicamentDetailPage() {
           >
             ← Retour aux médicaments
           </Link>
+            <div className="mb-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowStockModal(true)}
+                className="rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+              >
+                Ajouter au stock
+              </button>
+            </div>
           <form
             onSubmit={handleSave}
             className="mx-auto w-full max-w-[920px] rounded-xl bg-white p-6 sm:p-8"
@@ -375,10 +498,15 @@ export default function PartenaireMedicamentDetailPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowDeleteModal(true)}
-                  className="rounded-full bg-red-500 px-12 py-3.5 text-base font-semibold text-white transition-colors hover:bg-red-600 text-center"
+                  onClick={handleToggleActive}
+                  disabled={isSubmitting}
+                  className={`rounded-full px-12 py-3.5 text-base font-semibold transition-colors disabled:opacity-60 text-center ${
+                    produit?.is_active
+                      ? "bg-slate-200 text-slate-800 hover:bg-slate-300"
+                      : "bg-emerald-600 text-white hover:bg-emerald-700"
+                  }`}
                 >
-                  Supprimer
+                  {produit?.is_active ? "Désactiver" : "Réactiver"}
                 </button>
               </div>
             </div>
@@ -392,6 +520,16 @@ export default function PartenaireMedicamentDetailPage() {
         stock={stockActuel}
         onConfirm={handleDelete}
         onCancel={() => setShowDeleteModal(false)}
+      />
+
+      <StockQuantityModal
+        show={showStockModal}
+        quantite={stockAAjouter}
+        onQuantiteChange={setStockAAjouter}
+        onConfirm={handleAddStock}
+        onCancel={() => setShowStockModal(false)}
+        isSubmitting={isSubmitting}
+        produitNom={nom}
       />
     </>
   );

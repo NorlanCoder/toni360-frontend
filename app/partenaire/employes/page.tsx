@@ -71,7 +71,7 @@ function mapNomComplet(nomComplet: string | undefined, nom: string | undefined, 
     return fullName;
   }
 
-  return [nom, prenom].filter(Boolean).join(" ").trim();
+  return [prenom, nom].filter(Boolean).join(" ").trim();
 }
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */

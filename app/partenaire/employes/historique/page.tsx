@@ -40,7 +40,7 @@ const ACTION_COLORS: Record<string, string> = {
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireHistoriquePage() {
   const [entries, setEntries] = useState<ActionLogEntry[]>([]);
-  const [utilisateurs, setUtilisateurs] = useState<{ id: string; nom: string }[]>([]);
+  const [utilisateurs, setUtilisateurs] = useState<{ id: string; prenom?: string | null; nom: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,7 +63,13 @@ export default function PartenaireHistoriquePage() {
         ]);
 
         setEntries(histResponse.data.data ?? []);
-        setUtilisateurs(usersResponse.data ?? []);
+        setUtilisateurs(
+          [...(usersResponse.data ?? [])].sort((a, b) => {
+            const nomA = `${a.prenom ?? ""} ${a.nom}`.trim();
+            const nomB = `${b.prenom ?? ""} ${b.nom}`.trim();
+            return nomA.localeCompare(nomB, "fr", { sensitivity: "base" });
+          }),
+        );
       } catch (err: unknown) {
         toast.error(err instanceof ApiError ? err.message : "Impossible de charger l'historique.");
       } finally {
@@ -90,6 +96,8 @@ export default function PartenaireHistoriquePage() {
     : entries;
 
   const selectedUser = utilisateurs.find((u) => u.id === selectedUserId);
+  const formatUserLabel = (user: { prenom?: string | null; nom: string }) =>
+    `${user.prenom ?? ""} ${user.nom}`.trim();
 
   return (
     <div className="px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
@@ -102,7 +110,7 @@ export default function PartenaireHistoriquePage() {
             onClick={() => setDropdownOpen((o) => !o)}
             className="flex items-center gap-2 rounded-full border border-gray-300 px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-gray-700 transition-colors hover:bg-gray-50"
           >
-            {selectedUser ? selectedUser.nom : "Tous les employés"}
+            {selectedUser ? formatUserLabel(selectedUser) : "Tous les employés"}
             <ChevronDown className="h-5 w-5" />
           </button>
           {dropdownOpen && (
@@ -123,7 +131,7 @@ export default function PartenaireHistoriquePage() {
                     selectedUserId === u.id ? "font-semibold text-toni-green-dark-2" : "text-gray-700"
                   }`}
                 >
-                  {u.nom}
+                    {formatUserLabel(u)}
                 </button>
               ))}
               {utilisateurs.length === 0 && (
@@ -174,7 +182,7 @@ export default function PartenaireHistoriquePage() {
               <div
                 key={entry.id}
                 onClick={() => setSelectedEntry(entry)}
-                className="rounded-2xl px-4 py-3 flex items-center gap-4 bg-[#E6F6F0] cursor-pointer hover:bg-emerald-100 transition-colors"
+                className="rounded-2xl px-4 py-3 flex items-center gap-4 bg-[#E6F6F0]/20 cursor-pointer hover:bg-emerald-100 transition-colors"
               >
                 {/* Icône */}
                 <div className="flex-shrink-0">

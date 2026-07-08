@@ -2,11 +2,7 @@ import type { AuthSession } from "@/lib/api/session";
 
 type PermissionAction = "create" | "read" | "update" | "delete";
 
-/** Rôles dont le dashboard leur est masqué — redirigés vers leur page principale. */
-const ROLE_HOME_ROUTES: Record<string, string> = {
-  RESPONSABLE_STOCKS:    "/partenaire/medicaments",
-  RESPONSABLE_COMMANDES: "/partenaire/commandes",
-};
+const ROLE_HOME_ROUTES: Record<string, string> = {};
 
 function getSessionRoleCode(session: AuthSession | null): string | null {
   if (!session?.profile) return null;
@@ -23,7 +19,27 @@ export function getPartnerHomeRoute(session: AuthSession | null): string {
   if (roleCode && ROLE_HOME_ROUTES[roleCode]) {
     return ROLE_HOME_ROUTES[roleCode];
   }
-  return "/partenaire/dashboard";
+
+  const fallbacks: Array<{ path: string; module: string; action: PermissionAction }> = [
+    { path: "/partenaire/dashboard", module: "consultation_statistiques", action: "read" },
+    { path: "/partenaire/commandes", module: "gestion_commandes", action: "read" },
+    { path: "/partenaire/medicaments", module: "gestion_produits", action: "read" },
+    { path: "/partenaire/stocks", module: "gestion_stocks", action: "read" },
+    { path: "/partenaire/employes", module: "gestion_users", action: "read" },
+    { path: "/partenaire/employes/historique", module: "gestion_historique", action: "read" },
+  ];
+
+  for (const candidate of fallbacks) {
+    if (hasPermission(session, candidate.module, candidate.action)) {
+      return candidate.path;
+    }
+  }
+
+  if (canAccessNotifications(session)) {
+    return "/partenaire/notifications";
+  }
+
+  return "/partenaire/deconnexion";
 }
 
 /**
@@ -35,7 +51,12 @@ export function shouldRedirectAwayFromDashboard(session: AuthSession | null): bo
   return Boolean(roleCode && ROLE_HOME_ROUTES[roleCode]);
 }
 
+function canAccessNotifications(session: AuthSession | null): boolean {
+  return hasPermission(session, "gestion_notifications", "read");
+}
+
 const PARTNER_ROUTE_REQUIREMENTS: Array<{ prefix: string; permission: string }> = [
+  { prefix: "/partenaire/dashboard", permission: "consultation_statistiques:read" },
   { prefix: "/partenaire/employes/historique", permission: "gestion_historique:read" },
   { prefix: "/partenaire/employes/ajouter", permission: "gestion_users:create" },
   { prefix: "/partenaire/employes", permission: "gestion_users:read" },
@@ -77,13 +98,16 @@ export function canAccessPartnerRoute(session: AuthSession | null, pathname: str
     pathname.startsWith("/partenaire/connexion") ||
     pathname.startsWith("/partenaire/inscription") ||
     pathname.startsWith("/partenaire/deconnexion") ||
-    pathname.startsWith("/partenaire/cgu") ||
-    pathname.startsWith("/partenaire/dashboard")
+    pathname.startsWith("/partenaire/cgu")
   ) {
     return true;
   }
 
   const match = PARTNER_ROUTE_REQUIREMENTS.find((item) => pathname.startsWith(item.prefix));
+  if (pathname.startsWith("/partenaire/notifications")) {
+    return canAccessNotifications(session);
+  }
+
   if (!match) {
     return true;
   }
@@ -98,7 +122,7 @@ export function filterPartnerNavigationByPermissions<T extends { href: string }>
 ): T[] {
   return items.filter((item) => {
     if (item.href.startsWith("/partenaire/dashboard")) {
-      return !shouldRedirectAwayFromDashboard(session);
+      return hasPermission(session, "consultation_statistiques", "read") && !shouldRedirectAwayFromDashboard(session);
     }
 
     if (item.href === "/partenaire/employes/historique") {
@@ -119,6 +143,10 @@ export function filterPartnerNavigationByPermissions<T extends { href: string }>
 
     if (item.href.startsWith("/partenaire/commandes")) {
       return hasPermission(session, "gestion_commandes", "read");
+    }
+
+    if (item.href.startsWith("/partenaire/notifications")) {
+      return canAccessNotifications(session);
     }
 
     return true;

@@ -53,7 +53,7 @@ function PartenaireLayoutInner({ children }: { children: React.ReactNode }) {
 
     if (!canAccessPartnerRoute(session, pathname)) {
       toast.error(`Accès refusé (${pathname}) : permission insuffisante.`);
-      router.replace("/partenaire/dashboard");
+      router.replace(getPartnerHomeRoute(session));
     }
   }, [pathname, router]);
 

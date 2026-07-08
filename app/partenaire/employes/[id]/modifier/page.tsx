@@ -219,7 +219,7 @@ export default function PartenaireModifierEmployePage() {
               <label className="mb-1 block text-base font-medium text-gray-600">Nom complet</label>
               <input
                 type="text"
-                placeholder="AGOSSOU Jonathan"
+                placeholder="Penom + Nom"
                 value={nom}
                 onChange={(e) => { setNom(e.target.value); clearError("nom"); }}
                 className={`w-full rounded-md border bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
@@ -234,11 +234,12 @@ export default function PartenaireModifierEmployePage() {
                 type="email"
                 placeholder="jonathan@gmail.com"
                 value={email}
-                onChange={(e) => { setEmail(e.target.value); clearError("email"); }}
-                className={`w-full rounded-md border bg-white px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 ${
-                  fieldErrors.email ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                readOnly
+                className={`w-full rounded-md border bg-gray-100 px-3 py-2.5 text-base text-gray-500 placeholder:text-gray-400 cursor-not-allowed focus:outline-none ${
+                  fieldErrors.email ? "border-red-500" : "border-gray-300"
                 }`}
               />
+              <p className="mt-1 text-xs text-gray-500">L&apos;email ne peut pas être modifié.</p>
               {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
             </div>
           </div>

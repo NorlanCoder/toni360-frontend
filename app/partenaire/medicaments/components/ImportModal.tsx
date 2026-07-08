@@ -292,7 +292,7 @@ export default function ImportModal({ onClose, onSuccess }: ImportModalProps) {
                 <details className="rounded-lg border border-red-200">
                   <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium text-red-600">
                     <AlertCircle className="h-4 w-4" />
-                    {result.erreurs.length} {result.erreurs.length > 1 ? "erreurs" : "erreur"} — cliquer pour voir le détail
+                    {result.erreurs.length} erreur{result.erreurs.length !== 1 ? "s" : ""} — cliquer pour voir le détail
                   </summary>
                   <ul className="divide-y divide-red-100 px-4 pb-3 text-xs text-red-700">
                     {result.erreurs.map((e: ImportBatchResultErreur, i: number) => (

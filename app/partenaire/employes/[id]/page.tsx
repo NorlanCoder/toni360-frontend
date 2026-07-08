@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import {
+  deletePartnerUser,
   getPartnerUser,
   getPartnerUserPermissions,
   togglePartnerUserActive,
@@ -58,52 +59,55 @@ const PERMISSIONS_BY_ROLE: Record<EmployeeRoleCode, Permission[]> = {
     { label: "Gestion des paiements", enabled: true },
   ],
   GESTIONNAIRE_OPERATIONNEL: [
-    { label: "Gestion des commandes", enabled: true },
+    { label: "Notifications", enabled: true },
+    { label: "Tableau de bord", enabled: true },
     { label: "Gestion des médicaments", enabled: true },
-    { label: "Gestion des stocks", enabled: true },
-    { label: "Gestion des données de la pharmacie", enabled: true },
-    { label: "Gestion des interactions avec les patients", enabled: true },
-    { label: "Gestion des performances", enabled: true },
-    { label: "Gestion des paiements", enabled: true },
+    { label: "Historique des actions", enabled: true },
   ],
   RESPONSABLE_STOCKS: [
+    { label: "Notifications", enabled: true },
+    { label: "Tableau de bord", enabled: true },
     { label: "Gestion des médicaments", enabled: true },
     { label: "Gestion des stocks", enabled: true },
+    { label: "Historique des actions", enabled: true },
   ],
   RESPONSABLE_COMMANDES: [
+    { label: "Notifications", enabled: true },
+    { label: "Tableau de bord", enabled: true },
     { label: "Gestion des commandes", enabled: true },
-    { label: "Gestion des paiements", enabled: true },
+    { label: "Historique des actions", enabled: true },
   ],
 };
 
 /**
  * Mapping UI label → modules backend (pour construire les overrides à envoyer à l'API).
- * Un label sans modules = frontend-only (toujours activé, non envoyé à l'API).
  */
 const LABEL_TO_MODULES: Partial<Record<EmployeeRoleCode, Record<string, string[]>>> = {
   GESTIONNAIRE_OPERATIONNEL: {
-    "Gestion des commandes": ["GESTION_COMMANDES", "GESTION_ORDONNANCES"],
+    "Notifications": ["GESTION_NOTIFICATIONS"],
+    "Tableau de bord": ["CONSULTATION_STATISTIQUES"],
     "Gestion des médicaments": ["GESTION_PRODUITS", "GESTION_INCOHERENCES"],
-    "Gestion des stocks": ["GESTION_STOCKS"],
-    "Gestion des données de la pharmacie": ["PARAMETRAGE_PHARMACIE"],
-    "Gestion des interactions avec les patients": ["GESTION_ORDONNANCES"],
-    "Gestion des performances": ["CONSULTATION_STATISTIQUES"],
-    "Gestion des paiements": ["GESTION_PAIEMENTS"],
+    "Historique des actions": ["GESTION_HISTORIQUE"],
   },
   RESPONSABLE_STOCKS: {
+    "Notifications": ["GESTION_NOTIFICATIONS"],
+    "Tableau de bord": ["CONSULTATION_STATISTIQUES"],
     "Gestion des médicaments": ["GESTION_PRODUITS", "GESTION_INCOHERENCES"],
     "Gestion des stocks": ["GESTION_STOCKS"],
+    "Historique des actions": ["GESTION_HISTORIQUE"],
   },
   RESPONSABLE_COMMANDES: {
-    "Gestion des commandes": ["GESTION_COMMANDES", "GESTION_ORDONNANCES"],
-    "Gestion des paiements": ["GESTION_PAIEMENTS"],
+    "Notifications": ["GESTION_NOTIFICATIONS"],
+    "Tableau de bord": ["CONSULTATION_STATISTIQUES"],
+    "Gestion des commandes": ["GESTION_COMMANDES"],
+    "Historique des actions": ["GESTION_HISTORIQUE"],
   },
 };
 
 /**
  * À partir des permissions retournées par l'API, construit les states UI (label + enabled).
  * Un label est "enabled" si TOUTES ses permissions API correspondantes sont is_enabled = true.
- * Les labels sans modules (frontend-only) sont toujours enabled.
+ * Les labels sont "enabled" si toutes les permissions modules associées sont actives.
  */
 function buildUiPermissions(
   roleCode: EmployeeRoleCode,
@@ -115,7 +119,7 @@ function buildUiPermissions(
 
   return defaults.map((p) => {
     const modules = labelMap[p.label];
-    if (!modules || modules.length === 0) return { ...p, enabled: true }; // frontend-only
+    if (!modules || modules.length === 0) return { ...p, enabled: true };
 
     // Le label est activé si toutes les perms des modules concernés sont is_enabled
     const relatedPerms = rawPerms.filter((rp) => modules.includes(rp.module));
@@ -126,7 +130,7 @@ function buildUiPermissions(
 
 /**
  * Construit la liste { permission_id, is_enabled } à envoyer à l'API.
- * Seules les permissions avec modules (pas les frontend-only) sont incluses.
+ * Seules les permissions présentes dans les modules mappés sont incluses.
  */
 function buildApiPayload(
   roleCode: EmployeeRoleCode,
@@ -140,7 +144,7 @@ function buildApiPayload(
 
   for (const uiPerm of uiPerms) {
     const modules = labelMap[uiPerm.label];
-    if (!modules || modules.length === 0) continue; // frontend-only, skip
+    if (!modules || modules.length === 0) continue;
 
     const relatedPerms = rawPerms.filter((rp) => modules.includes(rp.module));
     for (const rp of relatedPerms) {
@@ -173,6 +177,16 @@ function getPermissionsForRole(code: EmployeeRoleCode | null): Permission[] {
   }
 
   return PERMISSIONS_BY_ROLE[code];
+}
+
+function formatErrorMessage(error: unknown, fallback: string): string {
+  const raw = error instanceof ApiError
+    ? error.message
+    : error instanceof Error
+      ? error.message
+      : fallback;
+
+  return raw.replace(/^\s*\d+\.\s*/, "").trim() || fallback;
 }
 
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
@@ -214,8 +228,8 @@ export default function PartenaireEmployeDetailPage() {
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
-  const [deactivatePassword, setDeactivatePassword] = useState("");
-  const [showDeactivatePassword, setShowDeactivatePassword] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
   const isTitulaire = employee.roleCode === "PHARMACIEN_TITULAIRE";
 
   useEffect(() => {
@@ -283,23 +297,45 @@ export default function PartenaireEmployeDetailPage() {
     setIsSubmitting(true);
     try {
       await togglePartnerUserActive(session.token, id);
+      const wasActive = employee.statut === "Actif";
       setEmployee((prev) => ({
         ...prev,
         statut: prev.statut === "Actif" ? "Désactivé" : "Actif",
       }));
       setShowDeactivateModal(false);
-      setDeactivatePassword("");
-      setShowDeactivatePassword(false);
+      toast.success(wasActive ? "Employé désactivé avec succès." : "Employé réactivé avec succès.");
     } catch (err: unknown) {
-      toast.error(err instanceof ApiError ? err.message : "Action impossible sur cet employé.");
+      toast.error(formatErrorMessage(err, "Action impossible sur cet employé."));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
-    await handleToggleActive();
-    router.push("/partenaire/employes");
+    const session = getAuthSession();
+    if (!session || session.userType !== "user" || !session.token || !id) {
+      toast.error("Session partenaire invalide.");
+      return;
+    }
+
+    if (!deletePassword.trim()) {
+      toast.error("Veuillez saisir votre mot de passe pour confirmer la suppression.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await deletePartnerUser(session.token, id);
+      setShowDeleteModal(false);
+      setDeletePassword("");
+      setShowDeletePassword(false);
+      toast.success("Employé supprimé avec succès.");
+      router.push("/partenaire/employes");
+    } catch (err: unknown) {
+      toast.error(formatErrorMessage(err, "Action impossible sur cet employé."));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoading) {
@@ -436,77 +472,42 @@ export default function PartenaireEmployeDetailPage() {
           </div>
         </main>
 
-      {/* ═══════════ MODAL 1 — Delete confirmation ═══════════ */}
+      {/* ═══════════ MODAL 1 — Delete confirmation with password ═══════════ */}
       {showDeleteModal && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
-          onClick={() => setShowDeleteModal(false)}
-        >
-          <div
-            className="mx-4 w-full max-w-sm rounded-2xl bg-white px-8 py-8 text-center shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="mb-6 text-base font-bold text-gray-800">
-              Voulez-vous supprimer cet employé ?
-            </p>
-            <div className="flex items-center justify-center gap-4">
-              <button
-                type="button"
-                className="min-w-[100px] rounded-full bg-emerald-600 px-8 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
-                onClick={() => {
-                  void handleDelete();
-                }}
-              >
-                Oui
-              </button>
-              <button
-                type="button"
-                className="min-w-[100px] rounded-full border-2 border-emerald-600 px-8 py-2.5 text-sm font-semibold text-emerald-600 transition-colors hover:bg-emerald-50"
-                onClick={() => setShowDeleteModal(false)}
-              >
-                Non
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════ MODAL 2 — Deactivation confirmation ═══════════ */}
-      {showDeactivateModal && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
-          onClick={() => { setShowDeactivateModal(false); setShowDeactivatePassword(false); setDeactivatePassword(""); }}
+          onClick={() => {
+            setShowDeleteModal(false);
+            setShowDeletePassword(false);
+            setDeletePassword("");
+          }}
         >
           <div
             className="mx-4 w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Dark green header */}
             <div className="bg-emerald-700 px-6 py-4">
-              <h3 className="text-center text-base font-bold text-white">
-                {employee.statut === "Actif" ? "Confirmer la désactivation" : "Confirmer la réactivation"}
-              </h3>
+              <h3 className="text-center text-base font-bold text-white">Confirmer la suppression</h3>
             </div>
 
-            {/* Body */}
             <div className="px-6 py-6">
               <label className="mb-2 block text-sm font-medium text-gray-700">
                 Entrez votre mot de passe
               </label>
               <div className="relative">
                 <input
-                  type={showDeactivatePassword ? "text" : "password"}
-                  value={deactivatePassword}
-                  onChange={(e) => setDeactivatePassword(e.target.value)}
+                  type={showDeletePassword ? "text" : "password"}
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 px-4 py-2.5 pr-10 text-sm text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowDeactivatePassword((v) => !v)}
+                  onClick={() => setShowDeletePassword((v) => !v)}
                   className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
                   tabIndex={-1}
                 >
-                  {showDeactivatePassword ? (
+                  {showDeletePassword ? (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                     </svg>
@@ -519,15 +520,66 @@ export default function PartenaireEmployeDetailPage() {
                 </button>
               </div>
 
+              <div className="mt-5 flex items-center justify-center gap-4">
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  className="min-w-[100px] rounded-full bg-red-600 px-8 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
+                  onClick={() => {
+                    void handleDelete();
+                  }}
+                >
+                  Supprimer
+                </button>
+                <button
+                  type="button"
+                  className="min-w-[100px] rounded-full border-2 border-emerald-600 px-8 py-2.5 text-sm font-semibold text-emerald-600 transition-colors hover:bg-emerald-50"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setShowDeletePassword(false);
+                    setDeletePassword("");
+                  }}
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════ MODAL 2 — Deactivation confirmation ═══════════ */}
+      {showDeactivateModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
+          onClick={() => setShowDeactivateModal(false)}
+        >
+          <div
+            className="mx-4 w-full max-w-sm rounded-2xl bg-white px-8 py-8 text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="mb-6 text-base font-bold text-gray-800">
+              {employee.statut === "Actif"
+                ? "Voulez-vous désactiver cet employé ?"
+                : "Voulez-vous réactiver cet employé ?"}
+            </p>
+            <div className="flex items-center justify-center gap-4">
               <button
                 type="button"
                 disabled={isSubmitting}
-                className="mt-5 w-full rounded-full bg-emerald-600 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+                className="min-w-[100px] rounded-full bg-emerald-600 px-8 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
                 onClick={() => {
                   void handleToggleActive();
                 }}
               >
-                {employee.statut === "Actif" ? "Désactiver" : "Réactiver"}
+                Oui
+              </button>
+              <button
+                type="button"
+                className="min-w-[100px] rounded-full border-2 border-emerald-600 px-8 py-2.5 text-sm font-semibold text-emerald-600 transition-colors hover:bg-emerald-50"
+                onClick={() => setShowDeactivateModal(false)}
+              >
+                Non
               </button>
             </div>
           </div>

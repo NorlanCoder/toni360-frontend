@@ -66,12 +66,17 @@ export default function PartenaireMedicamentsPage() {
     { key: "desactives", label: "Désactivés" },
   ];
 
-  const filteredMedicines = medicines
-    .filter((m) => activeFilter === "tous" || m.statut === filterMap[activeFilter])
-    .filter((m) =>
-      searchQuery.trim() === "" ||
-      m.nom.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const filteredMedicines = useMemo(
+    () =>
+      medicines
+        .filter((m) => activeFilter === "tous" || m.statut === filterMap[activeFilter])
+        .filter((m) =>
+          searchQuery.trim() === "" ||
+          m.nom.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .sort((a, b) => a.nom.localeCompare(b.nom, "fr", { sensitivity: "base" })),
+    [activeFilter, medicines, searchQuery],
+  );
 
   const moneyFormat = useMemo(
     () =>
@@ -98,12 +103,12 @@ export default function PartenaireMedicamentsPage() {
         setMedicines(
           stocks.map((stock) => {
             let statut: Medicine["statut"] = "Disponible";
-            if (stock.statut === "rupture") {
+            if (stock.produit && stock.produit.is_active === false) {
+              statut = "Désactivé";
+            } else if (stock.statut === "rupture") {
               statut = "Indisponible";
             } else if (stock.statut === "alerte" || stock.statut === "critique") {
               statut = "Au seuil";
-            } else if (stock.statut === "expire") {
-              statut = "Désactivé";
             }
 
             return {
@@ -176,7 +181,7 @@ export default function PartenaireMedicamentsPage() {
           </div>
 
           {/* Filter tabs */}
-          <div className="mb-6 flex flex-wrap  gap-x-2  gap-y-3">
+          <div className="mb-6 flex flex-wrap  gap-x-10  gap-y-3">
             {filters.map((filter) => {
               const isActive = activeFilter === filter.key;
               return (
@@ -204,16 +209,16 @@ export default function PartenaireMedicamentsPage() {
             <table className="min-w-[520px] w-full table-auto text-sm lg:text-base">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-3 sm:px-8 py-3 sm:py-5 text-left text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
+                  <th className="w-[58%] px-3 sm:px-8 py-3 sm:py-5 text-left text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
                     Médicament
                   </th>
-                  <th className="px-3 sm:px-8 py-3 sm:py-5 text-left text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
+                  <th className="w-[16%] px-3 sm:px-8 py-3 sm:py-5 text-left text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
                     Prix unitaire
                   </th>
-                  <th className="px-3 sm:px-8 py-3 sm:py-5 text-left text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
+                  <th className="w-[12%] px-3 sm:px-8 py-3 sm:py-5 text-left text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
                     Quantité
                   </th>
-                  <th className="px-3 sm:px-8 py-3 sm:py-5 text-right text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
+                  <th className="w-[14%] px-3 sm:px-8 py-3 sm:py-5 text-right text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
                     Statut
                   </th>
                 </tr>
@@ -228,13 +233,13 @@ export default function PartenaireMedicamentsPage() {
                     <td className="px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
                       {med.nom}
                     </td>
-                    <td className="px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
+                    <td className="whitespace-nowrap px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
                       {med.prix}
                     </td>
-                    <td className="px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
+                    <td className="whitespace-nowrap px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
                       {med.quantite}
                     </td>
-                    <td className="px-3 sm:px-8 py-3 sm:py-6 text-right">
+                    <td className="whitespace-nowrap px-3 sm:px-8 py-3 sm:py-6 text-right">
                       <span
                         className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${statusStyles[med.statut]}`}
                       >
