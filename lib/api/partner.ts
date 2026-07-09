@@ -37,6 +37,14 @@ export interface PartnerCommande {
   montant_total: number;
   commentaire_pharmacie?: string | null;
   created_at?: string;
+  dates?: {
+    commande?: string | null;
+    validation_ordonnance?: string | null;
+    paiement?: string | null;
+    debut_preparation?: string | null;
+    prete?: string | null;
+    recuperation?: string | null;
+  };
 }
 
 export interface PartnerCommandesResponse {

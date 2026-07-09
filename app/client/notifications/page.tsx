@@ -27,6 +27,13 @@ interface Notification {
   numero_commande?: string;
 }
 
+function decodeHtmlEntities(value: string): string {
+  if (typeof window === "undefined") return value;
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = value;
+  return textarea.value;
+}
+
 function formatNotificationDateTime(value?: string) {
   if (!value) {
     return null;
@@ -75,8 +82,8 @@ export default function NotificationsPage() {
       setNotifications(
         extractCollection(listResponse.data.notifications).map((notification) => ({
           id: notification.id,
-          title: notification.titre,
-          description: notification.message,
+          title: decodeHtmlEntities(notification.titre),
+          description: decodeHtmlEntities(notification.message),
           createdAt: notification.created_at,
           isRead: notification.is_read,
           commande_id: typeof notification.data?.commande_id === "string" ? notification.data.commande_id : undefined,
