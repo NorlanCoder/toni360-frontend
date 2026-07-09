@@ -355,12 +355,12 @@ export default function PartenaireDashboardPage() {
           </div>
 
           {/* ── Row 2: Stock card + Donut chart ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
             {/* Card 4 — Stocks disponibles */}
             <Link
               href="/partenaire/stocks"
-              className="group flex flex-col sm:col-span-1 rounded-2xl bg-[#B0E3D1] border border-[#00955F] p-6 min-h-[220px] transition-shadow hover:shadow-md"
+              className="group flex flex-col  rounded-2xl bg-[#B0E3D1] border border-[#00955F] p-6 min-h-[220px] transition-shadow hover:shadow-md"
             >
               {/* Icon */}
               <div className="mb-4">
@@ -392,7 +392,7 @@ export default function PartenaireDashboardPage() {
             {/* Card 5 — Donut chart */}
             <Link
               href="/partenaire/employes"
-              className="group flex sm:col-span-2 items-center justify-center rounded-2xl border border-emerald-300 bg-white p-4 min-h-[180px] transition-shadow hover:shadow-md sm:p-6 sm:min-h-[220px]"
+              className="group flex  items-center justify-center rounded-2xl border border-emerald-300 bg-white p-4 min-h-[180px] transition-shadow hover:shadow-md sm:p-6 sm:min-h-[220px]"
             >
               <div className="flex flex-col items-center gap-4 w-full sm:flex-row sm:items-center sm:gap-8 sm:w-auto">
                 {/* SVG Donut */}
