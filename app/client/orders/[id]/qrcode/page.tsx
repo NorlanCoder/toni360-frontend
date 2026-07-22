@@ -26,6 +26,7 @@ function QrCodePageContent() {
     code: string;
     imageDataUrl?: string | null;
     imageUrl?: string | null;
+    publicUrl?: string | null;
     tempsRestant?: string | null;
     expiresAt?: string | null;
     commandeNumero?: string;
@@ -59,6 +60,7 @@ function QrCodePageContent() {
           code: d.qr_code.code,
           imageDataUrl: d.qr_code.image_data_url,
           imageUrl: d.qr_code.image_url,
+          publicUrl: d.qr_code.public_url,
           tempsRestant: d.qr_code.temps_restant,
           expiresAt: d.qr_code.expires_at,
           commandeNumero: d.commande?.numero,
@@ -131,6 +133,17 @@ function QrCodePageContent() {
             <div className="h-52 w-52 flex items-center justify-center rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-400">
               QR indisponible
             </div>
+          )}
+
+          {qrData.publicUrl && (
+            <a
+              href={qrData.publicUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-[#00955F] underline underline-offset-2"
+            >
+              Ouvrir le lien public de la commande
+            </a>
           )}
         </div>
       </div>

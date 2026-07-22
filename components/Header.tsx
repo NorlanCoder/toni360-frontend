@@ -64,7 +64,7 @@ export default function Header() {
                 {/* Bouton S'inscrire - fond vert (toni-green) */}
                 <button
                   onClick={() => openModal("inscription")}
-                  className="px-6 py-2 bg-toni-green-dark-2 text-white rounded-full hover:bg-toni-green-dark transition"
+                  className="px-6 py-2 bg-toni-green-dark-2 text-white rounded-full font-bold hover:bg-toni-green-dark transition"
                 >
                   S&apos;inscrire
                 </button>

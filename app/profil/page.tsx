@@ -94,10 +94,10 @@ export default function ProfilPage() {
           {/* Footer Links in Sidebar */}
           <div className="flex flex-col gap-2 text-sm text-toni-green-dark-2 mt-6">
             <Link href="/confidentialite" className="hover:underline">
-              Politique de confidentialité,
+              Politique de confidentialité
             </Link>
             <Link href="/retour" className="hover:underline">
-              Conditions générales de retour,
+              Conditions générales de retour
             </Link>
             <Link href="/contact" className="hover:underline">
               Contactez-nous

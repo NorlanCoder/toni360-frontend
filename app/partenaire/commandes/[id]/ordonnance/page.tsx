@@ -61,6 +61,13 @@ export default function OrdonnancePage() {
   const isAnySubmitting = submittingValider || submittingRefuser || submittingEnvoyer;
   const messageHasContent = notification.trim().length > 0;
 
+  const getPreviewUrl = (url: string) => {
+    const isPdf = /\.pdf($|\?)/i.test(url);
+    return isPdf ? `${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH&zoom=page-fit&pagemode=none` : url;
+  };
+
+  const isPdfOrdonnance = ordonnanceUrl ? /\.pdf($|\?)/i.test(ordonnanceUrl) : false;
+
   // Statuts ordonnance o\u00f9 Valider et Refuser sont autoris\u00e9s
   const ORD_ALLOWED = new Set(["EN_ATTENTE", "EN_VERIFICATION", "REJETEE"]);
   const canValider = ORD_ALLOWED.has(ordonnanceStatut);
@@ -94,7 +101,7 @@ export default function OrdonnancePage() {
     setSubmittingRefuser(true);
     try {
       await rejeterPartnerOrdonnance(session.token, id, "Ordonnance non conforme.");
-      toast.success("Ordonnance refusée. Le patient a été notifié.");
+      toast.success("Ordonnance rejetée. Le patient a été notifié.");
       router.back();
     } catch (err: unknown) {
       toast.error(err instanceof ApiError ? err.message : "Impossible de refuser l'ordonnance.");
@@ -126,7 +133,7 @@ export default function OrdonnancePage() {
   };
 
   return (
-    <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-16 py-5 lg:py-10 bg-emerald-50">
+    <main className="flex-1 px-4 sm:px-6 lg:px-16 py-5 lg:py-10 bg-emerald-50">
       {/* Back + Title */}
       <div className="mb-8 flex items-center gap-4">
         <button
@@ -144,11 +151,24 @@ export default function OrdonnancePage() {
       <div className="flex flex-col lg:flex-row gap-6 items-start">
 
         {/* Aperçu */}
-        <div className="w-full lg:flex-1 lg:max-w-[520px] rounded-xl border border-gray-300 bg-white shadow-sm overflow-hidden min-h-[260px] sm:min-h-[400px] lg:min-h-[580px] flex items-center justify-center">
+        <div className="w-full lg:flex-1 lg:max-w-[860px] rounded-xl border border-gray-300 bg-white shadow-sm overflow-hidden h-[calc(100vh-170px)] min-h-[560px] max-h-[calc(100vh-130px)] flex items-center justify-center">
           {isLoadingOrd ? (
             <p className="text-sm text-gray-500">Chargement de l&apos;ordonnance...</p>
           ) : ordonnanceUrl ? (
-            <iframe src={ordonnanceUrl} title="Ordonnance" className="w-full h-[260px] sm:h-[400px] lg:h-[580px] border-0" />
+            isPdfOrdonnance ? (
+              <iframe
+                src={getPreviewUrl(ordonnanceUrl)}
+                title="Ordonnance"
+                scrolling="no"
+                className="w-full h-full border-0"
+              />
+            ) : (
+              <img
+                src={ordonnanceUrl}
+                alt="Ordonnance"
+                className="w-full max-w-full h-auto max-h-[calc(100vh-140px)] object-contain"
+              />
+            )
           ) : (
             <p className="text-sm text-gray-400 px-8 text-center">
               Aucune ordonnance jointe à cette commande.

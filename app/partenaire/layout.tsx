@@ -18,6 +18,7 @@ export default function PartenaireLayout({ children }: { children: React.ReactNo
     pathname === "/partenaire" ||
     pathname.startsWith("/partenaire/connexion") ||
     pathname.startsWith("/partenaire/inscription") ||
+    pathname.startsWith("/partenaire/verification") ||
     pathname.startsWith("/partenaire/deconnexion") ||
     pathname.startsWith("/partenaire/cgu") ||
     pathname.startsWith("/partenaire/privacy") ||
@@ -52,7 +53,7 @@ function PartenaireLayoutInner({ children }: { children: React.ReactNode }) {
 
     if (!canAccessPartnerRoute(session, pathname)) {
       toast.error(`Accès refusé (${pathname}) : permission insuffisante.`);
-      router.replace("/partenaire/dashboard");
+      router.replace(getPartnerHomeRoute(session));
     }
   }, [pathname, router]);
 

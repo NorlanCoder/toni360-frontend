@@ -195,10 +195,19 @@ export default function PartenaireAjouterMedicamentPage() {
       const action = result.data.action;
 
       if (action === "ajout_direct") {
-        setModalMessage(`Le médicament "${nom}" a été ajouté au stock avec succès.`);
+        const produitLabel = result.data.produit?.nom ?? nom;
+        setModalMessage(
+          result.data.stock_existant
+            ? `Le produit "${produitLabel}" existe déjà dans votre stock. La quantité initiale a été ajoutée.`
+            : `Le médicament "${produitLabel}" a été ajouté au stock initial avec succès.`,
+        );
         setShowModal(true);
       } else {
-        toast.info(result.message, { duration: 6000 });
+        if (action === "incoherence_pharmacien") {
+          toast.info("Aucune correspondance exacte trouvée. Le médicament a été envoyé en vérification des incohérences.", { duration: 7000 });
+        } else {
+          toast.info("Aucune correspondance fiable trouvée. Le médicament est transmis pour détection de similarité/incohérence.", { duration: 7000 });
+        }
         router.push("/partenaire/medicaments/incoherences");
       }
     } catch (err: unknown) {
@@ -346,7 +355,7 @@ export default function PartenaireAjouterMedicamentPage() {
           <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm text-gray-500">
-                Quantité à ajouter
+                Stock initial
               </label>
               <input
                 type="text"

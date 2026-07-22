@@ -146,11 +146,7 @@ function LocalisationDetailContent() {
       <h1 className="mb-1 text-xl font-bold text-gray-900 sm:text-2xl">Détail de la localisation</h1>
       <p className="mb-5 text-sm text-gray-400">{dateLabel}</p>
 
-      {/* Critères recherchés */}
-      <div className="mb-5 rounded-2xl border border-gray-200 bg-gray-50 px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Médicaments recherchés</p>
-        <p className="text-sm font-medium text-gray-800">{criteres}</p>
-      </div>
+     
 
       {pharmacies.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
@@ -177,7 +173,7 @@ function LocalisationDetailContent() {
                 <div className="rounded-b-2xl overflow-hidden bg-white border border-t-0 border-gray-200">
                   <div className="hidden sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr] gap-2 px-6 py-3 text-base font-bold text-[#B5B5B5] border-b border-[#66666680]">
                     <span>Nom du produit</span>
-                    <span className="text-center">Qté</span>
+                    <span className="text-left">Qté</span>
                     <span>P.U</span>
                     <span>Total</span>
                   </div>
@@ -195,7 +191,7 @@ function LocalisationDetailContent() {
                           )}
                         </div>
 
-                        <span className="text-sm text-gray-700 sm:text-center">
+                        <span className="text-sm text-gray-700 sm:text-left">
                           <span className="sm:hidden text-gray-400 mr-1">Qté :</span>
                           {item.qteDemandee}
                         </span>

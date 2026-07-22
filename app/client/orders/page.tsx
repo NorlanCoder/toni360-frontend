@@ -49,13 +49,6 @@ const TERMINATED_PATIENT_STATUSES = new Set([
   "expiree",
 ]);
 
-const QR_VISIBLE_PATIENT_STATUSES = new Set([
-  "en_cours",
-  "payee",
-  "en_preparation",
-  "prete",
-]);
-
 export default function ClientOrdersPage() {
   return (
     <Suspense fallback={<div className="min-h-screen" />}>
@@ -91,7 +84,15 @@ function ClientOrdersContent() {
   const [activeTab, setActiveTab] = useState<"En attente" | "En cours" | "Recuperees">(initTab);
   const [loadingQrOrderId] = useState<string | null>(null);
   const [validatingOrderId, setValidatingOrderId] = useState<string | null>(null);
+  const [confirmCancelOrder, setConfirmCancelOrder] = useState<ClientOrderItem | null>(null);
+  const [isCancellingOrder, setIsCancellingOrder] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  const tabQueryValue = useMemo(() => {
+    if (activeTab === "En cours") return "en_cours";
+    if (activeTab === "Recuperees") return "recuperees";
+    return "en_attente";
+  }, [activeTab]);
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -199,6 +200,8 @@ function ClientOrdersContent() {
     const targetOrder = orders.find((order) => order.id === orderId);
     const isRecuperee = targetOrder?.statusKey === "recuperee";
 
+    setIsCancellingOrder(true);
+
     try {
       await annulerCommande(token, orderId);
 
@@ -208,6 +211,7 @@ function ClientOrdersContent() {
           ...prev,
           recuperees: Math.max(0, prev.recuperees - 1),
         }));
+        setConfirmCancelOrder(null);
         toast.success("Commande retirée de l'historique.");
         return;
       }
@@ -217,10 +221,13 @@ function ClientOrdersContent() {
           order.id === orderId ? { ...order, status: "Annulée", statusKey: "annulee" } : order,
         ),
       );
+      setConfirmCancelOrder(null);
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.message);
       }
+    } finally {
+      setIsCancellingOrder(false);
     }
   };
 
@@ -284,7 +291,7 @@ function ClientOrdersContent() {
       return;
     }
 
-    router.push(`/client/orders/${order.id}/qrcode`);
+    router.push(`/client/orders/${order.id}/qrcode?tab=${tabQueryValue}`);
   };
 
   if (isLoading) {
@@ -449,7 +456,15 @@ function ClientOrdersContent() {
             ].map((tab) => (
               <button
                 key={tab.value}
-                onClick={() => setActiveTab(tab.value)}
+                onClick={() => {
+                  setActiveTab(tab.value);
+                  const nextTab = tab.value === "En cours"
+                    ? "en_cours"
+                    : tab.value === "Recuperees"
+                      ? "recuperees"
+                      : "en_attente";
+                  router.replace(`/client/orders?tab=${nextTab}`);
+                }}
                 className={`shrink-0 border-b-2 pb-2 md:text-xl text-lg transition-colors flex items-center gap-2 ${activeTab === tab.value
                     ? "border-[#008F4F] text-[#008F4F]"
                     : "border-transparent hover:text-gray-900"
@@ -553,8 +568,8 @@ function ClientOrdersContent() {
                       )
                     )}
 
-                    {/* Bouton voir QR — masqué pour Terminées */}
-                    {order.statusKey !== "recuperee" && QR_VISIBLE_PATIENT_STATUSES.has(order.statusKey) && (
+                    {/* Bouton voir QR — affiché pour toutes les commandes de l'onglet En cours */}
+                    {activeTab === "En cours" && (
                       <button
                         onClick={() => handleShowQr(order)}
                         disabled={loadingQrOrderId === order.id}
@@ -566,17 +581,20 @@ function ClientOrdersContent() {
 
                     {/* Bouton voir détail — toujours visible */}
                     <Link
-                      href={`/client/orders/${order.id}`}
+                      href={`/client/orders/${order.id}?tab=${tabQueryValue}`}
                       className="flex items-center gap-1 rounded-full  bg-white  text-xs font-semibold text-gray-600 hover:bg-gray-50  sm:text-sm"
                     >
                       <Eye size={18} />
                       
                     </Link>
 
-                     {/* Bouton supprimer — masqué pour Terminées */}
-                    {order.statusKey !== "recuperee" && (
+                     {/* Bouton supprimer — disponible hors onglet En cours, y compris pour Récupérées */}
+                    {activeTab !== "En cours" && (
                       <button
-                        onClick={() => handleCancel(order.id)}
+                        onClick={() => {
+                          setConfirmCancelOrder(order);
+                        }}
+                        aria-label="Supprimer cette commande"
                         className="text-red-500 hover:text-red-600 transition"
                       >
                         <Trash2 size={18} />
@@ -593,6 +611,49 @@ function ClientOrdersContent() {
           </div>
         </div>
       </div>
+
+      {confirmCancelOrder && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => {
+            if (!isCancellingOrder) {
+              setConfirmCancelOrder(null);
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="mb-2 text-base font-semibold text-gray-900">Supprimer cette commande ?</p>
+            <p className="mb-5 text-sm text-gray-500">
+              {confirmCancelOrder.statusKey === "recuperee"
+                ? `La commande ${confirmCancelOrder.numero} sera retirée de votre historique. Cette action est irréversible.`
+                : `La commande ${confirmCancelOrder.numero} sera annulée. Cette action est irréversible.`}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmCancelOrder(null);
+                }}
+                disabled={isCancellingOrder}
+                className="flex-1 rounded-full border border-gray-200 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-60"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleCancel(confirmCancelOrder.id)}
+                disabled={isCancellingOrder}
+                className="flex-1 rounded-full bg-red-500 py-2.5 text-sm font-bold text-white transition hover:bg-red-600 disabled:opacity-60"
+              >
+                {isCancellingOrder ? "Suppression..." : "Supprimer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

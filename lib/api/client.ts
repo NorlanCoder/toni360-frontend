@@ -251,6 +251,7 @@ export interface PatientOrderQrCodeResponse {
       expires_at?: string | null;
       used_at?: string | null;
       created_at?: string | null;
+      public_url?: string | null;
     };
     commande?: {
       id?: string;
@@ -270,11 +271,50 @@ export interface PatientOrderQrCodeResponse {
   };
 }
 
+export interface PublicCommandeDetailsResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    commande: {
+      id: string;
+      numero: string;
+      statut: string;
+      statut_label: string;
+      date_commande?: string | null;
+      montant_total?: number;
+      devise?: string;
+    };
+    auteur?: {
+      id?: string;
+      nom?: string;
+      prenom?: string;
+      nom_affiche?: string;
+    };
+    pharmacie?: {
+      id?: string;
+      nom?: string;
+      adresse?: string;
+      ville?: string;
+    } | null;
+    lignes: Array<{
+      id: string;
+      produit?: {
+        id?: string;
+        nom?: string;
+      };
+      quantite?: number;
+      prix_unitaire?: number;
+      prix_total?: number;
+    }>;
+  };
+}
+
 export interface PatientNotificationItem {
   id: string;
   titre: string;
   message: string;
   is_read: boolean;
+  created_at?: string;
   data?: Record<string, unknown>;
 }
 
@@ -506,6 +546,12 @@ export async function getCommandeQrCode(
   });
 }
 
+export async function getPublicCommandeDetails(commandeId: string): Promise<PublicCommandeDetailsResponse> {
+  return apiRequest<PublicCommandeDetailsResponse>(`/public/commandes/${commandeId}`, {
+    method: "GET",
+  });
+}
+
 export async function annulerCommande(token: string, commandeId: string, motif?: string): Promise<{ success: boolean; message?: string }> {
   const json = buildJsonRequest({ motif: motif ?? "Annulée par le patient" });
   return apiRequest<{ success: boolean; message?: string }>(`/patient/commandes/${commandeId}/annuler`, {
@@ -711,8 +757,13 @@ export interface LocalisationDetailResponse {
   };
 }
 
-export async function getHistoriqueLocalisations(token: string): Promise<HistoriqueLocalisationsResponse> {
-  return apiRequest<HistoriqueLocalisationsResponse>("/patient/recherche/historique", {
+export async function getHistoriqueLocalisations(
+  token: string,
+  page = 1,
+): Promise<HistoriqueLocalisationsResponse> {
+  const query = new URLSearchParams({ page: String(page) });
+
+  return apiRequest<HistoriqueLocalisationsResponse>(`/patient/recherche/historique?${query.toString()}`, {
     method: "GET",
     token,
   });

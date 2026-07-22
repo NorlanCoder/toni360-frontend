@@ -9,6 +9,7 @@ import {
   extractCollection,
   getPartnerIncoherences,
   fusionnerPartnerIncoherence,
+  proposerPartnerIncoherence,
   type PartnerIncoherence,
   type ProduitSuggestion,
 } from "@/lib/api/partner";
@@ -38,6 +39,7 @@ export default function PartenaireIncoherencesPage() {
   /* Detail modal (ouvert directement depuis la liste) */
   const [selected, setSelected] = useState<PartnerIncoherence | null>(null);
   const [fusingId, setFusingId] = useState<string | null>(null);
+  const [isProposing, setIsProposing] = useState(false);
 
   /* ── Load list ── */
   const loadData = useCallback(async () => {
@@ -71,12 +73,38 @@ export default function PartenaireIncoherencesPage() {
     try {
       await fusionnerPartnerIncoherence(session.token, incoherenceId, produitId);
       toast.success("Incohérence fusionnée avec succès !");
+      const remainingIncoherences = incoherences.filter((inc) => inc.id !== incoherenceId);
+      setIncoherences(remainingIncoherences);
       setSelected(null);
-      router.push("/partenaire/medicaments");
+
+      if (remainingIncoherences.length === 0) {
+        router.push("/partenaire/medicaments");
+      }
     } catch (err: unknown) {
       toast.error(err instanceof ApiError ? err.message : "Erreur lors de la fusion.");
     } finally {
       setFusingId(null);
+    }
+  };
+
+  const handleProposer = async (incoherenceId: string) => {
+    const session = getAuthSession();
+    if (!session?.token || !selected) return;
+
+    setIsProposing(true);
+    try {
+      const res = await proposerPartnerIncoherence(session.token, incoherenceId);
+      toast.success(res.message ?? "Proposition envoyée à l'administrateur.");
+
+      const updated = res.data;
+      if (updated) {
+        setSelected(updated);
+        setIncoherences((prev) => prev.map((inc) => (inc.id === updated.id ? updated : inc)));
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof ApiError ? err.message : "Erreur lors de la proposition.");
+    } finally {
+      setIsProposing(false);
     }
   };
 
@@ -268,7 +296,7 @@ export default function PartenaireIncoherencesPage() {
                           {selected.statut === "EN_ATTENTE" && s.produit_id && (
                             <button
                               type="button"
-                              disabled={fusingId !== null}
+                              disabled={fusingId !== null || isProposing}
                               onClick={() => handleFusionner(selected.id, s.produit_id!)}
                               className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
                             >
@@ -282,6 +310,32 @@ export default function PartenaireIncoherencesPage() {
                 </div>
               ) : (
                 <p className="text-sm text-gray-500">Aucune suggestion disponible.</p>
+              )}
+
+              {selected.statut === "EN_ATTENTE" && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <span className="font-medium text-blue-700">Validation admin :</span>{" "}
+                      <span className="text-blue-800">
+                        proposer le médicament saisi « {selected.nom_saisi} »
+                      </span>
+                      {selected.propose_at && (
+                        <span className="ml-2 text-xs text-blue-600">
+                          (proposé le {formatDate(selected.propose_at)})
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isProposing || !!selected.propose_at || fusingId !== null}
+                      onClick={() => handleProposer(selected.id)}
+                      className="rounded-lg border border-blue-500 px-3 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 disabled:opacity-50"
+                    >
+                      {isProposing ? "..." : selected.propose_at ? "Déjà proposé" : "Proposer ce médicament"}
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </div>

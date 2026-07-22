@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Lock, Eye, EyeOff, Check, X } from "lucide-react";
-import { toast } from "sonner";
+import { User, Lock, Eye, EyeOff, Check, X, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
 import { registerPatient } from "@/lib/api/auth";
@@ -12,10 +11,15 @@ import { saveAuthSession } from "@/lib/api/session";
 import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@/lib/passwordPolicy";
 
 export default function InscriptionPage() {
+  type FieldErrors = Partial<Record<"nom" | "email" | "telephone" | "password", string>>;
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formData, setFormData] = useState({
     nom: "",
     email: "",
@@ -23,6 +27,47 @@ export default function InscriptionPage() {
     telephone: "",
     password: "",
   });
+
+  const clearError = (field: keyof FieldErrors) =>
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+
+  const mapApiErrorsToFields = (error: ApiError): FieldErrors => {
+    const mapped: FieldErrors = {};
+    const details = error.details as { errors?: Record<string, unknown> } | undefined;
+    const apiErrors = details?.errors;
+
+    if (apiErrors && typeof apiErrors === "object") {
+      Object.entries(apiErrors).forEach(([key, value]) => {
+        const message = Array.isArray(value)
+          ? value.find((item) => typeof item === "string")
+          : typeof value === "string"
+            ? value
+            : undefined;
+
+        if (!message) return;
+
+        if (key === "nom" || key === "prenom") mapped.nom ??= message;
+        if (key === "email") mapped.email = message;
+        if (key === "telephone") mapped.telephone = message;
+        if (key === "password" || key === "password_confirmation") mapped.password ??= message;
+      });
+    }
+
+    if (Object.keys(mapped).length > 0) {
+      return mapped;
+    }
+
+    const lower = error.message.toLowerCase();
+    if (lower.includes("email")) return { email: error.message };
+    if (lower.includes("téléphone") || lower.includes("telephone")) return { telephone: error.message };
+    if (lower.includes("mot de passe") || lower.includes("password")) return { password: error.message };
+    return { nom: error.message };
+  };
 
   const passwordRules = getPasswordRuleResults(formData.password);
   const passwordStrength = getPasswordStrength(formData.password);
@@ -36,16 +81,39 @@ export default function InscriptionPage() {
     }
 
     const fullName = formData.nom.trim();
-    if (!fullName || !formData.email.trim() || !formData.telephone.trim() || !formData.password) {
-      toast.warning("Veuillez remplir tous les champs obligatoires.");
+    const nextErrors: FieldErrors = {};
+
+    if (!fullName) {
+      nextErrors.nom = "Le nom complet est obligatoire.";
+    }
+
+    const cleanEmail = formData.email.trim();
+    if (!cleanEmail) {
+      nextErrors.email = "L'adresse email est obligatoire.";
+    } else if (!EMAIL_RE.test(cleanEmail)) {
+      nextErrors.email = "Le format de l'adresse email est invalide.";
+    }
+
+    const cleanPhone = formData.telephone.trim();
+    if (!cleanPhone) {
+      nextErrors.telephone = "Le numéro de téléphone est obligatoire.";
+    } else if (cleanPhone.replace(/\D/g, "").length < 8) {
+      nextErrors.telephone = "Le numéro de téléphone est invalide.";
+    }
+
+    if (!formData.password) {
+      nextErrors.password = "Le mot de passe est obligatoire.";
+    } else if (!passwordValid) {
+      nextErrors.password = "Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      if (nextErrors.password) setPasswordTouched(true);
       return;
     }
 
-    if (!passwordValid) {
-      setPasswordTouched(true);
-      toast.warning("Le mot de passe doit contenir au moins 8 caracteres, une majuscule, une minuscule, un chiffre et un caractere special.");
-      return;
-    }
+    setFieldErrors({});
 
     const nameParts = fullName.split(/\s+/).filter(Boolean);
     const prenom = nameParts[0] ?? fullName;
@@ -63,20 +131,25 @@ export default function InscriptionPage() {
         password_confirmation: formData.password,
       });
 
+      const token = response.data?.token;
+      if (!token) {
+        setFieldErrors({ nom: response.message ?? "Réponse d'inscription invalide: token manquant." });
+        return;
+      }
+
       saveAuthSession({
         userType: "patient",
-        token: response.data.token,
-        tokenType: response.data.token_type,
-        profile: response.data.patient ?? null,
+        token,
+        tokenType: response.data?.token_type ?? "Bearer",
+        profile: response.data?.patient ?? null,
       });
 
-      toast.success(response.message ?? "Inscription réussie.");
       router.push("/client/accueil");
     } catch (error: unknown) {
       if (error instanceof ApiError) {
-        toast.error(error.message);
+        setFieldErrors(mapApiErrorsToFields(error));
       } else {
-        toast.error("Une erreur est survenue pendant l'inscription.");
+        setFieldErrors({ nom: "Une erreur est survenue pendant l'inscription." });
       }
     } finally {
       setSubmitting(false);
@@ -117,38 +190,63 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, nom: e.target.value })
                 }
-                className="w-full bg-white px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                onInput={() => clearError("nom")}
+                className={`w-full bg-white px-4 py-3 border rounded-md focus:outline-none focus:ring-2 text-black ${
+                  fieldErrors.nom
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-black focus:ring-toni-green-dark-2"
+                }`}
               />
+              {fieldErrors.nom && <p className="mt-1 text-xs text-red-600">{fieldErrors.nom}</p>}
             </div>
 
             {/* Email */}
-            <div className="relative flex items-center">
-              <User className="absolute left-4 text-gray-400" size={18} />
-              <input
-                type="email"
-                placeholder="Adresse email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                className="w-full bg-white pl-12 pr-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
-              />
+            <div>
+              <div className="relative flex items-center">
+                <User className="absolute left-4 text-gray-400" size={18} />
+                <input
+                  type="email"
+                  placeholder="Adresse email"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  onInput={() => clearError("email")}
+                  className={`w-full bg-white pl-12 pr-4 py-3 border rounded-md focus:outline-none focus:ring-2 text-black ${
+                    fieldErrors.email
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-black focus:ring-toni-green-dark-2"
+                  }`}
+                />
+              </div>
+              {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
             </div>
 
             {/* Téléphone avec indicatif */}
-            <div className="relative flex gap-2">
-              <select
-                value={formData.indicatif}
-                onChange={e => setFormData({ ...formData, indicatif: e.target.value })}
-                className="px-2 py-3 border border-black rounded-md text-black focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2"
-                style={{ fontSize: '0.75rem', width: '70px' }}
-              >
-                {COUNTRY_CODES.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.flag} {c.code}
-                  </option>
-                ))}
-              </select>
+            <div>
+              <div className="relative flex gap-2">
+              <div className="relative">
+                <select
+                  value={formData.indicatif}
+                  onChange={e => setFormData({ ...formData, indicatif: e.target.value })}
+                  className={`appearance-none pl-2 pr-10 py-3 border rounded-md text-black focus:outline-none focus:ring-2 ${
+                    fieldErrors.telephone
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-black focus:ring-toni-green-dark-2"
+                  }`}
+                  style={{ fontSize: '0.75rem', minWidth: '92px' }}
+                >
+                  {COUNTRY_CODES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.flag} {c.code}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={16}
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-700"
+                />
+              </div>
               <input
                 type="tel"
                 placeholder="Numéro de téléphone"
@@ -156,8 +254,15 @@ export default function InscriptionPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, telephone: e.target.value })
                 }
-                className="flex-1 bg-white px-4 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                onInput={() => clearError("telephone")}
+                className={`flex-1 bg-white px-4 py-3 border rounded-md focus:outline-none focus:ring-2 text-black ${
+                  fieldErrors.telephone
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-black focus:ring-toni-green-dark-2"
+                }`}
               />
+              </div>
+              {fieldErrors.telephone && <p className="mt-1 text-xs text-red-600">{fieldErrors.telephone}</p>}
             </div>
 
             {/* Mot de passe */}
@@ -171,8 +276,13 @@ export default function InscriptionPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
+                  onInput={() => clearError("password")}
                   onBlur={() => setPasswordTouched(true)}
-                  className="w-full bg-white pl-12 pr-12 py-3 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-toni-green-dark-2 text-black"
+                  className={`w-full bg-white pl-12 pr-12 py-3 border rounded-md focus:outline-none focus:ring-2 text-black ${
+                    fieldErrors.password
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-black focus:ring-toni-green-dark-2"
+                  }`}
                 />
                 <button
                   type="button"
@@ -184,7 +294,9 @@ export default function InscriptionPage() {
                 </button>
               </div>
 
-              {(passwordTouched || formData.password.length > 0) && (
+              {fieldErrors.password && <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>}
+
+              {(passwordTouched || formData.password.length > 0) && !passwordValid && (
                 <div className="space-y-2 pl-1">
                   <div>
                     <div className="mb-1 flex items-center justify-between text-xs">
@@ -215,7 +327,7 @@ export default function InscriptionPage() {
             {/* Bouton S'inscrire */}
             <button
               type="submit"
-              disabled={submitting || !passwordValid}
+              disabled={submitting}
               className="w-full bg-toni-green-dark-2 text-white font-bold py-3 rounded-md hover:bg-toni-green-dark transition"
             >
               {submitting ? "Inscription..." : "S\'inscrire"}

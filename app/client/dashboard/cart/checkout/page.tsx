@@ -280,7 +280,7 @@ function CartPageContent() {
     }
 
     if (items.length === 0) {
-      router.push("/client/orders");
+      router.push("/client/localisation");
       return;
     }
 
@@ -288,7 +288,7 @@ function CartPageContent() {
     try {
       const livePanierId = await resolveActivePanierId();
       if (!livePanierId) {
-        router.push("/client/orders");
+        router.push("/client/localisation");
         return;
       }
 
@@ -298,7 +298,7 @@ function CartPageContent() {
       await annulerCommande(token, commandeId, "Annulée par le patient depuis le checkout");
 
       clearLocalCart();
-      router.push("/client/orders");
+      router.push("/client/localisation");
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.message);
@@ -483,6 +483,9 @@ function CartPageContent() {
 
   const total = items.reduce((sum, item) => sum + item.qty * item.price, 0);
   const hasPrescription = prescriptionCount > 0;
+  const ordonnanceMessage = prescriptionCount === 1
+    ? "1 médicament de cette commande nécessite une ordonnance."
+    : `${prescriptionCount} médicaments de cette commande nécessitent une ordonnance.`;
 
   return (
     <section className="mx-auto w-full max-w-6xl px-3 pb-6 sm:px-6 sm:pb-8">
@@ -502,7 +505,7 @@ function CartPageContent() {
         {/* En-têtes colonnes (desktop) */}
         <div className="hidden sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr_44px] gap-2 px-6 py-3 text-base font-bold text-[#B5B5B5] border-b border-[#66666680]">
           <span>Nom du produit</span>
-          <span className="text-center">Qté</span>
+          <span className="text-left">Qté</span>
           <span>P.U</span>
           <span>Total</span>
           <span />
@@ -531,7 +534,7 @@ function CartPageContent() {
             </div>
 
             {/* Qté */}
-            <div className="flex sm:justify-center">
+            <div className="flex sm:justify-start">
               <div className="inline-flex items-center rounded-full border border-gray-200 px-2 py-1">
                 <button
                   type="button"
@@ -601,7 +604,7 @@ function CartPageContent() {
             </div>
           )}
           <p className="text-sm text-gray-600 mb-1">
-            {prescriptionCount} médicament(s) de cette commande nécessitent une ordonnance.
+            {ordonnanceMessage}
           </p>
 
           {/* Fichier sélectionné : prévisualisation */}

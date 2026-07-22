@@ -37,6 +37,14 @@ export interface PartnerCommande {
   montant_total: number;
   commentaire_pharmacie?: string | null;
   created_at?: string;
+  dates?: {
+    commande?: string | null;
+    validation_ordonnance?: string | null;
+    paiement?: string | null;
+    debut_preparation?: string | null;
+    prete?: string | null;
+    recuperation?: string | null;
+  };
 }
 
 export interface PartnerCommandesResponse {
@@ -181,6 +189,7 @@ export interface PartnerStockItem {
     dci?: string | null;
     forme?: string | null;
     dosage?: string | null;
+    is_active?: boolean;
   } | null;
 }
 
@@ -389,7 +398,7 @@ export interface PartnerHistoriqueResponse {
 
 export interface PartnerHistoriqueUtilisateursResponse {
   success: boolean;
-  data: { id: string; nom: string; role_code: string | null; role_label: string | null }[];
+  data: { id: string; nom: string; prenom?: string | null; role_code: string | null; role_label: string | null }[];
 }
 
 export async function getPartnerHistorique(
@@ -499,6 +508,16 @@ export async function togglePartnerUserActive(
 ): Promise<{ success: boolean; message?: string }> {
   return apiRequest<{ success: boolean; message?: string }>(`/pharmacie/users/${userId}/toggle-active`, {
     method: "PUT",
+    token,
+  });
+}
+
+export async function deletePartnerUser(
+  token: string,
+  userId: string,
+): Promise<{ success: boolean; message?: string }> {
+  return apiRequest<{ success: boolean; message?: string }>(`/pharmacie/users/${userId}`, {
+    method: "DELETE",
     token,
   });
 }
@@ -644,6 +663,25 @@ export async function updatePartnerProduitSeuil(
   const json = buildJsonRequest({ seuil_alerte });
   return apiRequest<{ success: boolean; message?: string }>(`/pharmacie/stocks/${produitId}/seuil`, {
     method: "PUT",
+    token,
+    body: json.body,
+    headers: json.headers,
+  });
+}
+
+export async function addPartnerStockQuantity(
+  token: string,
+  produitId: string,
+  quantite: number,
+): Promise<{ success: boolean; message?: string; data?: Record<string, unknown> }> {
+  const json = buildJsonRequest({
+    quantite,
+    type: "entree",
+    motif: "Ajout de stock depuis la fiche médicament",
+  });
+
+  return apiRequest<{ success: boolean; message?: string; data?: Record<string, unknown> }>(`/pharmacie/stocks/${produitId}/ajuster`, {
+    method: "POST",
     token,
     body: json.body,
     headers: json.headers,
@@ -811,12 +849,21 @@ export interface PartnerIncoherence {
   statut_color: string;
   statut_icon: string;
   produit_fusionne_id?: string | null;
+  produit_propose_id?: string | null;
+  propose_at?: string | null;
   commentaire_admin?: string | null;
   traite_par?: string | null;
   traite_at?: string | null;
   pharmacie?: { id: string; nom: string; ville?: string | null } | null;
   user?: { id: string; nom: string; prenom: string; email: string } | null;
   produit_fusionne?: {
+    id: string;
+    nom: string;
+    forme?: string | null;
+    dosage?: string | null;
+    code_produit?: string | null;
+  } | null;
+  produit_propose?: {
     id: string;
     nom: string;
     forme?: string | null;
@@ -871,6 +918,7 @@ export interface SoumettreResultResponse {
   data: {
     action: "ajout_direct" | "incoherence_pharmacien" | "incoherence_admin";
     score?: number;
+    stock_existant?: boolean;
     produit?: { id: string; nom: string; code_produit?: string | null; forme?: string | null; dosage?: string | null };
     stock?: Record<string, unknown>;
     mouvement?: Record<string, unknown>;
@@ -947,6 +995,19 @@ export async function fusionnerPartnerIncoherence(
       method: "POST",
       token,
       ...buildJsonRequest({ produit_id: produitId }),
+    },
+  );
+}
+
+export async function proposerPartnerIncoherence(
+  token: string,
+  incoherenceId: string,
+): Promise<{ success: boolean; message?: string; data?: PartnerIncoherence }> {
+  return apiRequest<{ success: boolean; message?: string; data?: PartnerIncoherence }>(
+    `/pharmacie/incoherences/${incoherenceId}/proposer`,
+    {
+      method: "POST",
+      token,
     },
   );
 }

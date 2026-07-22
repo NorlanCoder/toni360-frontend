@@ -25,6 +25,7 @@ interface OrderItem {
   total: number;
   ordonnance_requise?: boolean;
   ordonnance_fournie?: boolean;
+  ordonnance_statut?: string | null;
 }
 
 interface OrderDetail {
@@ -87,8 +88,8 @@ export default function CommandeDetailPage() {
 
   const mapToOrderDetail = (commande: PartnerCommande): OrderDetail => {
     const createdAt = commande.created_at ? new Date(commande.created_at) : null;
-    const preteAt: Date | null = null;
-    const recuperationAt: Date | null = null;
+    const preteAt = commande.dates?.prete ? new Date(commande.dates.prete) : null;
+    const recuperationAt = commande.dates?.recuperation ? new Date(commande.dates.recuperation) : null;
 
     const formatDate = (date: Date | null) => date ? date.toLocaleDateString("fr-FR") : null;
     const formatTime = (date: Date | null) => date ? date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : null;
@@ -122,6 +123,7 @@ export default function CommandeDetailPage() {
         total: produit.prix_total ?? 0,
         ordonnance_requise: !!produit.ordonnance_requise,
         ordonnance_fournie: !!produit.ordonnance?.fichier_url,
+        ordonnance_statut: produit.ordonnance?.statut ?? null,
       })),
       montantTotal: commande.montant_total ?? 0,
       statut: toViewStatus(commande.statut),
@@ -158,8 +160,16 @@ export default function CommandeDetailPage() {
       toast.error("Session partenaire invalide.");
       return;
     }
+    if (!order) {
+      toast.error("Commande introuvable.");
+      return;
+    }
     if (!READY_ALLOWED_STATUSES.has(backendStatus)) {
       toast.error("Cette commande ne peut pas encore être marquée prête.");
+      return;
+    }
+    if (order.items.some((item) => item.ordonnance_requise && item.ordonnance_statut !== "VALIDEE")) {
+      toast.error("Ordonnance non vérifiée: validez ou rejetez l'ordonnance avant de marquer la commande prête.");
       return;
     }
     setSubmittingReady(true);
@@ -223,7 +233,11 @@ export default function CommandeDetailPage() {
   }
 
   /* ── Computed flags ── */
-  const canMarkReady = READY_ALLOWED_STATUSES.has(backendStatus);
+  const hasUnvalidatedRequiredPrescription = order.items.some(
+    (item) => item.ordonnance_requise && item.ordonnance_statut !== "VALIDEE",
+  );
+  const canReadyByStatus = READY_ALLOWED_STATUSES.has(backendStatus);
+  const canMarkReady = canReadyByStatus && !hasUnvalidatedRequiredPrescription;
   const canForceRecuperer = new Set(["PRETE", "PAYEE", "EN_PREPARATION", "EN_COURS"]).has(backendStatus);
   const showDemanderOrdonnance = backendStatus === "EN_COURS";
 
@@ -294,8 +308,8 @@ export default function CommandeDetailPage() {
                 </span>
               </div>
 
-              {/* Date de préparation (si commande prête ou récupérée) */}
-              {(order.statut === "prete" || order.statut === "recuperee") && order.datePreparation && (
+              {/* Date de préparation (si commande prête) */}
+              {order.statut === "prete" && order.datePreparation && (
                 <div className="mb-2">
                   <span className="font-medium">Prête le :</span>
                   <span className="font-semibold text-gray-800 ml-1">
@@ -425,7 +439,7 @@ export default function CommandeDetailPage() {
             ) : (
               <>
                 {/* Demander ordonnance — gris outline, visible seulement en EN_COURS */}
-                {showDemanderOrdonnance && (
+                {/* {showDemanderOrdonnance && (
                   <button
                     type="button"
                     onClick={handleDemanderOrdonnance}
@@ -435,15 +449,17 @@ export default function CommandeDetailPage() {
                     {submittingOrdonnance && <Loader2 className="h-4 w-4 animate-spin" />}
                     Demander ordonnance
                   </button>
-                )}
+                )} */}
 
                 {/* Prête — vert outline */}
                 <button
                   type="button"
                   onClick={handleReady}
-                  disabled={submittingReady || !canMarkReady}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full border-2 px-6 py-3 text-base font-semibold transition-colors ${!submittingReady && canMarkReady
-                    ? "border-emerald-600 text-emerald-600 bg-white hover:bg-emerald-50"
+                  disabled={submittingReady || !canReadyByStatus}
+                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full border-2 px-6 py-3 text-base font-semibold transition-colors ${!submittingReady && canReadyByStatus
+                    ? canMarkReady
+                      ? "border-emerald-600 text-emerald-600 bg-white hover:bg-emerald-50"
+                      : "border-gray-300 text-gray-600 bg-gray-50 hover:bg-gray-100"
                     : "border-gray-300 text-gray-400 bg-white cursor-not-allowed"
                     }`}
                 >

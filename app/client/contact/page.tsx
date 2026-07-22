@@ -97,7 +97,7 @@ export default function ContactPage() {
                 <span className="text-gray-500">•</span>
                 <span className="font-medium">Téléphone</span>
                 <span className="mx-2">:</span>
-                <a href="tel:+2290129111487" className="text-[#008F4F] underline hover:underline">+229 01 29 11 14 87</a>.
+                <a href="tel:+2290129111487" className="text-[#008F4F] underline hover:underline">+229 01 29 11 14 87</a>
               </li>
             </ul>
           </div>

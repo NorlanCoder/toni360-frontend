@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 interface NotificationCardProps {
   title: string;
   description: string;
+  timestamp?: string;
   isRead?: boolean;
   onOpen: () => void;
   onDelete: () => void;
@@ -13,6 +14,7 @@ interface NotificationCardProps {
 export default function NotificationCard({
   title,
   description,
+  timestamp,
   isRead = false,
   onOpen,
   onDelete,
@@ -39,6 +41,7 @@ export default function NotificationCard({
       <div className="flex-1 min-w-0">
         <h3 className="font-bold text-gray-900 text-base mb-1">{title}</h3>
         <p className="text-gray-600 text-sm truncate">{description}</p>
+        {timestamp && <p className="mt-1 text-xs text-gray-400">{timestamp}</p>}
       </div>
 
       {/* Delete */}

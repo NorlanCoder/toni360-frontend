@@ -16,10 +16,12 @@ function ResetPasswordForm() {
 
   const token = searchParams.get("token") ?? "";
   const email = searchParams.get("email") ?? "";
-  const from = searchParams.get("from") ?? "client";
+  const rawFrom = searchParams.get("from");
+  const normalizedFrom = rawFrom === "pharmacie" ? "partenaire" : rawFrom;
+  const from = normalizedFrom === "client" || normalizedFrom === "partenaire" ? normalizedFrom : null;
+  const redirectPath = from === "partenaire" ? "/partenaire/connexion" : "/client/connexion";
 
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [formData, setFormData] = useState({
@@ -33,15 +35,15 @@ function ResetPasswordForm() {
   const passwordStrong = isPasswordStrong(formData.password);
 
   useEffect(() => {
-    if (!token || !email) {
+    if (!token || !email || !from) {
       toast.error("Lien invalide. Veuillez demander un nouveau lien de réinitialisation.");
     }
-  }, [token, email]);
+  }, [token, email, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!token || !email) {
+    if (!token || !email || !from) {
       toast.error("Lien invalide.");
       return;
     }
@@ -60,12 +62,12 @@ function ResetPasswordForm() {
       const res = await resetPassword({
         token,
         email,
+        from,
         password: formData.password,
         password_confirmation: formData.confirmPassword,
       });
       setDone(true);
       toast.success(res.message ?? "Mot de passe réinitialisé !");
-      const redirectPath = from === "partenaire" ? "/partenaire/connexion" : "/client/connexion";
       setTimeout(() => router.push(redirectPath), 3000);
     } catch (error: unknown) {
       if (error instanceof ApiError) {
@@ -112,7 +114,7 @@ function ResetPasswordForm() {
             Votre mot de passe a été réinitialisé. Vous allez être redirigé vers la page de connexion…
           </p>
           <Link
-            href="/client/connexion"
+            href={redirectPath}
             className="mt-4 inline-block text-sm font-bold hover:underline"
             style={{ color: "#137551" }}
           >
@@ -146,7 +148,7 @@ function ResetPasswordForm() {
           <div className="relative flex items-center">
             <Lock className="absolute left-4 text-gray-400" size={18} />
             <input
-              type={showConfirm ? "text" : "password"}
+              type={showPassword ? "text" : "password"}
               placeholder="Confirmer le nouveau mot de passe"
               value={formData.confirmPassword}
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
@@ -155,14 +157,14 @@ function ResetPasswordForm() {
             />
             <button
               type="button"
-              onClick={() => setShowConfirm(!showConfirm)}
+              onClick={() => setShowPassword(!showPassword)}
               className="absolute right-4 text-gray-400 hover:text-gray-600"
             >
-              {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
 
-          {(passwordTouched || formData.password.length > 0) && (
+          {(passwordTouched || formData.password.length > 0) && !passwordStrong && (
             <div className="space-y-2 rounded-md border border-gray-200 bg-white p-2.5">
               <div>
                 <div className="mb-1 flex items-center justify-between text-xs">
@@ -192,7 +194,7 @@ function ResetPasswordForm() {
 
           <button
             type="submit"
-            disabled={submitting || !token || !email || !passwordStrong}
+            disabled={submitting || !token || !email || !from || !passwordStrong}
             className="w-full rounded-md py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50 sm:py-3 sm:text-base"
             style={{ backgroundColor: "#137551" }}
           >
@@ -202,7 +204,7 @@ function ResetPasswordForm() {
       )}
 
       <p className="mt-6 text-center text-sm text-gray-600">
-        <Link href="/mot-de-passe-oublie" className="font-semibold hover:underline" style={{ color: "#137551" }}>
+        <Link href={from ? `/mot-de-passe-oublie?from=${from}` : "/client/connexion"} className="font-semibold hover:underline" style={{ color: "#137551" }}>
           Demander un nouveau lien
         </Link>
       </p>
@@ -212,12 +214,25 @@ function ResetPasswordForm() {
 
 export default function ReinitialiserMotDePassePage() {
   return (
+    <Suspense fallback={<p className="text-gray-500">Chargement…</p>}>
+      <ReinitialiserMotDePasseContent />
+    </Suspense>
+  );
+}
+
+function ReinitialiserMotDePasseContent() {
+  const searchParams = useSearchParams();
+  const rawFrom = searchParams.get("from");
+  const normalizedFrom = rawFrom === "pharmacie" ? "partenaire" : rawFrom;
+  const from = normalizedFrom === "client" || normalizedFrom === "partenaire" ? normalizedFrom : "client";
+
+  return (
     <div className="flex min-h-screen">
       {/* Section Image - Gauche */}
       <div className="relative hidden lg:block lg:w-3/5">
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/images/ph6.png')" }}
+          style={{ backgroundImage: from === "partenaire" ? "url('/images/imgc.jpg')" : "url('/images/ph6.png')" }}
         />
       </div>
 
@@ -226,9 +241,7 @@ export default function ReinitialiserMotDePassePage() {
         className="flex w-full flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-10 lg:w-2/5 lg:px-8 lg:py-12"
         style={{ backgroundColor: "#eafff8" }}
       >
-        <Suspense fallback={<p className="text-gray-500">Chargement…</p>}>
-          <ResetPasswordForm />
-        </Suspense>
+        <ResetPasswordForm />
       </div>
     </div>
   );

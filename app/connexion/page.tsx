@@ -46,11 +46,17 @@ export default function ConnexionPage() {
         password: formData.password,
       });
 
+      const token = response.data?.token;
+      if (!token) {
+        toast.error(response.message ?? "Réponse de connexion invalide: token manquant.");
+        return;
+      }
+
       saveAuthSession({
         userType: "patient",
-        token: response.data.token,
-        tokenType: response.data.token_type,
-        profile: response.data.patient ?? null,
+        token,
+        tokenType: response.data?.token_type ?? "Bearer",
+        profile: response.data?.patient ?? null,
       }, formData.rememberMe);
 
       toast.success(response.message ?? "Connexion réussie.");
@@ -190,7 +196,7 @@ export default function ConnexionPage() {
                 />
                 <span className="text-gray-700">Se souvenir de moi</span>
               </label>
-              <Link href="/mot-de-passe-oublie" className="text-gray-700 hover:text-toni-green-dark-2">
+              <Link href="/mot-de-passe-oublie?from=client" className="text-gray-700 hover:text-toni-green-dark-2">
                 Mot de passe oublié ?
               </Link>
             </div>

@@ -26,7 +26,7 @@ export default function PartenaireHeader() {
 
   const session = useMemo(() => getAuthSession(), []);
   const profile = session?.profile as { prenom?: string; nom?: string } | null;
-  const displayName = profile?.prenom || profile?.nom || "";
+  const displayName = profile?.nom || profile?.prenom || "";
   const showWelcome = pathname === "/partenaire/dashboard";
   const [notifCount, setNotifCount] = useState(0);
   const router = useRouter();
@@ -64,8 +64,7 @@ export default function PartenaireHeader() {
       {/* Welcome / Search slot */}
       <div className="min-w-0 flex-1">
         {visibleSearch ? (
-          <div className="relative max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <div className="relative flex max-w-xl items-center">
             <input
               ref={searchInputRef}
               type="search"
@@ -77,13 +76,20 @@ export default function PartenaireHeader() {
                 }
               }}
               placeholder={searchPlaceholder}
-              className="w-full rounded-xl border border-emerald-100 bg-emerald-50/60 py-2 pl-9 pr-4 text-sm text-gray-700 outline-none placeholder:text-gray-400 focus:border-emerald-400 focus:bg-emerald-50 focus:ring-1 focus:ring-emerald-300"
+              className="h-12 w-full rounded-full bg-gray-100 py-3 pl-4 pr-14 text-base text-gray-700 outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-toni-green-dark-2"
             />
+            <button
+              type="button"
+              aria-label="Lancer la recherche"
+              className="absolute right-1 flex h-10 w-10 items-center justify-center rounded-full bg-toni-green-dark-2 text-white"
+            >
+              <Search size={18} />
+            </button>
           </div>
         ) : (
           showWelcome && (
             <p className="text-base sm:text-xl font-semibold text-gray-800 truncate">
-              Bienvenu{displayName ? `, Dr. ${displayName}` : ""}
+              Bienvenue{displayName ? `, Dr. ${displayName}` : ""}
             </p>
           )
         )}

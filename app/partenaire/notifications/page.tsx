@@ -24,6 +24,13 @@ interface Notification {
   numero_commande?: string;
 }
 
+function decodeHtmlEntities(value: string): string {
+  if (typeof window === "undefined") return value;
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = value;
+  return textarea.value;
+}
+
 export default function PartenaireNotificationsPage() {
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -48,8 +55,8 @@ export default function PartenaireNotificationsPage() {
       setNotifications(
         extractCollection(listResponse.data.notifications).map((n) => ({
           id: n.id,
-          title: n.titre,
-          description: n.message,
+          title: decodeHtmlEntities(n.titre),
+          description: decodeHtmlEntities(n.message),
           isRead: n.is_read,
           commande_id: typeof n.data?.commande_id === "string" ? n.data.commande_id : undefined,
           numero_commande: typeof n.data?.numero_commande === "string" ? n.data.numero_commande : undefined,
@@ -174,7 +181,7 @@ export default function PartenaireNotificationsPage() {
           <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
             {nonReadCount > 0 ? (
               <p className="text-sm text-gray-600 shrink-0">
-                {nonReadCount} notification{nonReadCount > 1 ? "s" : ""} non lue{nonReadCount > 1 ? "s" : ""}
+                {nonReadCount} notification{nonReadCount !== 1 ? "s" : ""} non lue{nonReadCount !== 1 ? "s" : ""}
               </p>
             ) : (
               <span />

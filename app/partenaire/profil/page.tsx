@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, Upload } from "lucide-react";
+import { Eye, EyeOff, ExternalLink, Upload } from "lucide-react";
 import { getPartnerProfile } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession, saveAuthSession } from "@/lib/api/session";
@@ -42,6 +42,7 @@ export default function PartenaireProfil() {
   const [telephone, setTelephone] = useState<E164Number | undefined>(undefined);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [licenceUrl, setLicenceUrl] = useState<string | null>(null);
   const [hasLicence, setHasLicence] = useState(false);
   const [licenceFile, setLicenceFile] = useState<File | null>(null);
@@ -324,13 +325,20 @@ export default function PartenaireProfil() {
                 <label className="block text-[15px] text-gray-500 mb-[8px]">Mot de passe <span className="text-xs text-gray-400">(laisser vide pour ne pas changer)</span></label>
                 <div className="relative">
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Nouveau mot de passe"
-                    className="w-full pl-4 pr-10 py-[14px] bg-gray-50 border border-gray-200 rounded-[8px] text-[17px] text-gray-700 outline-none focus:border-emerald-500"
+                    className="w-full pl-4 pr-12 py-[14px] bg-gray-50 border border-gray-200 rounded-[8px] text-[17px] text-gray-700 outline-none focus:border-emerald-500"
                   />
-                  
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                    className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
               </div>
 
