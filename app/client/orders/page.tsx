@@ -313,32 +313,41 @@ function ClientOrdersContent() {
         {/* Summary + Orders section */}
         <div className="rounded-3xl p-0 sm:p-2">
           {/* Summary cards */}
-          <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:mb-10 lg:grid-cols-3 lg:gap-4">
-            <div className="flex items-center gap-3 rounded-xl border border-[#66666680] bg-white px-4 py-3 transition -sm sm:px-5 sm:py-4">
-              <div className="w-14 h-14 rounded-full bg-[#004B2F] flex items-center justify-center">
-                <img src="/images/recuperer.svg" alt="Terminées" className="w-6 h-6" />
+          <div className="mb-8 grid grid-cols-3 gap-2 sm:gap-3 lg:mb-10 lg:gap-4">
+            <div className="flex flex-col items-center gap-1.5 rounded-xl border border-[#66666680] bg-white px-2 py-3 text-center transition sm:flex-row sm:items-center sm:gap-3 sm:px-5 sm:py-4 sm:text-left">
+              <div className="w-8 h-8 sm:w-14 sm:h-14 shrink-0 rounded-full bg-[#004B2F] flex items-center justify-center">
+                <img src="/images/recuperer.svg" alt="Terminées" className="w-4 h-4 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <p className="text-sm md:text-base text-[#383838] ">Commandes terminées</p>
-                <h1 className="text-xl md:text-[32px] font-semibold text-[#383838]">{stats.terminees}</h1>
+                <p className="text-[11px] leading-tight sm:text-sm md:text-base text-[#383838]">
+                  <span className="sm:hidden">Terminées</span>
+                  <span className="hidden sm:inline">Commandes terminées</span>
+                </p>
+                <h1 className="text-base sm:text-xl md:text-[32px] font-semibold text-[#383838]">{stats.terminees}</h1>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-[#66666680] bg-white px-4 py-3 transition  sm:px-5 sm:py-4">
-              <div className="w-14 h-14 rounded-full bg-[#FF3D00] flex items-center justify-center">
-                <img src="/images/preparer.svg" alt="En attente" className="w-6 h-6" />
+            <div className="flex flex-col items-center gap-1.5 rounded-xl border border-[#66666680] bg-white px-2 py-3 text-center transition sm:flex-row sm:items-center sm:gap-3 sm:px-5 sm:py-4 sm:text-left">
+              <div className="w-8 h-8 sm:w-14 sm:h-14 shrink-0 rounded-full bg-[#FF3D00] flex items-center justify-center">
+                <img src="/images/preparer.svg" alt="En attente" className="w-4 h-4 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <p className="text-sm md:text-base text-[#383838]">Commandes en attentes</p>
-                <h1 className="text-xl md:text-[32px] font-bold text-[#383838]">{stats.enAttente}</h1>
+                <p className="text-[11px] leading-tight sm:text-sm md:text-base text-[#383838]">
+                  <span className="sm:hidden">En attente</span>
+                  <span className="hidden sm:inline">Commandes en attentes</span>
+                </p>
+                <h1 className="text-base sm:text-xl md:text-[32px] font-bold text-[#383838]">{stats.enAttente}</h1>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-[#66666680] bg-white px-4 py-3 transition  sm:px-5 sm:py-4">
-              <div className="w-14 h-14 rounded-full bg-[#00955F] flex items-center justify-center">
-                <img src="/images/location.svg" alt="Récupérées" className="w-6 h-6" />
+            <div className="flex flex-col items-center gap-1.5 rounded-xl border border-[#66666680] bg-white px-2 py-3 text-center transition sm:flex-row sm:items-center sm:gap-3 sm:px-5 sm:py-4 sm:text-left">
+              <div className="w-8 h-8 sm:w-14 sm:h-14 shrink-0 rounded-full bg-[#00955F] flex items-center justify-center">
+                <img src="/images/location.svg" alt="Récupérées" className="w-4 h-4 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <p className="text-sm md:text-base text-[#383838]">Commandes récupérées</p>
-                <h1 className="text-xl md:text-[32px] font-bold text-[#383838]">{stats.recuperees}</h1>
+                <p className="text-[11px] leading-tight sm:text-sm md:text-base text-[#383838]">
+                  <span className="sm:hidden">Récupérées</span>
+                  <span className="hidden sm:inline">Commandes récupérées</span>
+                </p>
+                <h1 className="text-base sm:text-xl md:text-[32px] font-bold text-[#383838]">{stats.recuperees}</h1>
               </div>
             </div>
             
