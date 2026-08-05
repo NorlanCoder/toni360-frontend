@@ -158,7 +158,7 @@ export default function AccueilClientPage() {
     setAddingTo((p) => ({ ...p, [item.key]: true }));
     try {
       await addPanierItem(session.token, item.produitId, qty, item.rechercheId, item.pharmacieId);
-      toast.success(`${item.nom} ajouté au panier`);
+      toast.success(`${item.nom} ajouté au panier`, { position: "bottom-right" });
       refreshCart();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -166,7 +166,7 @@ export default function AccueilClientPage() {
         router.replace("/client/connexion");
         return;
       }
-      toast.error("Impossible d'ajouter au panier.");
+      toast.error("Impossible d'ajouter au panier.", { position: "bottom-right" });
     } finally {
       setAddingTo((p) => ({ ...p, [item.key]: false }));
     }
