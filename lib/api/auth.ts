@@ -25,6 +25,7 @@ interface PartnerRegisterPayload {
 interface LoginPayload {
   login: string;
   password: string;
+  remember?: boolean;
 }
 
 export interface AuthApiResponse {
@@ -40,6 +41,7 @@ export interface AuthApiResponse {
     patient?: unknown;
     user?: unknown;
     permissions?: string[];
+    expires_at?: string;
   };
 }
 

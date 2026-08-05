@@ -48,6 +48,7 @@ export default function ConnexionPartenairePage() {
       const response = await loginPartner({
         login: loginValue,
         password: formData.password,
+        remember: formData.rememberMe,
       });
 
       // Vérification OTP requise
@@ -68,6 +69,7 @@ export default function ConnexionPartenairePage() {
         tokenType: response.data!.token_type ?? "Bearer",
         profile: profileResponse.data.user ?? null,
         permissions: profileResponse.data.permissions ?? response.data!.permissions ?? [],
+        expiresAt: response.data!.expires_at,
       };
       saveAuthSession(session, formData.rememberMe);
 

@@ -44,6 +44,7 @@ export default function ConnexionPage() {
       const response = await loginPatient({
         login: loginValue,
         password: formData.password,
+        remember: formData.rememberMe,
       });
 
       const token = response.data?.token;
@@ -57,6 +58,7 @@ export default function ConnexionPage() {
         token,
         tokenType: response.data?.token_type ?? "Bearer",
         profile: response.data?.patient ?? null,
+        expiresAt: response.data?.expires_at,
       }, formData.rememberMe);
 
       toast.success(response.message ?? "Connexion réussie.");

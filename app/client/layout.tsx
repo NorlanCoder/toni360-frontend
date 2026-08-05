@@ -16,7 +16,7 @@ import {
   User,
   X,
 } from "lucide-react";
-import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import { clearAuthSession, getAuthSession, isRememberedSession } from "@/lib/api/session";
 import { getClientNotificationCount } from "@/lib/api/client";
 import { PiListChecks } from "react-icons/pi";
 import { SearchProvider, useSearch } from "@/lib/search-context";
@@ -92,11 +92,12 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   // Déconnexion automatique après 15 minutes d'inactivité
+  // (désactivée si "Se souvenir de moi" était coché : la session dure alors 7 jours)
   useIdleTimeout(() => {
     clearAuthSession();
     toast.warning("Session expirée. Veuillez vous reconnecter.");
     router.replace("/client/connexion");
-  });
+  }, 15 * 60 * 1000, !isRememberedSession());
 
   // Vider la barre de recherche quand on quitte la page d'accueil
   useEffect(() => {

@@ -46,6 +46,7 @@ export default function ConnexionPage() {
       const response = await loginPatient({
         login: loginValue,
         password: formData.password,
+        remember: formData.rememberMe,
       });
 
       // Vérification OTP requise (email non vérifié)
@@ -65,6 +66,7 @@ export default function ConnexionPage() {
         token: response.data!.token!,
         tokenType: response.data!.token_type ?? "Bearer",
         profile: profileResponse.data.patient ?? response.data!.patient ?? null,
+        expiresAt: response.data!.expires_at,
       }, formData.rememberMe);
 
       toast.success(response.message ?? "Connexion réussie.");

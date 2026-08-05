@@ -8,6 +8,10 @@ export interface AuthSession {
   tokenType: string;
   profile: unknown;
   permissions?: string[];
+  /** "Se souvenir de moi" était coché à la connexion (token valide 7 jours côté backend). */
+  rememberMe?: boolean;
+  /** Date d'expiration du token (ISO 8601), renvoyée par le backend. */
+  expiresAt?: string;
 }
 
 function isBrowser(): boolean {
@@ -29,11 +33,20 @@ export function saveAuthSession(session: AuthSession, rememberMe = false): void 
   const otherStorage = rememberMe ? sessionStorage : localStorage;
   otherStorage.removeItem(AUTH_SESSION_KEY);
 
-  storage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+  storage.setItem(AUTH_SESSION_KEY, JSON.stringify({ ...session, rememberMe }));
 
   // Réinitialiser le timer d'inactivité pour éviter une déconnexion immédiate
   // si l'utilisateur se reconnecte après une longue absence.
   localStorage.setItem("toni360.last_activity", Date.now().toString());
+}
+
+/**
+ * Indique si la session active a été ouverte avec "Se souvenir de moi".
+ * Utilisé pour désactiver le timeout d'inactivité côté client sur ces sessions
+ * (le token backend reste, lui, valide 7 jours).
+ */
+export function isRememberedSession(): boolean {
+  return getAuthSession()?.rememberMe === true;
 }
 
 export function getAuthSession(): AuthSession | null {

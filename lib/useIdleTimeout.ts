@@ -19,8 +19,11 @@ const IDLE_EVENTS: (keyof WindowEventMap)[] = [
  *
  * @param onTimeout  Callback appelé quand la session expire (clear + redirect)
  * @param timeoutMs  Durée d'inactivité avant déconnexion (défaut : 15 min)
+ * @param enabled    Si false, le timeout d'inactivité est désactivé (ex. session
+ *                    ouverte avec "Se souvenir de moi", où seule l'expiration du
+ *                    token à 7 jours côté serveur doit s'appliquer)
  */
-export function useIdleTimeout(onTimeout: () => void, timeoutMs = 15 * 60 * 1000): void {
+export function useIdleTimeout(onTimeout: () => void, timeoutMs = 15 * 60 * 1000, enabled = true): void {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onTimeoutRef = useRef(onTimeout);
   onTimeoutRef.current = onTimeout;
@@ -37,6 +40,14 @@ export function useIdleTimeout(onTimeout: () => void, timeoutMs = 15 * 60 * 1000
   }, [timeoutMs]);
 
   useEffect(() => {
+    if (!enabled) {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+
     // Vérifier immédiatement si la session a déjà expiré (ex. après une nuit)
     const lastActivity = Number(localStorage.getItem(IDLE_KEY) ?? "0");
     if (lastActivity > 0 && Date.now() - lastActivity >= timeoutMs) {
@@ -69,5 +80,5 @@ export function useIdleTimeout(onTimeout: () => void, timeoutMs = 15 * 60 * 1000
       IDLE_EVENTS.forEach((event) => window.removeEventListener(event, handleActivity));
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [resetTimer, timeoutMs]);
+  }, [resetTimer, timeoutMs, enabled]);
 }

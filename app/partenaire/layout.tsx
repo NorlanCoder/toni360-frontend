@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { clearAuthSession, getAuthSession } from "@/lib/api/session";
+import { clearAuthSession, getAuthSession, isRememberedSession } from "@/lib/api/session";
 import { canAccessPartnerRoute, getPartnerHomeRoute, shouldRedirectAwayFromDashboard } from "@/lib/auth/authorization";
 import { toast } from "sonner";
 import { SidebarProvider } from "./_sidebar-context";
@@ -58,11 +58,12 @@ function PartenaireLayoutInner({ children }: { children: React.ReactNode }) {
   }, [pathname, router]);
 
   // Déconnexion automatique après 15 minutes d'inactivité
+  // (désactivée si "Se souvenir de moi" était coché : la session dure alors 7 jours)
   useIdleTimeout(() => {
     clearAuthSession();
     toast.warning("Session expirée. Veuillez vous reconnecter.");
     router.replace("/partenaire/connexion");
-  });
+  }, 15 * 60 * 1000, !isRememberedSession());
 
   return (
     <SidebarProvider>
