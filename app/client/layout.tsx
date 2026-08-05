@@ -205,7 +205,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Footer drawer */}
-            <div className="px-5 pb-6 text-xs text-toni-green-dark-2 leading-relaxed">
+            <div className="px-5 pb-6 flex flex-col gap-1.5 text-xs text-toni-green-dark-2 leading-relaxed">
               <Link href="/privacy?from=patient-parcours" className="hover:underline block" onClick={() => setMobileMenuOpen(false)}>
                 Politique de confidentialité
               </Link>
@@ -263,7 +263,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
 
-        <div className="px-5 pb-6 text-xs text-toni-green-dark-2 leading-relaxed">
+        <div className="px-5 pb-6 flex flex-col gap-1.5 text-xs text-toni-green-dark-2 leading-relaxed">
           <Link href="/privacy?from=patient-parcours" className="hover:underline block">Politique de confidentialité</Link>
           <Link href="/terms-of-use?from=patient-parcours" className="hover:underline block">Conditions générales d&apos;utilisation</Link>
           <Link href="/contacts?from=patient-parcours" className="hover:underline block">Contactez-nous</Link>
