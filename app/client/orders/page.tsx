@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown, Eye, Loader2, Trash2 } from "lucide-react";
+import { ChevronDown, Eye, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   annulerCommande,
@@ -277,45 +277,66 @@ function ClientOrdersContent() {
 
         {/* Summary + Orders section */}
         <div className="rounded-3xl p-0 sm:p-2">
-          {/* Summary cards */}
+          {/* Summary cards — servent de filtres (remplacent les anciens onglets) */}
           <div className="mb-8 grid grid-cols-3 gap-2 sm:gap-3 lg:mb-10 lg:gap-4">
-            <div className="flex flex-col items-center gap-1.5 rounded-xl border border-[#66666680] bg-white px-2 py-3 text-center transition sm:flex-row sm:items-center sm:gap-3 sm:px-5 sm:py-4 sm:text-left">
-              <div className="w-8 h-8 sm:w-14 sm:h-14 shrink-0 rounded-full bg-[#004B2F] flex items-center justify-center">
-                <img src="/images/recuperer.svg" alt="Terminées" className="w-4 h-4 sm:w-6 sm:h-6" />
-              </div>
-              <div>
-                <p className="text-[11px] leading-tight sm:text-sm md:text-base text-[#383838]">
-                  <span className="sm:hidden">Terminées</span>
-                  <span className="hidden sm:inline">Commandes terminées</span>
-                </p>
-                <h1 className="text-base sm:text-xl md:text-[32px] font-semibold text-[#383838]">{stats.terminees}</h1>
-              </div>
-            </div>
-            <div className="flex flex-col items-center gap-1.5 rounded-xl border border-[#66666680] bg-white px-2 py-3 text-center transition sm:flex-row sm:items-center sm:gap-3 sm:px-5 sm:py-4 sm:text-left">
-              <div className="w-8 h-8 sm:w-14 sm:h-14 shrink-0 rounded-full bg-[#FF3D00] flex items-center justify-center">
-                <img src="/images/preparer.svg" alt="En attente" className="w-4 h-4 sm:w-6 sm:h-6" />
-              </div>
-              <div>
-                <p className="text-[11px] leading-tight sm:text-sm md:text-base text-[#383838]">
-                  <span className="sm:hidden">En attente</span>
-                  <span className="hidden sm:inline">Commandes en attentes</span>
-                </p>
-                <h1 className="text-base sm:text-xl md:text-[32px] font-bold text-[#383838]">{stats.enAttente}</h1>
-              </div>
-            </div>
-            <div className="flex flex-col items-center gap-1.5 rounded-xl border border-[#66666680] bg-white px-2 py-3 text-center transition sm:flex-row sm:items-center sm:gap-3 sm:px-5 sm:py-4 sm:text-left">
-              <div className="w-8 h-8 sm:w-14 sm:h-14 shrink-0 rounded-full bg-[#00955F] flex items-center justify-center">
-                <img src="/images/location.svg" alt="Récupérées" className="w-4 h-4 sm:w-6 sm:h-6" />
-              </div>
-              <div>
-                <p className="text-[11px] leading-tight sm:text-sm md:text-base text-[#383838]">
-                  <span className="sm:hidden">Récupérées</span>
-                  <span className="hidden sm:inline">Commandes récupérées</span>
-                </p>
-                <h1 className="text-base sm:text-xl md:text-[32px] font-bold text-[#383838]">{stats.recuperees}</h1>
-              </div>
-            </div>
-            
+            {[
+              {
+                tab: "Recuperees" as const,
+                nextTab: "recuperees",
+                bg: "#004B2F",
+                icon: "/images/recuperer.svg",
+                label: "Récupérées",
+                labelLong: "Commandes récupérées",
+                value: stats.recuperees,
+              },
+              {
+                tab: "En attente" as const,
+                nextTab: "en_attente",
+                bg: "#FF3D00",
+                icon: "/images/preparer.svg",
+                label: "En attente",
+                labelLong: "Commandes en attentes",
+                value: stats.enAttente,
+              },
+              {
+                tab: "En cours" as const,
+                nextTab: "en_cours",
+                bg: "#00955F",
+                icon: "/images/location.svg",
+                label: "En cours",
+                labelLong: "Commandes en cours",
+                value: stats.enCours + stats.pretes,
+              },
+            ].map((card) => (
+              <button
+                key={card.tab}
+                type="button"
+                onClick={() => {
+                  setActiveTab(card.tab);
+                  router.replace(`/client/orders?tab=${card.nextTab}`);
+                }}
+                className={`flex flex-col items-center gap-1.5 rounded-xl border bg-white px-2 py-3 text-center transition sm:flex-row sm:items-center sm:gap-3 sm:px-5 sm:py-4 sm:text-left ${
+                  activeTab === card.tab
+                    ? "border-[#008F4F] ring-1 ring-[#008F4F]"
+                    : "border-[#66666680] hover:border-[#008F4F]/50"
+                }`}
+              >
+                <div
+                  className="w-8 h-8 sm:w-14 sm:h-14 shrink-0 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: card.bg }}
+                >
+                  <img src={card.icon} alt={card.label} className="w-4 h-4 sm:w-6 sm:h-6" />
+                </div>
+                <div>
+                  <p className="text-[11px] leading-tight sm:text-sm md:text-base text-[#383838]">
+                    <span className="sm:hidden">{card.label}</span>
+                    <span className="hidden sm:inline">{card.labelLong}</span>
+                  </p>
+                  <h1 className="text-base sm:text-xl md:text-[32px] font-semibold text-[#383838]">{card.value}</h1>
+                </div>
+              </button>
+            ))}
+
             {/* <button
               onClick={() => router.push("/client/dashboard/cart")}
               className="flex items-center justify-center gap-2 rounded-xl border border-[#66666680] bg-white px-4 py-3 font-semibold text-[#008F4F] transition hover:bg-[#d8f5ea]"
@@ -419,39 +440,6 @@ function ClientOrdersContent() {
                 <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
               </div>
             </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="mb-6 flex gap-4 overflow-x-auto pb-2 w-full font-semibold text-gray-600  sm:text-lg">
-            {[
-              { label: "En attente", value: "En attente" as const, img: "/images/attente.svg" },
-              { label: "En cours", value: "En cours" as const, icon: Loader2 },
-              { label: "Récupérées", value: "Recuperees" as const, img: "/images/location-2.svg" },
-            ].map((tab) => (
-              <button
-                key={tab.value}
-                onClick={() => {
-                  setActiveTab(tab.value);
-                  const nextTab = tab.value === "En cours"
-                    ? "en_cours"
-                    : tab.value === "Recuperees"
-                      ? "recuperees"
-                      : "en_attente";
-                  router.replace(`/client/orders?tab=${nextTab}`);
-                }}
-                className={`shrink-0 border-b-2 pb-2 md:text-xl text-lg transition-colors flex items-center gap-2 ${activeTab === tab.value
-                    ? "border-[#008F4F] text-[#008F4F]"
-                    : "border-transparent hover:text-gray-900"
-                  }`}
-              >
-                {"img" in tab ? (
-                  <img src={tab.img} alt={tab.label} className="w-5 h-5" />
-                ) : (
-                  <tab.icon size={16} />
-                )}
-                {tab.label}
-              </button>
-            ))}
           </div>
 
           {/* Orders list */}
