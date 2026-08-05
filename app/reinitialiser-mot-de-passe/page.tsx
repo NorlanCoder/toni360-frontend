@@ -28,7 +28,6 @@ function ResetPasswordForm() {
     password: "",
     confirmPassword: "",
   });
-  const [done, setDone] = useState(false);
 
   const passwordRules = getPasswordRuleResults(formData.password);
   const passwordStrength = getPasswordStrength(formData.password);
@@ -66,9 +65,8 @@ function ResetPasswordForm() {
         password: formData.password,
         password_confirmation: formData.confirmPassword,
       });
-      setDone(true);
       toast.success(res.message ?? "Mot de passe réinitialisé !");
-      setTimeout(() => router.push(redirectPath), 3000);
+      router.push(redirectPath);
     } catch (error: unknown) {
       if (error instanceof ApiError) {
         toast.error(error.message);
@@ -106,23 +104,7 @@ function ResetPasswordForm() {
         </p>
       )}
 
-      {done ? (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
-          <div className="mb-3 text-4xl">✅</div>
-          <h3 className="mb-2 text-lg font-semibold text-gray-800">Mot de passe mis à jour !</h3>
-          <p className="text-sm text-gray-600">
-            Votre mot de passe a été réinitialisé. Vous allez être redirigé vers la page de connexion…
-          </p>
-          <Link
-            href={redirectPath}
-            className="mt-4 inline-block text-sm font-bold hover:underline"
-            style={{ color: "#137551" }}
-          >
-            Se connecter maintenant →
-          </Link>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
           {/* Nouveau mot de passe */}
           <div className="relative flex items-center">
             <Lock className="absolute left-4 text-gray-400" size={18} />
@@ -194,7 +176,6 @@ function ResetPasswordForm() {
             {submitting ? "Enregistrement..." : "Réinitialiser le mot de passe"}
           </button>
         </form>
-      )}
 
       <p className="mt-6 text-center text-sm text-gray-600">
         <Link href={from ? `/mot-de-passe-oublie?from=${from}` : "/client/connexion"} className="font-semibold hover:underline" style={{ color: "#137551" }}>
