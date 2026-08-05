@@ -517,15 +517,8 @@ export default function DevenirPartenairePage() {
                 onChange={(e) =>
                   setFormData({ ...formData, confirmPassword: e.target.value })
                 }
-                className={`${inputClass("confirmPassword")} pr-12`}
+                className={inputClass("confirmPassword")}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
             </div>
             {formErrors.confirmPassword && <p className="mt-1 text-xs text-red-600">{formErrors.confirmPassword}</p>}
           </div>
