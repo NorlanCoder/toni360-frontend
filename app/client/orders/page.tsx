@@ -11,7 +11,6 @@ import {
   getClientCommandeCompteurs,
   getClientCommandes,
   mettreEnAttenteCommande,
-  validerCommande,
 } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
@@ -83,7 +82,6 @@ function ClientOrdersContent() {
 
   const [activeTab, setActiveTab] = useState<"En attente" | "En cours" | "Recuperees">(initTab);
   const [loadingQrOrderId] = useState<string | null>(null);
-  const [validatingOrderId, setValidatingOrderId] = useState<string | null>(null);
   const [confirmCancelOrder, setConfirmCancelOrder] = useState<ClientOrderItem | null>(null);
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -228,39 +226,6 @@ function ClientOrdersContent() {
       }
     } finally {
       setIsCancellingOrder(false);
-    }
-  };
-
-  const handleValidatePendingOrder = async (order: ClientOrderItem) => {
-    if (!token) {
-      return;
-    }
-
-    setValidatingOrderId(order.id);
-    try {
-      await validerCommande(token, order.id);
-
-      setOrders((prev) =>
-        prev.map((entry) =>
-          entry.id === order.id
-            ? { ...entry, status: "En cours de traitement", statusKey: "en_cours" }
-            : entry,
-        ),
-      );
-
-      try {
-        await loadOrders();
-      } catch {
-        // ignore
-      }
-      setActiveTab("En cours");
-      toast.success(`Commande ${order.numero} validée. La pharmacie va prendre en charge votre commande.`);
-    } catch (error) {
-      if (error instanceof ApiError) {
-        toast.error(error.message);
-      }
-    } finally {
-      setValidatingOrderId(null);
     }
   };
 
@@ -553,28 +518,6 @@ function ClientOrdersContent() {
                       >
                         Mettre en attente
                       </button>
-                    )}
-
-                    {/* Bouton valider — sur EN_ATTENTE_PAIEMENT ou EN_ATTENTE_CLIENT */}
-                    {/* Si ordonnance manquante → "Voir" (redirige vers le détail) */}
-                    {activeTab === "En attente" && (order.statusKey === "en_attente_paiement" || order.statusKey === "en_attente_client") && (
-                      order.etat_ordonnance === "en_attente" ? (
-                        // <button
-                        //   onClick={() => router.push(`/client/orders/${order.id}`)}
-                        //   className="rounded-full bg-orange-100 px-3 py-1.5 text-xs font-semibold text-orange-600 sm:px-4 sm:text-sm"
-                        // >
-                        //   Voir
-                        // </button>
-                        ""
-                      ) : (
-                        <button
-                          onClick={() => void handleValidatePendingOrder(order)}
-                          disabled={validatingOrderId === order.id}
-                          className="rounded-full bg-[#dff1ea] px-3 py-1.5 text-xs font-semibold text-[#1f8a5b] sm:px-4 sm:text-sm disabled:opacity-60"
-                        >
-                          {validatingOrderId === order.id ? "Validation..." : "Valider"}
-                        </button>
-                      )
                     )}
 
                     {/* Bouton voir QR — affiché pour toutes les commandes de l'onglet En cours */}
