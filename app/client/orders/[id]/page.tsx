@@ -298,7 +298,7 @@ function OrderDetailContent() {
     try {
       await annulerCommande(token, commandeId);
       toast.success("Commande annulée.");
-      router.push(ordersListUrl);
+      router.push("/client/localisation");
     } catch (error) {
       if (error instanceof ApiError) toast.error(error.message);
     } finally {
