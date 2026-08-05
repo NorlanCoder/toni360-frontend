@@ -23,7 +23,7 @@ export default function DevenirPartenairePage() {
     | "email"
     | "heureOuvrables"
     | "villeExercice"
-    | "confirmPassword"
+    | "confirmPassword" 
     | "licence"
     | "general";
 

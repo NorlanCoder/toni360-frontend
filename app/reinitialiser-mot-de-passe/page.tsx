@@ -152,16 +152,9 @@ function ResetPasswordForm() {
               placeholder="Confirmer le nouveau mot de passe"
               value={formData.confirmPassword}
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-12 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
+              className="w-full rounded-md border border-black bg-white py-2.5 pl-12 pr-4 text-sm text-black outline-none transition-colors focus:border-toni-green-dark-2 sm:py-3 sm:text-base"
               autoComplete="new-password"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
           </div>
 
           {(passwordTouched || formData.password.length > 0) && !passwordStrong && (
