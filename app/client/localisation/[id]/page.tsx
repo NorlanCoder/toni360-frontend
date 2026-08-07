@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { getLocalisationDetail, LocalisationResultat } from "@/lib/api/client";
+import { getLocalisationDetail } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 import PharmacieHeader from "@/components/client/PharmacieHeader";
@@ -73,28 +73,28 @@ function LocalisationDetailContent() {
         const produitsCriteres = recherche.criteres?.produits ?? [];
         setCriteres(produitsCriteres.map((p) => `${p.terme} (x${p.quantite})`).join(", ") || "—");
 
-        // Regrouper les résultats par pharmacie
-        const resultats: LocalisationResultat[] = recherche.resultats ?? [];
+        // N'afficher que les produits réellement commandés (commande annulée liée),
+        // pas l'ensemble des résultats de la recherche d'origine.
+        const commandeAnnulee = (recherche.commandes ?? []).find(
+          (c) => String(c.statut ?? "").toUpperCase() === "ANNULEE"
+        );
         const map = new Map<string, PharmacieBloc>();
-        for (const r of resultats) {
-          const pid = r.pharmacie_id;
-          if (!map.has(pid)) {
-            map.set(pid, {
-              pharmacieId: pid,
-              pharmacieNom: r.pharmacie?.nom ?? "Pharmacie",
-              pharmacieAdresse: [r.pharmacie?.adresse, r.pharmacie?.ville].filter(Boolean).join(", "),
-              pharmacieTelephone: r.pharmacie?.telephone ?? "",
-              distanceKm: Number(r.distance_km ?? 0),
-              produits: [],
-            });
-          }
-          map.get(pid)!.produits.push({
-            id: r.id,
-            nom: r.produit?.nom ?? "Produit",
-            type: [r.produit?.forme, r.produit?.dosage].filter(Boolean).join(" ") || "Produit",
-            prix: Number(r.prix ?? 0),
-            qteDemandee: Number(r.quantite_demandee ?? 0),
-            qteDispo: Number(r.quantite_disponible ?? 0),
+        if (commandeAnnulee) {
+          const pid = commandeAnnulee.pharmacie?.id ?? commandeAnnulee.id;
+          map.set(pid, {
+            pharmacieId: pid,
+            pharmacieNom: commandeAnnulee.pharmacie?.nom ?? "Pharmacie",
+            pharmacieAdresse: [commandeAnnulee.pharmacie?.adresse, commandeAnnulee.pharmacie?.ville].filter(Boolean).join(", "),
+            pharmacieTelephone: commandeAnnulee.pharmacie?.telephone ?? "",
+            distanceKm: 0,
+            produits: (commandeAnnulee.produits ?? []).map((pc, idx) => ({
+              id: `${pid}-${idx}`,
+              nom: pc.produit?.nom ?? "Produit",
+              type: [pc.produit?.forme, pc.produit?.dosage].filter(Boolean).join(" ") || "Produit",
+              prix: Number(pc.prix_unitaire ?? 0),
+              qteDemandee: Number(pc.quantite ?? 0),
+              qteDispo: Number(pc.quantite ?? 0),
+            })),
           });
         }
 

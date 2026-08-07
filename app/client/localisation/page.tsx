@@ -99,7 +99,14 @@ export default function LocalisationListPage() {
         return false;
       }
 
-      return resultats.some((res) => Boolean(res.pharmacie_id) && Boolean(res.produit_id));
+      if (!resultats.some((res) => Boolean(res.pharmacie_id) && Boolean(res.produit_id))) {
+        return false;
+      }
+
+      // N'afficher que les recherches dont la commande a été terminée (annulée)
+      // depuis le détail d'une commande en attente (bouton "Terminer").
+      const commandes = recherche.commandes ?? [];
+      return commandes.some((c) => String(c.statut ?? "").toUpperCase() === "ANNULEE");
     });
   }, [recherches]);
 
@@ -158,9 +165,9 @@ export default function LocalisationListPage() {
             type="button"
             onClick={() => setConfirmDeleteAll(true)}
             disabled={deletingAll}
-            className="flex items-center gap-1.5 text-xs font-medium text-red-400 hover:text-red-600 transition disabled:opacity-50"
+            className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-500 transition hover:bg-red-100 hover:text-red-600 disabled:opacity-50 sm:px-5 sm:py-3 sm:text-base"
           >
-            <Trash2 size={13} />
+            <Trash2 size={18} className="text-red-500" />
             Tout supprimer
           </button>
         )}
@@ -168,7 +175,7 @@ export default function LocalisationListPage() {
 
       {/* Message de rétention discret */}
       <p className="mb-5 text-base text-gray-400 leading-relaxed">
-        Les localisations enregistrées sont automatiquement supprimées après 12 mois.
+        Les localisations enregistrées sont automatiquement supprimées après 12 mois
       </p>
 
       {localisationsValides.length === 0 ? (
@@ -183,8 +190,13 @@ export default function LocalisationListPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {localisationsValides.map((r) => {
+            // N'afficher que les produits réellement commandés (commande annulée liée),
+            // pas l'ensemble des résultats de la recherche d'origine.
+            const commandeAnnulee = (r.commandes ?? []).find(
+              (c) => String(c.statut ?? "").toUpperCase() === "ANNULEE"
+            );
             const nomsReels = Array.from(
-              new Set((r.resultats ?? []).map((res) => res.produit?.nom).filter(Boolean) as string[])
+              new Set((commandeAnnulee?.produits ?? []).map((p) => p.produit?.nom).filter(Boolean) as string[])
             );
             const MAX_VISIBLE = 3;
             const visibles = nomsReels.slice(0, MAX_VISIBLE).join(", ");
@@ -192,7 +204,7 @@ export default function LocalisationListPage() {
             const nomsProduits = nomsReels.length === 0
               ? "Aucun produit trouvé"
               : reste > 0 ? `${visibles} +${reste} autre${reste > 1 ? "s" : ""}` : visibles;
-            const nbPharmacies = Array.from(new Set(r.resultats?.map((res) => res.pharmacie_id) ?? [])).length;
+            const nbPharmacies = commandeAnnulee?.pharmacie ? 1 : 0;
             const date = new Date(r.created_at ?? r.date);
             const dateLabel = date.toLocaleDateString("fr-FR", {
               day: "2-digit",
@@ -245,12 +257,12 @@ export default function LocalisationListPage() {
                   type="button"
                   onClick={() => setConfirmDeleteId(r.id)}
                   disabled={deletingId === r.id}
-                  className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-50"
+                  className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-red-500 hover:text-red-600 hover:bg-red-50 transition disabled:opacity-50"
                   aria-label="Supprimer cette localisation"
                 >
                   {deletingId === r.id
                     ? <span className="w-4 h-4 rounded-full border-2 border-red-400 border-t-transparent animate-spin" />
-                    : <Trash2 size={15} />
+                    : <Trash2 size={15} className="text-red-500" />
                   }
                 </button>
               </div>
