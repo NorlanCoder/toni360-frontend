@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Download, Check, X, Trash2, Pencil } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import PhoneInput from "react-phone-number-input";
+import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { registerPartner } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
@@ -13,19 +13,87 @@ import { PARTNER_SESSION_KEY } from "@/app/partenaire/verification/page";
 import { getPasswordRuleResults, getPasswordStrength, isPasswordStrong } from "@/lib/passwordPolicy";
 import { toast } from "sonner";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type FormErrorKey =
+  | "nomPharmacie"
+  | "titulairePrenom"
+  | "titulaireNom"
+  | "adresseComplete"
+  | "telephone"
+  | "email"
+  | "heureOuvrables"
+  | "villeExercice"
+  | "confirmPassword"
+  | "licence"
+  | "general";
+
+interface PartnerFormData {
+  nomPharmacie: string;
+  titulairePrenom: string;
+  titulaireNom: string;
+  adresseComplete: string;
+  telephone: string | undefined;
+  email: string;
+  heureOuvrables: string;
+  villeExercice: string;
+  confirmPassword: string;
+  licence: File | null;
+}
+
+function validateField(field: FormErrorKey, data: PartnerFormData): string | null {
+  switch (field) {
+    case "titulairePrenom":
+      return data.titulairePrenom.trim() ? null : "Le prénom du titulaire est obligatoire.";
+    case "titulaireNom":
+      return data.titulaireNom.trim() ? null : "Le nom du titulaire est obligatoire.";
+    case "nomPharmacie":
+      return data.nomPharmacie.trim() ? null : "Le nom officiel de la pharmacie est obligatoire.";
+    case "adresseComplete":
+      return data.adresseComplete.trim() ? null : "L'adresse complète est obligatoire.";
+    case "telephone": {
+      const telephone = data.telephone ?? "";
+      if (!telephone.trim()) return "Le numéro de téléphone est obligatoire.";
+      if (telephone.length > 20) return "Le numéro de téléphone est trop long.";
+      if (!isValidPhoneNumber(telephone)) return "Le numéro de téléphone n'est pas valide.";
+      return null;
+    }
+    case "email": {
+      const email = data.email.trim();
+      if (!email) return "L'adresse mail est obligatoire.";
+      if (!EMAIL_REGEX.test(email)) return "L'adresse mail n'est pas valide.";
+      return null;
+    }
+    case "heureOuvrables":
+      if (!data.heureOuvrables.trim()) return "Le mot de passe est obligatoire.";
+      if (!isPasswordStrong(data.heureOuvrables)) return "Le mot de passe doit respecter toutes les règles de sécurité.";
+      return null;
+    case "confirmPassword":
+      if (!data.confirmPassword.trim()) return "La confirmation du mot de passe est obligatoire.";
+      if (data.heureOuvrables && data.confirmPassword !== data.heureOuvrables) return "Les mots de passe ne correspondent pas.";
+      return null;
+    case "licence":
+      if (!data.licence) return "Veuillez soumettre votre licence pharmaceutique.";
+      if (data.licence.size > 5 * 1024 * 1024) return "La licence ne doit pas dépasser 5 Mo.";
+      return null;
+    default:
+      return null;
+  }
+}
+
+const REQUIRED_FIELDS: FormErrorKey[] = [
+  "titulairePrenom",
+  "titulaireNom",
+  "nomPharmacie",
+  "adresseComplete",
+  "telephone",
+  "email",
+  "heureOuvrables",
+  "confirmPassword",
+  "licence",
+];
+
 export default function DevenirPartenairePage() {
-  type FormErrorKey =
-    | "nomPharmacie"
-    | "titulairePrenom"
-    | "titulaireNom"
-    | "adresseComplete"
-    | "telephone"
-    | "email"
-    | "heureOuvrables"
-    | "villeExercice"
-    | "confirmPassword" 
-    | "licence"
-    | "general";
 
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -37,22 +105,62 @@ export default function DevenirPartenairePage() {
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [formErrors, setFormErrors] = useState<Partial<Record<FormErrorKey, string>>>({});
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<PartnerFormData>({
     nomPharmacie: "",
     titulairePrenom: "",
     titulaireNom: "",
     adresseComplete: "",
-    telephone: undefined as string | undefined,
+    telephone: undefined,
     email: "",
     heureOuvrables: "",
     villeExercice: "",
     confirmPassword: "",
-    licence: null as File | null,
+    licence: null,
   });
 
   const passwordRules = getPasswordRuleResults(formData.heureOuvrables);
   const passwordStrength = getPasswordStrength(formData.heureOuvrables);
   const passwordValid = isPasswordStrong(formData.heureOuvrables);
+
+  // Valide un champ immédiatement (au blur) ou met à jour une erreur déjà visible
+  // pendant la frappe, pour un retour en temps réel avant même la soumission.
+  const applyFieldError = (field: FormErrorKey, error: string | null) => {
+    setFormErrors((prev) => {
+      if (!error) {
+        if (!(field in prev)) return prev;
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      }
+      if (prev[field] === error) return prev;
+      return { ...prev, [field]: error };
+    });
+  };
+
+  const handleFieldBlur = (field: FormErrorKey, data: PartnerFormData = formData) => {
+    applyFieldError(field, validateField(field, data));
+  };
+
+  const updateField = <K extends keyof PartnerFormData>(field: K, value: PartnerFormData[K]) => {
+    const nextData = { ...formData, [field]: value };
+    setFormData(nextData);
+
+    // Ne re-valide en direct que les champs qui affichaient déjà une erreur,
+    // pour ne pas être intrusif tant que l'utilisateur n'a pas encore quitté le champ.
+    const fieldKey = field as FormErrorKey;
+    if (fieldKey in formErrors) {
+      applyFieldError(fieldKey, validateField(fieldKey, nextData));
+    }
+
+    // Mot de passe et confirmation sont interdépendants : si l'un change,
+    // ré-évaluer l'autre s'il affichait déjà une erreur.
+    if (field === "heureOuvrables" && "confirmPassword" in formErrors) {
+      applyFieldError("confirmPassword", validateField("confirmPassword", nextData));
+    }
+    if (field === "confirmPassword" && "heureOuvrables" in formErrors) {
+      applyFieldError("heureOuvrables", validateField("heureOuvrables", nextData));
+    }
+  };
 
   const mapApiErrorsToForm = (details: unknown, fallbackMessage: string): Partial<Record<FormErrorKey, string>> => {
     const mapped: Partial<Record<FormErrorKey, string>> = {};
@@ -107,60 +215,22 @@ export default function DevenirPartenairePage() {
       return;
     }
 
+    setPasswordTouched(true);
+
     const nextErrors: Partial<Record<FormErrorKey, string>> = {};
-
-    if (!formData.titulairePrenom.trim()) {
-      nextErrors.titulairePrenom = "Le prénom du titulaire est obligatoire.";
-    }
-    if (!formData.titulaireNom.trim()) {
-      nextErrors.titulaireNom = "Le nom du titulaire est obligatoire.";
-    }
-    if (!formData.nomPharmacie.trim()) {
-      nextErrors.nomPharmacie = "Le nom officiel de la pharmacie est obligatoire.";
-    }
-    if (!formData.adresseComplete.trim()) {
-      nextErrors.adresseComplete = "L'adresse complète est obligatoire.";
-    }
-    if (!formData.telephone?.trim()) {
-      nextErrors.telephone = "Le numéro de téléphone est obligatoire.";
-    }
-    if (!formData.email.trim()) {
-      nextErrors.email = "L'adresse mail est obligatoire.";
-    }
-    if (!formData.heureOuvrables.trim()) {
-      nextErrors.heureOuvrables = "Le mot de passe est obligatoire.";
-    }
-    if (!formData.confirmPassword.trim()) {
-      nextErrors.confirmPassword = "La confirmation du mot de passe est obligatoire.";
-    }
-
-    if (formData.heureOuvrables && formData.confirmPassword && formData.heureOuvrables !== formData.confirmPassword) {
-      nextErrors.confirmPassword = "Les mots de passe ne correspondent pas.";
-    }
-
-    if (formData.heureOuvrables && !passwordValid) {
-      setPasswordTouched(true);
-      nextErrors.heureOuvrables = "Le mot de passe doit respecter toutes les règles de sécurité.";
-    }
-
-    const telephone = formData.telephone ?? "";
-
-    if (telephone.length > 20) {
-      nextErrors.telephone = "Le numéro de téléphone est trop long.";
-    }
-
-    if (!formData.licence) {
-      nextErrors.licence = "Veuillez soumettre votre licence pharmaceutique.";
-    }
-
-    if (formData.licence && formData.licence.size > 5 * 1024 * 1024) {
-      nextErrors.licence = "La licence ne doit pas dépasser 5 Mo.";
-    }
+    REQUIRED_FIELDS.forEach((field) => {
+      const error = validateField(field, formData);
+      if (error) {
+        nextErrors[field] = error;
+      }
+    });
 
     if (Object.keys(nextErrors).length > 0) {
       setFormErrors(nextErrors);
       return;
     }
+
+    const telephone = formData.telephone ?? "";
 
     setFormErrors({});
     setSubmitting(true);
@@ -208,7 +278,9 @@ export default function DevenirPartenairePage() {
       const url = URL.createObjectURL(file);
       setFileName(file.name);
       setLicencePreviewUrl(url);
-      setFormData({ ...formData, licence: file });
+      const nextData = { ...formData, licence: file };
+      setFormData(nextData);
+      applyFieldError("licence", validateField("licence", nextData));
     }
     // reset input so same file can be re-selected
     e.target.value = "";
@@ -218,7 +290,9 @@ export default function DevenirPartenairePage() {
     if (licencePreviewUrl) URL.revokeObjectURL(licencePreviewUrl);
     setLicencePreviewUrl(null);
     setFileName("");
-    setFormData({ ...formData, licence: null });
+    const nextData = { ...formData, licence: null };
+    setFormData(nextData);
+    applyFieldError("licence", validateField("licence", nextData));
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -256,9 +330,8 @@ export default function DevenirPartenairePage() {
                 type="text"
                 placeholder="Prénom du titulaire"
                 value={formData.titulairePrenom}
-                onChange={(e) =>
-                  setFormData({ ...formData, titulairePrenom: e.target.value })
-                }
+                onChange={(e) => updateField("titulairePrenom", e.target.value)}
+                onBlur={() => handleFieldBlur("titulairePrenom")}
                 className={inputClass("titulairePrenom")}
               />
               {formErrors.titulairePrenom && <p className="mt-1 text-xs text-red-600">{formErrors.titulairePrenom}</p>}
@@ -270,9 +343,8 @@ export default function DevenirPartenairePage() {
                 type="text"
                 placeholder="Nom du titulaire"
                 value={formData.titulaireNom}
-                onChange={(e) =>
-                  setFormData({ ...formData, titulaireNom: e.target.value })
-                }
+                onChange={(e) => updateField("titulaireNom", e.target.value)}
+                onBlur={() => handleFieldBlur("titulaireNom")}
                 className={inputClass("titulaireNom")}
               />
               {formErrors.titulaireNom && <p className="mt-1 text-xs text-red-600">{formErrors.titulaireNom}</p>}
@@ -286,9 +358,8 @@ export default function DevenirPartenairePage() {
                 type="text"
                 placeholder="Nom officiel de la pharmacie"
                 value={formData.nomPharmacie}
-                onChange={(e) =>
-                  setFormData({ ...formData, nomPharmacie: e.target.value })
-                }
+                onChange={(e) => updateField("nomPharmacie", e.target.value)}
+                onBlur={() => handleFieldBlur("nomPharmacie")}
                 className={inputClass("nomPharmacie")}
               />
               {formErrors.nomPharmacie && <p className="mt-1 text-xs text-red-600">{formErrors.nomPharmacie}</p>}
@@ -301,9 +372,8 @@ export default function DevenirPartenairePage() {
                 type="text"
                 placeholder="Adresse complète"
                 value={formData.adresseComplete}
-                onChange={(e) =>
-                  setFormData({ ...formData, adresseComplete: e.target.value })
-                }
+                onChange={(e) => updateField("adresseComplete", e.target.value)}
+                onBlur={() => handleFieldBlur("adresseComplete")}
                 className={inputClass("adresseComplete")}
               />
               {formErrors.adresseComplete && <p className="mt-1 text-xs text-red-600">{formErrors.adresseComplete}</p>}
@@ -317,7 +387,8 @@ export default function DevenirPartenairePage() {
                   defaultCountry="BJ"
                   placeholder="numéro de téléphone"
                   value={formData.telephone}
-                  onChange={(value) => setFormData({ ...formData, telephone: value })}
+                  onChange={(value) => updateField("telephone", value)}
+                  onBlur={() => handleFieldBlur("telephone")}
                   className="bg-white"
                 />
               </div>
@@ -330,9 +401,8 @@ export default function DevenirPartenairePage() {
                 type="email"
                 placeholder="Adresse mail"
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                onChange={(e) => updateField("email", e.target.value)}
+                onBlur={() => handleFieldBlur("email")}
                 className={inputClass("email")}
               />
               {formErrors.email && <p className="mt-1 text-xs text-red-600">{formErrors.email}</p>}
@@ -345,10 +415,11 @@ export default function DevenirPartenairePage() {
                   type={showPassword ? "text" : "password"}
                   placeholder="Mot de passe"
                   value={formData.heureOuvrables}
-                  onChange={(e) =>
-                    setFormData({ ...formData, heureOuvrables: e.target.value })
-                  }
-                  onBlur={() => setPasswordTouched(true)}
+                  onChange={(e) => updateField("heureOuvrables", e.target.value)}
+                  onBlur={() => {
+                    setPasswordTouched(true);
+                    handleFieldBlur("heureOuvrables");
+                  }}
                   className={`${inputClass("heureOuvrables")} pr-12`}
                 />
                 <button
@@ -509,18 +580,19 @@ export default function DevenirPartenairePage() {
             </div>
 
             {/* Confirmer le mot de passe */}
-            <div className="relative flex items-center">
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Confirmer le mot de passe"
-                value={formData.confirmPassword}
-                onChange={(e) =>
-                  setFormData({ ...formData, confirmPassword: e.target.value })
-                }
-                className={inputClass("confirmPassword")}
-              />
+            <div>
+              <div className="relative flex items-center">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Confirmer le mot de passe"
+                  value={formData.confirmPassword}
+                  onChange={(e) => updateField("confirmPassword", e.target.value)}
+                  onBlur={() => handleFieldBlur("confirmPassword")}
+                  className={inputClass("confirmPassword")}
+                />
+              </div>
+              {formErrors.confirmPassword && <p className="mt-1 text-xs text-red-600">{formErrors.confirmPassword}</p>}
             </div>
-            {formErrors.confirmPassword && <p className="mt-1 text-xs text-red-600">{formErrors.confirmPassword}</p>}
           </div>
 
           {/* Soumission licence pharmaceutique */}
