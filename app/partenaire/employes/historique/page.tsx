@@ -103,7 +103,7 @@ export default function PartenaireHistoriquePage() {
     <div className="px-4 sm:px-8 lg:px-16 py-6 lg:py-10">
       {/* Titre + Dropdown filtre employé */}
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">Historique des actions</h1>
+        <h1 className="text-[32px] font-bold leading-none text-gray-800">Historique des actions</h1>
         <div className="relative" ref={dropdownRef}>
           <button
             type="button"
