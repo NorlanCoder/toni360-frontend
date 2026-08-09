@@ -55,6 +55,9 @@ function getLocalisationMessage(order: ClientOrderItem): string | null {
   if (PENDING_PATIENT_STATUSES.has(order.statusKey)) {
     return `La ${order.pharmacy} a été localisée, mais vous n'avez pas encore passé la commande.`;
   }
+  if (order.statusKey === "prete") {
+    return `Votre commande est prête à être récupérée à la ${order.pharmacy}.`;
+  }
   if (IN_PROGRESS_PATIENT_STATUSES.has(order.statusKey)) {
     return `Votre commande est en cours de préparation à la ${order.pharmacy}.`;
   }
