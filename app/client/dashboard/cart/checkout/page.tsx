@@ -295,6 +295,16 @@ function CartPageContent() {
       const creation = await createCommande(token, livePanierId);
       const commandeId = creation.data.commande.id;
 
+      if (creation.data.necessite_ordonnance && ordonnanceFile) {
+        try {
+          await uploadOrdonnances(commandeId, ordonnanceFile);
+        } catch (uploadError) {
+          if (uploadError instanceof ApiError) {
+            toast.error("L'ordonnance n'a pas pu être envoyée.");
+          }
+        }
+      }
+
       await annulerCommande(token, commandeId, "Annulée par le patient depuis le checkout");
 
       clearLocalCart();

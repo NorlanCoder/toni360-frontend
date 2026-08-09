@@ -741,11 +741,13 @@ export interface LocalisationSummary {
   commandes?: Array<{
     id: string;
     statut?: string;
-    pharmacie?: { id: string; nom: string; adresse?: string | null; ville?: string | null; telephone?: string | null } | null;
+    pharmacie?: { id: string; nom: string; adresse?: string | null; ville?: string | null; telephone?: string | null; email?: string | null } | null;
     produits?: Array<{
       quantite?: number;
       prix_unitaire?: number;
+      ordonnance_requise?: boolean;
       produit?: { id: string; nom: string; forme?: string | null; dosage?: string | null } | null;
+      ordonnance?: { fichier_url?: string | null } | null;
     }>;
   }>;
 }

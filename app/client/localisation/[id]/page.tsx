@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye, FileText, X } from "lucide-react";
 import { toast } from "sonner";
 import { getLocalisationDetail } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
@@ -14,6 +14,7 @@ interface PharmacieBloc {
   pharmacieNom: string;
   pharmacieAdresse: string;
   pharmacieTelephone: string;
+  pharmacieEmail: string;
   distanceKm: number;
   produits: Array<{
     id: string;
@@ -22,6 +23,7 @@ interface PharmacieBloc {
     prix: number;
     qteDemandee: number;
     qteDispo: number;
+    ordonnanceRequise: boolean;
   }>;
 }
 
@@ -42,6 +44,8 @@ function LocalisationDetailContent() {
   const [criteres, setCriteres] = useState<string>("");
   const [dateLabel, setDateLabel] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [ordonnanceUrl, setOrdonnanceUrl] = useState<string | null>(null);
+  const [showOrdonnanceModal, setShowOrdonnanceModal] = useState(false);
 
   const token = useMemo(() => {
     const session = getAuthSession();
@@ -86,6 +90,7 @@ function LocalisationDetailContent() {
             pharmacieNom: commandeAnnulee.pharmacie?.nom ?? "Pharmacie",
             pharmacieAdresse: [commandeAnnulee.pharmacie?.adresse, commandeAnnulee.pharmacie?.ville].filter(Boolean).join(", "),
             pharmacieTelephone: commandeAnnulee.pharmacie?.telephone ?? "",
+            pharmacieEmail: commandeAnnulee.pharmacie?.email ?? "",
             distanceKm: 0,
             produits: (commandeAnnulee.produits ?? []).map((pc, idx) => ({
               id: `${pid}-${idx}`,
@@ -94,8 +99,12 @@ function LocalisationDetailContent() {
               prix: Number(pc.prix_unitaire ?? 0),
               qteDemandee: Number(pc.quantite ?? 0),
               qteDispo: Number(pc.quantite ?? 0),
+              ordonnanceRequise: Boolean(pc.ordonnance_requise),
             })),
           });
+
+          const produitAvecOrdonnance = (commandeAnnulee.produits ?? []).find((pc) => pc.ordonnance?.fichier_url);
+          setOrdonnanceUrl(produitAvecOrdonnance?.ordonnance?.fichier_url ?? null);
         }
 
         setPharmacies(Array.from(map.values()).sort((a, b) => a.distanceKm - b.distanceKm));
@@ -165,6 +174,7 @@ function LocalisationDetailContent() {
                   nom={ph.pharmacieNom}
                   adresse={ph.pharmacieAdresse}
                   telephone={ph.pharmacieTelephone}
+                  email={ph.pharmacieEmail}
                   distanceKm={ph.distanceKm}
                   className="rounded-t-2xl px-6 py-6"
                 />
@@ -185,7 +195,17 @@ function LocalisationDetailContent() {
                     >
                       <div className="flex flex-col gap-2 px-6 py-4 sm:grid sm:grid-cols-[3fr_2fr_2fr_2fr] sm:items-center sm:gap-2">
                         <div>
-                          <p className="font-semibold text-gray-900">{item.nom}</p>
+                          <p className="font-semibold text-gray-900 flex items-center gap-2">
+                            {item.nom}
+                            {item.ordonnanceRequise && (
+                              <span className="relative group/ordo shrink-0">
+                                <FileText size={15} className="text-red-500" />
+                                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/ordo:block whitespace-nowrap rounded bg-red-500 px-2 py-1 text-xs text-white z-10">
+                                  Ordonnance requise
+                                </span>
+                              </span>
+                            )}
+                          </p>
                           {item.type && item.type !== "Produit" && (
                             <p className="text-xs text-gray-400">{item.type}</p>
                           )}
@@ -222,6 +242,82 @@ function LocalisationDetailContent() {
           })}
         </div>
       )}
+
+      {/* Ordonnance soumise */}
+      {ordonnanceUrl && (() => {
+        const isPdf = ordonnanceUrl.toLowerCase().includes(".pdf") || ordonnanceUrl.toLowerCase().includes("pdf");
+        return (
+          <div className="mt-5 flex flex-col gap-2">
+            <p className="text-sm font-semibold text-gray-700">Ordonnance soumise :</p>
+            <div className="flex items-center gap-3 rounded-xl border border-toni-green-dark-2/30 bg-green-50 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (isPdf) {
+                    window.open(ordonnanceUrl, "_blank", "noopener,noreferrer");
+                  } else {
+                    setShowOrdonnanceModal(true);
+                  }
+                }}
+                className="shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-gray-200 bg-white flex items-center justify-center hover:opacity-80 transition"
+                title="Prévisualiser"
+              >
+                {!isPdf ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={ordonnanceUrl} alt="aperçu" className="w-full h-full object-cover" />
+                ) : (
+                  <FileText size={22} className="text-toni-green-dark-2" />
+                )}
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 truncate">{isPdf ? "Ordonnance.pdf" : "Ordonnance"}</p>
+                <p className="text-xs text-gray-400">Déjà soumise</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isPdf) {
+                    window.open(ordonnanceUrl, "_blank", "noopener,noreferrer");
+                  } else {
+                    setShowOrdonnanceModal(true);
+                  }
+                }}
+                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-toni-green-dark-2 transition shrink-0"
+                title={isPdf ? "Ouvrir dans un nouvel onglet" : "Prévisualiser"}
+              >
+                <Eye size={16} />
+              </button>
+            </div>
+
+            {showOrdonnanceModal && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+                onClick={() => setShowOrdonnanceModal(false)}
+              >
+                <div
+                  className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between px-1 pb-3 border-b border-gray-100">
+                    <p className="text-sm font-semibold text-gray-800">Ordonnance soumise</p>
+                    <button
+                      type="button"
+                      onClick={() => setShowOrdonnanceModal(false)}
+                      className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-center pt-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={ordonnanceUrl} alt="Ordonnance" className="max-h-[70vh] w-auto rounded-lg object-contain" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </section>
   );
 }
