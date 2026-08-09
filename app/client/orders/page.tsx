@@ -48,6 +48,19 @@ const TERMINATED_PATIENT_STATUSES = new Set([
   "expiree",
 ]);
 
+function getLocalisationMessage(order: ClientOrderItem): string | null {
+  if (order.statusKey === "recuperee") {
+    return `Votre commande a été récuperee à la ${order.pharmacy}.`;
+  }
+  if (PENDING_PATIENT_STATUSES.has(order.statusKey)) {
+    return `La ${order.pharmacy} a été localisée, mais vous n'avez pas encore passé la commande.`;
+  }
+  if (IN_PROGRESS_PATIENT_STATUSES.has(order.statusKey)) {
+    return `Votre commande est en cours de préparation à la ${order.pharmacy}.`;
+  }
+  return null;
+}
+
 export default function ClientOrdersPage() {
   return (
     <Suspense fallback={<div className="min-h-screen" />}>
@@ -60,7 +73,6 @@ function ClientOrdersContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [orders, setOrders] = useState<ClientOrderItem[]>([]);
-  const [timelineByOrder, setTimelineByOrder] = useState<Record<string, string>>({});
   const [stats, setStats] = useState({ terminees: 0, enAttente: 0, recuperees: 0, enCours: 0, pretes: 0, annulees: 0 });
   const _today = new Date();
   const _from30 = new Date(_today);
@@ -136,10 +148,6 @@ function ClientOrdersContent() {
       pretes: counterResponse.data.total_prete ?? 0,
       annulees: counterResponse.data.total_annulee ?? 0,
     });
-
-    setTimelineByOrder(
-      Object.fromEntries(mappedOrders.map((order) => [order.id, order.status] as const)),
-    );
   }, [token]);
 
   useEffect(() => {
@@ -445,7 +453,9 @@ function ClientOrdersContent() {
           {/* Orders list */}
           <div className="   overflow-hidden">
             <div className="">
-              {filteredOrders.map((order, index) => (
+              {filteredOrders.map((order, index) => {
+                const localisationMessage = getLocalisationMessage(order);
+                return (
                 <div
                   key={`${order.id}-${index}`}
                   className="flex flex-col gap-3 border-b-2 border-[#666666] px-4 py-4 last:border-b-0 sm:px-6 md:flex-row md:items-center md:justify-between"
@@ -454,9 +464,11 @@ function ClientOrdersContent() {
                     <p className="text-base md:text-xl font-bold text-gray-900">
                       Commande NO {order.numero}
                     </p>
-                    <p className="mt-1 text-base text-gray-500">
-                      Votre commande a été localisée à la pharmacie  {timelineByOrder[order.id] ?? order.status} {order.pharmacy}
-                    </p>
+                    {localisationMessage && (
+                      <p className="mt-1 text-base text-gray-500">
+                        {localisationMessage}
+                      </p>
+                    )}
                     <div className="mt-2 text-base text-[#282828] italic ">
                       {order.date} &nbsp; {order.time}
                     </div>
@@ -542,7 +554,8 @@ function ClientOrdersContent() {
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
               {filteredOrders.length === 0 && (
                 <div className="px-6 py-8 text-sm text-gray-500">Aucune commande pour ce filtre.</div>
