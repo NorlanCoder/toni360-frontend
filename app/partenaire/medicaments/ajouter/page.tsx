@@ -395,7 +395,7 @@ export default function PartenaireAjouterMedicamentPage() {
                 aria-checked={ordonnance}
                 onClick={() => setOrdonnance((v) => !v)}
                 className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${
-                  ordonnance ? "bg-toni-green-dark" : "bg-gray-300"
+                  ordonnance ? "bg-[#00A669]" : "bg-gray-300"
                 }`}
               >
                 <span

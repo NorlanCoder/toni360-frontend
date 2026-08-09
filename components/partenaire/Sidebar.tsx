@@ -146,7 +146,7 @@ export default function PartenaireSidebar() {
             </div>
 
             {/* Footer drawer */}
-            <div className="px-5 pb-6 flex flex-col gap-1.5 text-xs text-toni-green-dark-2 leading-relaxed">
+            <div className="px-5 pb-6 flex flex-col gap-1.5 text-xs text-[#00A669] leading-relaxed">
               <Link href="/partenaire/cgu" className="hover:underline block transition-colors" onClick={onClose}>
                 Conditions générales d&apos;utilisation
               </Link>
@@ -205,7 +205,7 @@ export default function PartenaireSidebar() {
           </nav>
         </div>
 
-        <div className="px-5 pb-6 flex flex-col gap-1.5 text-xs text-toni-green-dark-2 leading-relaxed">
+        <div className="px-5 pb-6 flex flex-col gap-1.5 text-xs text-[#00A669] leading-relaxed">
 
           <Link href="/partenaire/privacy?from=pharmacie-parcours" className="hover:underline block transition-colors">
             Politique de confidentialité

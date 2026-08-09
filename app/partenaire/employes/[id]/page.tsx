@@ -451,7 +451,7 @@ export default function PartenaireEmployeDetailPage() {
                         onClick={() => void togglePermission(idx)}
                         className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${
                           isSavingPermissions ? "cursor-not-allowed opacity-60" : "cursor-pointer"
-                        } ${perm.enabled ? "bg-emerald-500" : "bg-gray-300"}`}
+                        } ${perm.enabled ? "bg-[#00A669]" : "bg-gray-300"}`}
                       >
                         <span
                           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ${
