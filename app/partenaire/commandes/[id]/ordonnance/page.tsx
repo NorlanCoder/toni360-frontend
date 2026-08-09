@@ -100,8 +100,12 @@ export default function OrdonnancePage() {
     if (!session) { toast.error("Session partenaire invalide."); return; }
     setSubmittingRefuser(true);
     try {
-      await rejeterPartnerOrdonnance(session.token, id, "Ordonnance non conforme.");
+      // Zone de texte vide → rejet simple (le patient doit présenter l'ordonnance en pharmacie).
+      // Zone de texte renseignée → rejet commenté avec le motif détaillé au patient.
+      const commentaire = notification.trim();
+      await rejeterPartnerOrdonnance(session.token, id, commentaire || undefined);
       toast.success("Ordonnance rejetée. Le patient a été notifié.");
+      setNotification("");
       router.back();
     } catch (err: unknown) {
       toast.error(err instanceof ApiError ? err.message : "Impossible de refuser l'ordonnance.");
@@ -209,9 +213,9 @@ export default function OrdonnancePage() {
             <button
               type="button"
               onClick={handleRefuser}
-              disabled={isAnySubmitting || messageHasContent || !canRefuser}
+              disabled={isAnySubmitting || !canRefuser}
               className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full border-2 px-6 py-2.5 text-sm font-semibold transition-colors ${
-                !isAnySubmitting && !messageHasContent && canRefuser
+                !isAnySubmitting && canRefuser
                   ? "border-emerald-600 text-emerald-700 bg-white hover:bg-emerald-50"
                   : "border-gray-200 text-gray-400 bg-white cursor-not-allowed"
               }`}
@@ -231,6 +235,9 @@ export default function OrdonnancePage() {
               placeholder="Notifier une incohérence au patient..."
               className="w-full resize-none rounded-2xl border border-gray-300 bg-white px-5 py-4 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-sm disabled:opacity-50"
             />
+            <p className="text-xs text-gray-400">
+              Ce texte, s&apos;il est renseigné, sera transmis au patient comme motif du rejet en cliquant sur « Refuser ».
+            </p>
             <div className="flex justify-end">
               <button
                 type="button"

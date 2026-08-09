@@ -332,9 +332,9 @@ export async function validerPartnerOrdonnance(
 export async function rejeterPartnerOrdonnance(
   token: string,
   commandeId: string,
-  motif: string,
+  motif?: string,
 ): Promise<PartnerCommandeDetailResponse> {
-  const json = buildJsonRequest({ motif });
+  const json = buildJsonRequest({ motif: motif ?? null });
   return apiRequest<PartnerCommandeDetailResponse>(`/pharmacie/commandes/${commandeId}/rejeter-ordonnance`, {
     method: "POST",
     token,
