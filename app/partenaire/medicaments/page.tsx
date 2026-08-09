@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { extractCollection, getPartnerStocks } from "@/lib/api/partner";
+import { formatNumberFr } from "@/lib/formatNumber";
 import { toast } from "sonner";
 import ImportModal from "./components/ImportModal";
 import { useHeaderSearch } from "@/app/partenaire/_header-search-context";
@@ -114,7 +115,7 @@ export default function PartenaireMedicamentsPage() {
             return {
               id: stock.produit_id,
               nom: stock.produit?.nom ?? "—",
-              prix: moneyFormat.format(stock.prix_unitaire ?? 0),
+              prix: formatNumberFr(stock.prix_unitaire ?? 0) + " FCFA",
               quantite: stock.quantite ?? 0,
               statut,
             };
@@ -125,7 +126,7 @@ export default function PartenaireMedicamentsPage() {
       } finally {
         setIsLoading(false);
       }
-    }, [moneyFormat]);
+    }, []);
 
   useEffect(() => {
     void loadMedicines();
@@ -213,7 +214,7 @@ export default function PartenaireMedicamentsPage() {
                     Médicament
                   </th>
                   <th className="w-[16%] px-3 sm:px-8 py-3 sm:py-5 text-left text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
-                    Prix unitaire
+                    P.U
                   </th>
                   <th className="w-[12%] px-3 sm:px-8 py-3 sm:py-5 text-left text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-600">
                     Quantité
@@ -237,7 +238,7 @@ export default function PartenaireMedicamentsPage() {
                       {med.prix}
                     </td>
                     <td className="whitespace-nowrap px-3 sm:px-8 py-3 sm:py-6 text-sm sm:text-base text-gray-700">
-                      {med.quantite}
+                      {formatNumberFr(med.quantite)}
                     </td>
                     <td className="whitespace-nowrap px-3 sm:px-8 py-3 sm:py-6 text-right">
                       <span

@@ -13,6 +13,7 @@ import {
   PartnerCommande,
 } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
+import { formatNumberFr } from "@/lib/formatNumber";
 import { toast } from "sonner";
 
 /* ──────────────────────────── Types ──────────────────────────── */
@@ -403,9 +404,11 @@ export default function CommandeDetailPage() {
                           )}
                         </span>
                       </td>
-                      <td className="px-6 py-5 text-gray-600">{String(item.qte).padStart(2, "0")}</td>
-                      <td className="px-6 py-5 text-gray-600">{formatPrice(item.pu)}</td>
-                      <td className="px-6 py-5 text-gray-800 font-medium">{formatPrice(item.total)}</td>
+                      <td className="px-6 py-5 text-gray-600">
+                        {item.qte >= 1000 ? formatNumberFr(item.qte) : String(item.qte).padStart(2, "0")}
+                      </td>
+                      <td className="px-6 py-5 text-gray-600">{formatNumberFr(item.pu)}</td>
+                      <td className="px-6 py-5 text-gray-800">{formatNumberFr(item.total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -414,7 +417,7 @@ export default function CommandeDetailPage() {
             {/* ── Montant total ── */}
             <div className="flex items-center justify-between rounded-b-lg border border-t-0 border-gray-200 bg-emerald-200 px-6 py-5">
               <span className="text-lg font-bold text-gray-800">Montant total</span>
-              <span className="text-2xl font-extrabold text-gray-900">{formatTotal(order.montantTotal)}</span>
+              <span className="text-2xl font-extrabold text-gray-900">{formatNumberFr(order.montantTotal)} FCFA</span>
             </div>
           </div>
 

@@ -13,6 +13,7 @@ import {
   type PartnerIncoherence,
   type ProduitSuggestion,
 } from "@/lib/api/partner";
+import { formatNumberFr } from "@/lib/formatNumber";
 import { toast } from "sonner";
 import { X } from "lucide-react";
 
@@ -210,7 +211,7 @@ export default function PartenaireIncoherencesPage() {
                   {selected.nom_saisi}
                 </h2>
                 <p className="mt-0.5 text-sm text-gray-500">
-                  {selected.forme_saisie ?? "—"} · Qté : {selected.quantite} · {formatDate(selected.created_at)}
+                  {selected.forme_saisie ?? "—"} · Qté : <span className="font-bold text-gray-700">{formatNumberFr(selected.quantite)}</span> · {formatDate(selected.created_at)}
                 </p>
               </div>
               <button
@@ -243,8 +244,8 @@ export default function PartenaireIncoherencesPage() {
                 {selected.prix_unitaire != null && (
                   <span className="text-sm text-gray-500">
                     Prix :{" "}
-                    <span className="font-medium text-gray-800">
-                      {selected.prix_unitaire} FCFA
+                    <span className="font-bold text-gray-800">
+                      {formatNumberFr(selected.prix_unitaire)} FCFA
                     </span>
                   </span>
                 )}

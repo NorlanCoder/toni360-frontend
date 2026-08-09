@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { getAuthSession } from "@/lib/api/session";
 import { ApiError } from "@/lib/api/errors";
 import { extractCollection, getPartnerStocks, PartnerStockItem } from "@/lib/api/partner";
+import { formatNumberFr } from "@/lib/formatNumber";
 import { toast } from "sonner";
 
 export default function PartenaireStocksPage() {
@@ -55,8 +56,8 @@ export default function PartenaireStocksPage() {
                   {stocks.map((stock) => (
                     <tr key={stock.id} className="border-b border-gray-200 last:border-b-0">
                       <td className="px-8 py-5 text-gray-900">{stock.produit?.nom ?? "-"}</td>
-                      <td className="px-8 py-5 text-gray-700">{stock.quantite}</td>
-                      <td className="px-8 py-5 text-gray-700">{stock.seuil_alerte}</td>
+                      <td className="px-8 py-5 font-bold text-gray-700">{formatNumberFr(stock.quantite)}</td>
+                      <td className="px-8 py-5 font-bold text-gray-700">{formatNumberFr(stock.seuil_alerte)}</td>
                       <td className="px-8 py-5 text-right text-gray-700">{stock.statut_label ?? "-"}</td>
                     </tr>
                   ))}

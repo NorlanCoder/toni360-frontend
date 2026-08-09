@@ -159,7 +159,7 @@ function DeleteConfirmationModal({
               <span className="font-bold">Nom :</span> {nom}
             </p>
             <p>
-              <span className="font-bold">Stock actuel :</span> {stock}
+              <span className="font-bold">Stock actuel :</span> {formatMilliers(stock)}
             </p>
           </div>
 

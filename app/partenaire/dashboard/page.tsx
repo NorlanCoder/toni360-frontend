@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 import { hasPermission } from "@/lib/auth/authorization";
+import { formatNumberFr } from "@/lib/formatNumber";
 import {
   getPartnerCommandeCompteurs,
   getPartnerStockStats,
@@ -299,7 +300,7 @@ export default function PartenaireDashboardPage() {
                 {isLoading ? (
                   <NumberSkeleton colorClass="bg-red-700/15" />
                 ) : (
-                  <span className="text-6xl font-bold text-red-700 leading-none">{aPreparerCount}</span>
+                  <span className="text-6xl font-bold text-red-700 leading-none">{formatNumberFr(aPreparerCount)}</span>
                 )}
                 <span className="text-sm text-red-600 leading-tight max-w-[100px]">
                   {pluralizeLabel(aPreparerCount, "commande en attente de préparation", "commandes en attente de préparation")}
@@ -335,7 +336,7 @@ export default function PartenaireDashboardPage() {
                 {isLoading ? (
                   <NumberSkeleton colorClass="bg-[#b7860b]/15" />
                 ) : (
-                  <span className="text-6xl font-bold text-[#b7860b] leading-none">{enAttenteCount}</span>
+                  <span className="text-6xl font-bold text-[#b7860b] leading-none">{formatNumberFr(enAttenteCount)}</span>
                 )}
                 <span className="text-sm text-[#b7860b] leading-tight max-w-[110px]">
                   {pluralizeLabel(enAttenteCount, "commande prête à être récupérée", "commandes prêtes à être récupérées")}
@@ -371,7 +372,7 @@ export default function PartenaireDashboardPage() {
                 {isLoading ? (
                   <NumberSkeleton colorClass="bg-emerald-800/15" />
                 ) : (
-                  <span className="text-6xl font-bold text-emerald-800 leading-none">{recupereesCount}</span>
+                  <span className="text-6xl font-bold text-emerald-800 leading-none">{formatNumberFr(recupereesCount)}</span>
                 )}
                 <span className="text-sm text-emerald-700 leading-tight max-w-[110px]">
                   {pluralizeLabel(recupereesCount, "commande récupérée par un patient", "commandes récupérées par les patients")}
@@ -411,7 +412,7 @@ export default function PartenaireDashboardPage() {
                 {isLoading ? (
                   <NumberSkeleton colorClass="bg-emerald-800/15" />
                 ) : (
-                  <span className="text-6xl font-bold text-emerald-800 leading-none">{stockTotal}</span>
+                  <span className="text-6xl font-bold text-emerald-800 leading-none">{formatNumberFr(stockTotal)}</span>
                 )}
                 <span className="text-sm text-emerald-700 leading-tight">
                   {pluralizeLabel(stockTotal, "produit actuellement en stock", "produits actuellement en stock")}

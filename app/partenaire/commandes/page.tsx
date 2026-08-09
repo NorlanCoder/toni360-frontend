@@ -10,6 +10,7 @@ import { extractCollection, getPartnerCommandes, PartnerCommande } from "@/lib/a
 import { ApiError } from "@/lib/api/errors";
 import { useHeaderSearch } from "@/app/partenaire/_header-search-context";
 import { toast } from "sonner";
+import { formatNumberFr } from "@/lib/formatNumber";
 
 /* ──────────────────────────── Types ──────────────────────────── */
 type TabKey = "a-preparer" | "en-attente" | "recuperees";
@@ -204,7 +205,7 @@ export default function PartenaireDashboardPage() {
             date: commande.created_at
               ? formatDate.format(new Date(commande.created_at))
               : "-",
-            montant: moneyFormat.format(commande.montant_total || 0),
+            montant: commande.montant_total ? moneyFormat.format(commande.montant_total) : "-",
             statut: commande.statut_label || "À préparer",
           })),
         );
