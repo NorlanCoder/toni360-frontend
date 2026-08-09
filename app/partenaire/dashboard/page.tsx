@@ -390,7 +390,7 @@ export default function PartenaireDashboardPage() {
 
             {/* Card 4 — Stocks disponibles */}
             <Link
-              href="/partenaire/stocks"
+              href="/partenaire/medicaments"
               className="group flex flex-col sm:col-span-1 rounded-2xl bg-[#B0E3D1] border border-[#00955F] p-6 min-h-[220px] transition-shadow hover:shadow-md"
             >
               {/* Icon */}
