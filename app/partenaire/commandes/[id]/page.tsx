@@ -199,6 +199,14 @@ export default function CommandeDetailPage() {
       toast.error("Session partenaire invalide.");
       return;
     }
+    if (!order) {
+      toast.error("Commande introuvable.");
+      return;
+    }
+    if (order.items.some((item) => item.ordonnance_requise && item.ordonnance_statut !== "VALIDEE")) {
+      toast.error("Ordonnance non validée : validez l'ordonnance avant de marquer la commande récupérée.");
+      return;
+    }
     setSubmittingRecuperer(true);
     try {
       const recupResponse = await livrerPartnerCommande(session.token, id);
@@ -454,28 +462,28 @@ export default function CommandeDetailPage() {
                   </button>
                 )} */}
 
-                {/* Prête — vert outline */}
+                {/* Prête — vert outline (désactivé tant que l'ordonnance requise n'est pas validée) */}
                 <button
                   type="button"
                   onClick={handleReady}
-                  disabled={submittingReady || !canReadyByStatus}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full border-2 px-6 py-3 text-base font-semibold transition-colors ${!submittingReady && canReadyByStatus
-                    ? canMarkReady
-                      ? "border-emerald-600 text-emerald-600 bg-white hover:bg-emerald-50"
-                      : "border-gray-300 text-gray-600 bg-gray-50 hover:bg-gray-100"
-                    : "border-gray-300 text-gray-400 bg-white cursor-not-allowed"
+                  disabled={submittingReady || !canMarkReady}
+                  title={hasUnvalidatedRequiredPrescription ? "Consultez et validez l'ordonnance avant de marquer la commande prête." : undefined}
+                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full border-2 px-6 py-3 text-base font-semibold transition-colors ${!submittingReady && canMarkReady
+                    ? "border-emerald-600 text-emerald-600 bg-white hover:bg-emerald-50"
+                    : "border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed"
                     }`}
                 >
                   {submittingReady && <Loader2 className="h-4 w-4 animate-spin" />}
                   Prête
                 </button>
 
-                {/* Récupérée — vert plein */}
+                {/* Récupérée — vert plein (désactivé tant que l'ordonnance requise n'est pas validée) */}
                 <button
                   type="button"
                   onClick={handleRecuperer}
-                  disabled={!canForceRecuperer || submittingRecuperer}
-                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold text-white transition-colors ${canForceRecuperer && !submittingRecuperer
+                  disabled={!canForceRecuperer || submittingRecuperer || hasUnvalidatedRequiredPrescription}
+                  title={hasUnvalidatedRequiredPrescription ? "Consultez et validez l'ordonnance avant de marquer la commande récupérée." : undefined}
+                  className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold text-white transition-colors ${canForceRecuperer && !submittingRecuperer && !hasUnvalidatedRequiredPrescription
                     ? "bg-emerald-600 hover:bg-emerald-700"
                     : "bg-gray-300 cursor-not-allowed"
                     }`}

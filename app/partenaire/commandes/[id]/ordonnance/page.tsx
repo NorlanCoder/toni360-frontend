@@ -106,7 +106,12 @@ export default function OrdonnancePage() {
       await rejeterPartnerOrdonnance(session.token, id, commentaire || undefined);
       toast.success("Ordonnance rejetée. Le patient a été notifié.");
       setNotification("");
-      router.back();
+      // Rejet commenté → retour au détail de la commande pour suivre la suite du traitement.
+      if (commentaire) {
+        router.push(`/partenaire/commandes/${id}`);
+      } else {
+        router.back();
+      }
     } catch (err: unknown) {
       toast.error(err instanceof ApiError ? err.message : "Impossible de refuser l'ordonnance.");
     } finally {
