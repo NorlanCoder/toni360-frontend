@@ -37,6 +37,7 @@ type SearchResult = {
 export default function AccueilClientPage() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
   const { searchTerm, searchVersion } = useSearch();
   const { refreshCart } = useCart();
 
@@ -68,6 +69,8 @@ export default function AccueilClientPage() {
           clearAuthSession();
           router.replace("/client/connexion");
         }
+      } finally {
+        setIsProfileLoading(false);
       }
     };
 
@@ -306,7 +309,12 @@ export default function AccueilClientPage() {
     <section className="mx-auto w-full max-w-6xl px-3 py-2 sm:px-6 sm:py-4 lg:px-8">
       {/* Welcome */}
       <h1 className="mb-4 break-words text-xl font-bold leading-tight text-gray-900 sm:mb-6 sm:text-3xl lg:text-4xl">
-        Bienvenue, {displayName}
+        Bienvenue,{" "}
+        {isProfileLoading ? (
+          <span className="inline-block h-[1em] w-32 animate-pulse rounded-md bg-gray-200 align-middle sm:w-40 lg:w-48" />
+        ) : (
+          displayName
+        )}
       </h1>
 
       {/* Hero card */}

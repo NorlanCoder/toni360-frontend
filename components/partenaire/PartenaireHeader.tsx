@@ -5,10 +5,17 @@ import { Bell, Menu, Search, User } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useSidebarContext } from "@/app/partenaire/_sidebar-context";
 import { useHeaderSearch } from "@/app/partenaire/_header-search-context";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { getAuthSession } from "@/lib/api/session";
 import { getPartnerNotificationCount } from "@/lib/api/partner";
+
+const noopSubscribe = () => () => {};
+
+// Hydratation-safe : `false` pendant le rendu serveur, `true` une fois monté côté client.
+function useMounted(): boolean {
+  return useSyncExternalStore(noopSubscribe, () => true, () => false);
+}
 
 export default function PartenaireHeader() {
   const { setOpen } = useSidebarContext();
@@ -30,6 +37,10 @@ export default function PartenaireHeader() {
   const showWelcome = pathname === "/partenaire/dashboard";
   const [notifCount, setNotifCount] = useState(0);
   const router = useRouter();
+
+  // Évite d'afficher "Bienvenue" sans nom pendant l'hydratation côté client
+  // (la session est lue depuis le localStorage, indisponible côté serveur).
+  const mounted = useMounted();
 
   useEffect(() => {
     if (!session?.token) return;
@@ -88,9 +99,17 @@ export default function PartenaireHeader() {
           </div>
         ) : (
           showWelcome && (
-            <p className="text-base sm:text-xl font-semibold text-gray-800 truncate">
-              Bienvenue{displayName ? `, Dr. ${displayName}` : ""}
-            </p>
+            <h1 className="truncate text-xl font-bold leading-tight text-gray-900 sm:text-2xl lg:text-3xl">
+              Bienvenue
+              {!mounted ? (
+                <>
+                  ,{" "}
+                  <span className="inline-block h-[1em] w-28 animate-pulse rounded-md bg-gray-200 align-middle sm:w-36" />
+                </>
+              ) : displayName ? (
+                `, Dr. ${displayName}`
+              ) : null}
+            </h1>
           )
         )}
       </div>
