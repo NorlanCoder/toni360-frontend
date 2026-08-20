@@ -292,15 +292,6 @@ function ClientOrdersContent() {
           <div className="mb-8 grid grid-cols-3 gap-2 sm:gap-3 lg:mb-10 lg:gap-4">
             {[
               {
-                tab: "Recuperees" as const,
-                nextTab: "recuperees",
-                bg: "#004B2F",
-                icon: "/images/recuperer.svg",
-                label: "Récupérées",
-                labelLong: "Commandes récupérées",
-                value: stats.recuperees,
-              },
-              {
                 tab: "En attente" as const,
                 nextTab: "en_attente",
                 bg: "#FF3D00",
@@ -317,6 +308,15 @@ function ClientOrdersContent() {
                 label: "En cours",
                 labelLong: "Commandes en cours",
                 value: stats.enCours + stats.pretes,
+              },
+              {
+                tab: "Recuperees" as const,
+                nextTab: "recuperees",
+                bg: "#004B2F",
+                icon: "/images/recuperer.svg",
+                label: "Récupérées",
+                labelLong: "Commandes récupérées",
+                value: stats.recuperees,
               },
             ].map((card) => (
               <button
