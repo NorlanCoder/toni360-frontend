@@ -473,7 +473,7 @@ function OrderDetailContent() {
                   className="flex sm:justify-center text-red-500 hover:text-red-600 transition disabled:opacity-40"
                   aria-label="Supprimer"
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={16} className="text-red-500 hover:text-red-600" />
                 </button>
               )}
             </div>
