@@ -13,14 +13,13 @@ import {
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
 
+const PAGE_SIZE = 20;
+
 export default function LocalisationListPage() {
   const router = useRouter();
   const [recherches, setRecherches] = useState<LocalisationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isPageLoading, setIsPageLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -39,51 +38,49 @@ export default function LocalisationListPage() {
       return;
     }
 
-    const loadPage = async (page: number) => {
-      const pageLoad = page !== 1;
-      if (pageLoad) {
-        setIsPageLoading(true);
-      }
+    let active = true;
 
+    // On charge toutes les pages brutes du backend puis on filtre/pagine
+    // cote client : le filtrage "localisationsValides" ne peut pas s'appliquer
+    // page par page sans desynchroniser le compteur/la pagination affiches
+    // (une page brute peut ne contenir aucune localisation valide alors que
+    // d'autres pages en ont).
+    const loadAll = async () => {
+      setIsLoading(true);
       try {
-        const res = await getHistoriqueLocalisations(token, page);
-        const payload = res.data;
-        setRecherches(payload?.data ?? []);
-        setCurrentPage(payload?.current_page ?? page);
-        setLastPage(payload?.last_page ?? 1);
-        setTotal(payload?.total ?? 0);
+        const first = await getHistoriqueLocalisations(token, 1);
+        if (!active) return;
+
+        let all = first.data?.data ?? [];
+        const nbPages = first.data?.last_page ?? 1;
+
+        if (nbPages > 1) {
+          const rest = await Promise.all(
+            Array.from({ length: nbPages - 1 }, (_, i) => getHistoriqueLocalisations(token, i + 2)),
+          );
+          if (!active) return;
+          for (const res of rest) {
+            all = all.concat(res.data?.data ?? []);
+          }
+        }
+
+        setRecherches(all);
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
           clearAuthSession();
           router.replace("/client/connexion");
         }
       } finally {
-        setIsPageLoading(false);
-        setIsLoading(false);
+        if (active) setIsLoading(false);
       }
     };
 
-    void loadPage(currentPage);
+    void loadAll();
 
     return () => {
-      setIsPageLoading(false);
+      active = false;
     };
-  }, [token, router, currentPage]);
-
-  const loadSpecificPage = (page: number) => {
-    if (page < 1 || page > lastPage || page === currentPage || isPageLoading) {
-      return;
-    }
-    setCurrentPage(page);
-  };
-
-  const loadPreviousPage = () => {
-    loadSpecificPage(currentPage - 1);
-  };
-
-  const loadNextPage = () => {
-    loadSpecificPage(currentPage + 1);
-  };
+  }, [token, router]);
 
   const localisationsValides = useMemo(() => {
     return recherches.filter((recherche) => {
@@ -110,6 +107,20 @@ export default function LocalisationListPage() {
     });
   }, [recherches]);
 
+  const lastPage = Math.max(1, Math.ceil(localisationsValides.length / PAGE_SIZE));
+
+  // Recadre la page courante si elle devient hors bornes (ex. apres une suppression).
+  useEffect(() => {
+    if (currentPage > lastPage) {
+      setCurrentPage(lastPage);
+    }
+  }, [currentPage, lastPage]);
+
+  const pageItems = localisationsValides.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
   const handleDelete = async (id: string) => {
     if (!token || deletingId) return;
     setConfirmDeleteId(null);
@@ -117,7 +128,6 @@ export default function LocalisationListPage() {
     try {
       await deleteLocalisation(token, id);
       setRecherches((prev) => prev.filter((r) => r.id !== id));
-      setTotal((prev) => Math.max(prev - 1, 0));
       toast.success("Localisation supprimée.");
     } catch (error) {
       if (error instanceof ApiError) toast.error(error.message);
@@ -133,9 +143,7 @@ export default function LocalisationListPage() {
     try {
       await deleteAllLocalisations(token);
       setRecherches([]);
-      setTotal(0);
       setCurrentPage(1);
-      setLastPage(1);
       toast.success("Toutes les localisations ont été supprimées.");
     } catch (error) {
       if (error instanceof ApiError) toast.error(error.message);
@@ -189,7 +197,7 @@ export default function LocalisationListPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {localisationsValides.map((r) => {
+          {pageItems.map((r) => {
             // N'afficher que les produits réellement commandés (commande annulée liée),
             // pas l'ensemble des résultats de la recherche d'origine.
             const commandeAnnulee = (r.commandes ?? []).find(
@@ -275,8 +283,8 @@ export default function LocalisationListPage() {
         <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-3">
           <button
             type="button"
-            onClick={loadPreviousPage}
-            disabled={currentPage <= 1 || isPageLoading}
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage <= 1}
             className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Précédent
@@ -284,22 +292,20 @@ export default function LocalisationListPage() {
 
           <p className="text-sm text-gray-500">
             Page <span className="font-semibold text-gray-700">{currentPage}</span> / {lastPage}
-            {total > 0 && <span className="ml-2 text-gray-400">({total} localisations)</span>}
+            {localisationsValides.length > 0 && (
+              <span className="ml-2 text-gray-400">({localisationsValides.length} localisations)</span>
+            )}
           </p>
 
           <button
             type="button"
-            onClick={loadNextPage}
-            disabled={currentPage >= lastPage || isPageLoading}
+            onClick={() => setCurrentPage((p) => Math.min(lastPage, p + 1))}
+            disabled={currentPage >= lastPage}
             className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Suivant
           </button>
         </div>
-      )}
-
-      {isPageLoading && (
-        <div className="mt-3 text-center text-sm text-gray-500">Chargement de la page…</div>
       )}
 
       {/* Modal confirmation suppression individuelle */}
