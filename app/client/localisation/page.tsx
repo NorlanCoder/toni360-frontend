@@ -173,9 +173,8 @@ export default function LocalisationListPage() {
             type="button"
             onClick={() => setConfirmDeleteAll(true)}
             disabled={deletingAll}
-            className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-500 transition hover:bg-red-100 hover:text-red-600 disabled:opacity-50 sm:px-5 sm:py-3 sm:text-base"
+            className="flex items-center gap-2 rounded-full border-2 border-red-500 px-4 py-2 text-sm font-bold text-red-500 transition hover:bg-red-500 hover:text-white disabled:opacity-50"
           >
-            <Trash2 size={18} className="text-red-500" />
             Tout supprimer
           </button>
         )}
