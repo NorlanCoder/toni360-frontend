@@ -470,7 +470,7 @@ function OrderDetailContent() {
                       setPendingItemId(null);
                     }
                   }}
-                  className="flex sm:justify-center text-red-400 hover:text-red-600 transition disabled:opacity-40"
+                  className="flex sm:justify-center text-red-500 hover:text-red-600 transition disabled:opacity-40"
                   aria-label="Supprimer"
                 >
                   <Trash2 size={16} />
