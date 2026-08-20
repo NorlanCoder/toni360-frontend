@@ -132,6 +132,7 @@ export default function AccueilClientPage() {
           }
         }
 
+        flat.sort((a, b) => a.nom.localeCompare(b.nom, "fr", { sensitivity: "base" }));
         setResults(flat);
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
