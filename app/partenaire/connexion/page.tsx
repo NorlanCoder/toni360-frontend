@@ -8,7 +8,7 @@ import Link from "next/link";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { getPartnerProfile, loginPartner } from "@/lib/api/auth";
-import { PARTNER_SESSION_KEY } from "@/app/partenaire/verification/page";
+import { PARTNER_SESSION_KEY, PARTNER_SESSION_REMEMBER_KEY } from "@/app/partenaire/verification/page";
 import { ApiError } from "@/lib/api/errors";
 import { saveAuthSession } from "@/lib/api/session";
 import { getPartnerHomeRoute } from "@/lib/auth/authorization";
@@ -54,6 +54,7 @@ export default function ConnexionPartenairePage() {
       // Vérification OTP requise
       if (response.requires_verification) {
         sessionStorage.setItem(PARTNER_SESSION_KEY, loginMethod === "email" ? formData.email.trim() : (formData.telephone ?? ""));
+        sessionStorage.setItem(PARTNER_SESSION_REMEMBER_KEY, formData.rememberMe ? "1" : "0");
         toast.info(response.message ?? "Un code de vérification vous a été envoyé.");
         router.push(
           `/partenaire/verification?email=${encodeURIComponent(response.email ?? "")}&purpose=${response.purpose ?? "email_verification"}`

@@ -12,6 +12,7 @@ import OtpInput from "@/components/auth/OtpInput";
 
 const RESEND_COOLDOWN = 60;
 export const SESSION_KEY = "otp_pending_email";
+export const SESSION_REMEMBER_KEY = "otp_pending_remember";
 
 function VerificationContent() {
   const router = useRouter();
@@ -64,15 +65,17 @@ function VerificationContent() {
       }
 
       const profileResponse = await getPatientProfile(response.data.token);
+      const remember = sessionStorage.getItem(SESSION_REMEMBER_KEY) === "1";
 
       saveAuthSession({
         userType: "patient",
         token: response.data.token,
         tokenType: response.data.token_type ?? "Bearer",
         profile: profileResponse.data.patient ?? response.data.patient ?? null,
-      });
+      }, remember);
 
       sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(SESSION_REMEMBER_KEY);
       toast.success("Vérification réussie. Bienvenue !");
       router.push("/client/accueil");
     } catch (error: unknown) {

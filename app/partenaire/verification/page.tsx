@@ -13,6 +13,7 @@ import OtpInput from "@/components/auth/OtpInput";
 
 const RESEND_COOLDOWN = 60;
 export const PARTNER_SESSION_KEY = "otp_pending_partner_email";
+export const PARTNER_SESSION_REMEMBER_KEY = "otp_pending_partner_remember";
 
 function PartenaireVerificationContent() {
   const router = useRouter();
@@ -65,6 +66,7 @@ function PartenaireVerificationContent() {
       }
 
       const profileResponse = await getPartnerProfile(response.data.token);
+      const remember = sessionStorage.getItem(PARTNER_SESSION_REMEMBER_KEY) === "1";
 
       const session = {
         userType: "user" as const,
@@ -74,8 +76,9 @@ function PartenaireVerificationContent() {
         permissions: profileResponse.data.permissions ?? [],
       };
 
-      saveAuthSession(session);
+      saveAuthSession(session, remember);
       sessionStorage.removeItem(PARTNER_SESSION_KEY);
+      sessionStorage.removeItem(PARTNER_SESSION_REMEMBER_KEY);
       toast.success("Vérification réussie. Bienvenue !");
       router.push(getPartnerHomeRoute(session));
     } catch (error: unknown) {

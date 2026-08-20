@@ -82,7 +82,7 @@ export default function ProfilPage() {
       saveAuthSession({
         ...session,
         profile: response.data.patient,
-      });
+      }, session.rememberMe);
 
       toast.success("Profil mis à jour avec succès.");
     } catch (error) {
