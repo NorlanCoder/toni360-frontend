@@ -181,7 +181,7 @@ export default function LocalisationListPage() {
       {localisationsValides.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
           <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
-            <Search size={28} className="text-gray-400" />
+            <MapPin size={28} className="text-gray-400" />
           </div>
           <p className="text-base font-semibold text-gray-700">Aucune localisation pour l&apos;instant</p>
          
