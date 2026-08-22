@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
-import { hasPermission } from "@/lib/auth/authorization";
+import { hasEffectivePermission, hasPermission } from "@/lib/auth/authorization";
 import { formatNumberFr } from "@/lib/formatNumber";
 import {
   getPartnerCommandeCompteurs,
@@ -194,6 +194,17 @@ export default function PartenaireDashboardPage() {
 
   const donutSegments = buildDonutSegments(roleDistribution);
   const canManageEmployes = useMemo(() => hasPermission(getAuthSession(), "gestion_users", "read"), []);
+  const canAccessCommandes = useMemo(
+    () => hasEffectivePermission(getAuthSession(), "gestion_commandes", "read"),
+    [],
+  );
+  // La cartouche "Stocks disponibles" pointe vers /partenaire/medicaments : son
+  // acces suit donc "Gestion des medicaments" (gestion_produits), independamment
+  // de "Tableau de bord" — pas hasEffectivePermission ici.
+  const canAccessMedicaments = useMemo(
+    () => hasPermission(getAuthSession(), "gestion_produits", "read"),
+    [],
+  );
 
   useEffect(() => {
     const syncProfile = async () => {
@@ -300,9 +311,11 @@ export default function PartenaireDashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-5">
 
             {/* Card 1 — Commandes à préparer */}
-            <Link
-              href="/partenaire/commandes"
-              className="group flex flex-col rounded-2xl bg-[#fde8e8] p-6 min-h-[220px] transition-shadow hover:shadow-md"
+            <CardOrDiv
+              href={canAccessCommandes ? "/partenaire/commandes" : undefined}
+              className={`group flex flex-col rounded-2xl bg-[#fde8e8] p-6 min-h-[220px] ${
+                canAccessCommandes ? "transition-shadow hover:shadow-md" : "cursor-default opacity-70"
+              }`}
             >
               {/* Icon */}
               <div className="mb-4">
@@ -331,14 +344,16 @@ export default function PartenaireDashboardPage() {
               </div>
               {/* Arrow */}
               <div>
-                <ArrowButton bg="bg-red-700" />
+                <ArrowButton bg={canAccessCommandes ? "bg-red-700" : "bg-gray-300"} />
               </div>
-            </Link>
+            </CardOrDiv>
 
             {/* Card 2 — Commandes en attente */}
-            <Link
-              href="/partenaire/commandes/en-attente"
-              className="group flex flex-col rounded-2xl bg-[#fef9e7] p-6 min-h-[220px] transition-shadow hover:shadow-md"
+            <CardOrDiv
+              href={canAccessCommandes ? "/partenaire/commandes/en-attente" : undefined}
+              className={`group flex flex-col rounded-2xl bg-[#fef9e7] p-6 min-h-[220px] ${
+                canAccessCommandes ? "transition-shadow hover:shadow-md" : "cursor-default opacity-70"
+              }`}
             >
               {/* Icon */}
               <div className="mb-4">
@@ -367,14 +382,16 @@ export default function PartenaireDashboardPage() {
               </div>
               {/* Arrow */}
               <div>
-                <ArrowButton bg="bg-[#b7860b] hover:bg-[#9a7009]" />
+                <ArrowButton bg={canAccessCommandes ? "bg-[#b7860b] hover:bg-[#9a7009]" : "bg-gray-300"} />
               </div>
-            </Link>
+            </CardOrDiv>
 
             {/* Card 3 — Commandes récupérées */}
-            <Link
-              href="/partenaire/commandes/recuperees"
-              className="group flex flex-col rounded-2xl bg-[#e6f7f0] border border-emerald-300 p-6 min-h-[220px] transition-shadow hover:shadow-md"
+            <CardOrDiv
+              href={canAccessCommandes ? "/partenaire/commandes/recuperees" : undefined}
+              className={`group flex flex-col rounded-2xl bg-[#e6f7f0] border border-emerald-300 p-6 min-h-[220px] ${
+                canAccessCommandes ? "transition-shadow hover:shadow-md" : "cursor-default opacity-70"
+              }`}
             >
               {/* Icon */}
               <div className="mb-4">
@@ -403,18 +420,20 @@ export default function PartenaireDashboardPage() {
               </div>
               {/* Arrow */}
               <div>
-                <ArrowButton bg="bg-emerald-700 hover:bg-emerald-800" />
+                <ArrowButton bg={canAccessCommandes ? "bg-emerald-700 hover:bg-emerald-800" : "bg-gray-300"} />
               </div>
-            </Link>
+            </CardOrDiv>
           </div>
 
           {/* ── Row 2: Stock card + Donut chart ── */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
 
             {/* Card 4 — Stocks disponibles */}
-            <Link
-              href="/partenaire/medicaments"
-              className="group flex flex-col sm:col-span-1 rounded-2xl bg-[#B0E3D1] border border-[#00955F] p-6 min-h-[220px] transition-shadow hover:shadow-md"
+            <CardOrDiv
+              href={canAccessMedicaments ? "/partenaire/medicaments" : undefined}
+              className={`group flex flex-col sm:col-span-1 rounded-2xl bg-[#B0E3D1] border border-[#00955F] p-6 min-h-[220px] ${
+                canAccessMedicaments ? "transition-shadow hover:shadow-md" : "cursor-default opacity-70"
+              }`}
             >
               {/* Icon */}
               <div className="mb-4">
@@ -443,9 +462,9 @@ export default function PartenaireDashboardPage() {
               </div>
               {/* Arrow */}
               <div>
-                <ArrowButton bg="bg-emerald-700 hover:bg-emerald-800" />
+                <ArrowButton bg={canAccessMedicaments ? "bg-emerald-700 hover:bg-emerald-800" : "bg-gray-300"} />
               </div>
-            </Link>
+            </CardOrDiv>
 
             {/* Card 5 — Donut chart */}
             <CardOrDiv

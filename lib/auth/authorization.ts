@@ -20,8 +20,13 @@ export function getPartnerHomeRoute(session: AuthSession | null): string {
     return ROLE_HOME_ROUTES[roleCode];
   }
 
+  // Le tableau de bord est toujours accessible (chaque cartouche gere sa propre
+  // restriction), donc il reste la destination par defaut apres connexion.
+  if (!shouldRedirectAwayFromDashboard(session)) {
+    return "/partenaire/dashboard";
+  }
+
   const fallbacks: Array<{ path: string; module: string; action: PermissionAction }> = [
-    { path: "/partenaire/dashboard", module: "consultation_statistiques", action: "read" },
     { path: "/partenaire/commandes", module: "gestion_commandes", action: "read" },
     { path: "/partenaire/medicaments", module: "gestion_produits", action: "read" },
     { path: "/partenaire/stocks", module: "gestion_stocks", action: "read" },
@@ -30,7 +35,7 @@ export function getPartnerHomeRoute(session: AuthSession | null): string {
   ];
 
   for (const candidate of fallbacks) {
-    if (hasPermission(session, candidate.module, candidate.action)) {
+    if (hasEffectivePermission(session, candidate.module, candidate.action)) {
       return candidate.path;
     }
   }
@@ -55,8 +60,9 @@ function canAccessNotifications(session: AuthSession | null): boolean {
   return hasPermission(session, "gestion_notifications", "read");
 }
 
+// Le tableau de bord n'a pas d'entree ici : il reste toujours accessible,
+// c'est chaque cartouche qui applique sa propre restriction (voir dashboard/page.tsx).
 const PARTNER_ROUTE_REQUIREMENTS: Array<{ prefix: string; permission: string }> = [
-  { prefix: "/partenaire/dashboard", permission: "consultation_statistiques:read" },
   { prefix: "/partenaire/employes/historique", permission: "gestion_historique:read" },
   { prefix: "/partenaire/employes/ajouter", permission: "gestion_users:create" },
   { prefix: "/partenaire/employes", permission: "gestion_users:read" },
@@ -88,6 +94,35 @@ export function hasPermission(
   return permissions.includes(`${moduleName.toLowerCase()}:${action}`);
 }
 
+/**
+ * Modules dont l'acces depend aussi de "Tableau de bord" (consultation_statistiques) :
+ * leurs cartouches/pages s'appuient sur les compteurs du tableau de bord, donc si le
+ * Pharmacien titulaire desactive "Tableau de bord" pour un role, ces modules doivent
+ * redevenir inaccessibles meme si leur propre permission reste active.
+ */
+const DASHBOARD_DEPENDENT_MODULES = ["gestion_commandes", "gestion_stocks"];
+
+/**
+ * Comme hasPermission, mais applique en plus la dependance ci-dessus pour
+ * gestion_commandes/gestion_stocks. A utiliser pour toute navigation/route liee
+ * a ces deux modules (sidebar, cartouches dashboard, garde de route).
+ */
+export function hasEffectivePermission(
+  session: AuthSession | null,
+  moduleName: string,
+  action: PermissionAction,
+): boolean {
+  if (!hasPermission(session, moduleName, action)) {
+    return false;
+  }
+
+  if (DASHBOARD_DEPENDENT_MODULES.includes(moduleName.toLowerCase())) {
+    return hasPermission(session, "consultation_statistiques", "read");
+  }
+
+  return true;
+}
+
 export function canAccessPartnerRoute(session: AuthSession | null, pathname: string): boolean {
   if (!session || session.userType !== "user") {
     return false;
@@ -113,7 +148,7 @@ export function canAccessPartnerRoute(session: AuthSession | null, pathname: str
   }
 
   const [moduleName, action] = match.permission.split(":") as [string, PermissionAction];
-  return hasPermission(session, moduleName, action);
+  return hasEffectivePermission(session, moduleName, action);
 }
 
 export function filterPartnerNavigationByPermissions<T extends { href: string }>(
@@ -121,8 +156,11 @@ export function filterPartnerNavigationByPermissions<T extends { href: string }>
   items: T[],
 ): T[] {
   return items.filter((item) => {
+    // Le tableau de bord reste toujours affiche dans la sidebar : desactiver
+    // "Tableau de bord" ne fait plus disparaitre la page, seulement ses
+    // cartouches dependantes (voir hasEffectivePermission).
     if (item.href.startsWith("/partenaire/dashboard")) {
-      return hasPermission(session, "consultation_statistiques", "read") && !shouldRedirectAwayFromDashboard(session);
+      return !shouldRedirectAwayFromDashboard(session);
     }
 
     if (item.href === "/partenaire/employes/historique") {
@@ -138,11 +176,11 @@ export function filterPartnerNavigationByPermissions<T extends { href: string }>
     }
 
     if (item.href.startsWith("/partenaire/stocks")) {
-      return hasPermission(session, "gestion_stocks", "read");
+      return hasEffectivePermission(session, "gestion_stocks", "read");
     }
 
     if (item.href.startsWith("/partenaire/commandes")) {
-      return hasPermission(session, "gestion_commandes", "read");
+      return hasEffectivePermission(session, "gestion_commandes", "read");
     }
 
     if (item.href.startsWith("/partenaire/notifications")) {
