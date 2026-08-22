@@ -11,8 +11,8 @@ import { hasEffectivePermission, hasPermission } from "@/lib/auth/authorization"
 import { formatNumberFr } from "@/lib/formatNumber";
 import {
   getPartnerCommandeCompteurs,
+  getPartnerDashboardStats,
   getPartnerStockStats,
-  getPartnerUsers,
 } from "@/lib/api/partner";
 
 /* ─────────────────────── Donut Chart ───────────────────────── */
@@ -32,11 +32,6 @@ interface DonutSegment {
   offset: number;
 }
 
-interface PartnerUserLike {
-  role?: { code?: string | null; libelle?: string | null } | null;
-  roles?: Array<{ code?: string | null; libelle?: string | null }> | null;
-  role_code?: string | null;
-}
 
 const ROLE_META: Record<string, { label: string; color: string; order: number }> = {
   PHARMACIEN_TITULAIRE: { label: "Pharmacien titulaire", color: "#0f766e", order: 1 },
@@ -78,58 +73,6 @@ function buildDonutSegments(distribution: RoleDistribution[]): DonutSegment[] {
     runningOffset += length;
     return segment;
   });
-}
-
-function getPaginatorMeta(responseData: unknown): { lastPage: number; users: PartnerUserLike[] } {
-  if (!responseData || typeof responseData !== "object") {
-    return { lastPage: 1, users: [] };
-  }
-
-  if (Array.isArray(responseData)) {
-    return { lastPage: 1, users: responseData as PartnerUserLike[] };
-  }
-
-  const paginated = responseData as {
-    data?: unknown;
-    last_page?: number;
-  };
-
-  return {
-    lastPage: typeof paginated.last_page === "number" && paginated.last_page > 0 ? paginated.last_page : 1,
-    users: Array.isArray(paginated.data) ? (paginated.data as PartnerUserLike[]) : [],
-  };
-}
-
-function getRoleCode(user: PartnerUserLike): string | null {
-  const roleFromList = Array.isArray(user.roles) ? user.roles.find((r) => typeof r?.code === "string" && r.code.trim()) : null;
-  if (roleFromList?.code) {
-    return roleFromList.code;
-  }
-
-  if (typeof user.role?.code === "string" && user.role.code.trim()) {
-    return user.role.code;
-  }
-
-  if (typeof user.role_code === "string" && user.role_code.trim()) {
-    return user.role_code;
-  }
-
-  return null;
-}
-
-function getRoleLabel(user: PartnerUserLike, roleCode: string | null): string {
-  const roleFromList = Array.isArray(user.roles) ? user.roles.find((r) => typeof r?.code === "string" && r.code.trim()) : null;
-  const roleLibelle = roleFromList?.libelle ?? user.role?.libelle ?? null;
-
-  if (roleCode && ROLE_META[roleCode]) {
-    return ROLE_META[roleCode].label;
-  }
-
-  if (typeof roleLibelle === "string" && roleLibelle.trim()) {
-    return sanitizeRoleLabel(roleLibelle);
-  }
-
-  return ROLE_META.UNKNOWN_ROLE.label;
 }
 
 /* ────────────────── Skeleton loader (number placeholder) ──────────────── */
@@ -216,14 +159,19 @@ export default function PartenaireDashboardPage() {
       }
 
       try {
-        const canReadCommandes  = hasPermission(session, "gestion_commandes", "read");
-        const canReadStocks     = hasPermission(session, "gestion_stocks", "read");
-        const canReadUsers      = hasPermission(session, "gestion_users", "read");
+        const canReadCommandes    = hasPermission(session, "gestion_commandes", "read");
+        const canReadStocks       = hasPermission(session, "gestion_stocks", "read");
+        // La repartition des employes est une simple info de tableau de bord
+        // (aucune donnee personnelle) : elle suit "Tableau de bord", pas
+        // "gestion_users", pour rester visible aux roles qui ne gerent pas les
+        // employes (ex. Responsable des stocks) — seul le clic vers la gestion
+        // des employes reste, lui, conditionne par gestion_users (cf. canManageEmployes).
+        const canReadStatistiques = hasPermission(session, "consultation_statistiques", "read");
 
-        const [compteursResponse, stockStats, usersPage1] = await Promise.all([
-          canReadCommandes  ? getPartnerCommandeCompteurs(session.token) : Promise.resolve(null),
-          canReadStocks     ? getPartnerStockStats(session.token)        : Promise.resolve(null),
-          canReadUsers      ? getPartnerUsers(session.token, { page: 1 }) : Promise.resolve(null),
+        const [compteursResponse, stockStats, dashboardStats] = await Promise.all([
+          canReadCommandes    ? getPartnerCommandeCompteurs(session.token) : Promise.resolve(null),
+          canReadStocks       ? getPartnerStockStats(session.token)        : Promise.resolve(null),
+          canReadStatistiques ? getPartnerDashboardStats(session.token)    : Promise.resolve(null),
         ]);
 
         const compteurs = compteursResponse?.data;
@@ -232,42 +180,13 @@ export default function PartenaireDashboardPage() {
         setRecupereesCount(compteurs?.recuperee ?? 0);
         setStockTotal(stockStats?.data.total_unites ?? 0);
 
-        const firstPage = usersPage1 ? getPaginatorMeta(usersPage1.data) : { users: [], lastPage: 0 };
-        const allUsers: PartnerUserLike[] = [...firstPage.users];
-
-        if (firstPage.lastPage > 1) {
-          const remainingRequests: Array<Promise<Awaited<ReturnType<typeof getPartnerUsers>>>> = [];
-          for (let page = 2; page <= firstPage.lastPage; page += 1) {
-            remainingRequests.push(getPartnerUsers(session.token, { page }));
-          }
-
-          const remainingResponses = await Promise.all(remainingRequests);
-          remainingResponses.forEach((res) => {
-            allUsers.push(...getPaginatorMeta(res.data).users);
-          });
-        }
-
-        const map = new Map<string, { code: string; label: string; count: number }>();
-
-        allUsers.forEach((userItem) => {
-          const roleCode = getRoleCode(userItem) ?? "UNKNOWN_ROLE";
-          const roleLabel = getRoleLabel(userItem, roleCode);
-          const key = `${roleCode}::${roleLabel}`;
-          const current = map.get(key);
-
-          if (current) {
-            current.count += 1;
-            return;
-          }
-
-          map.set(key, {
-            code: roleCode,
-            label: roleLabel,
-            count: 1,
-          });
-        });
-
-        const ordered = Array.from(map.values())
+        const repartition = dashboardStats?.data.repartition_employes ?? [];
+        const ordered = repartition
+          .map((entry) => ({
+            code: entry.code,
+            label: ROLE_META[entry.code]?.label ?? sanitizeRoleLabel(entry.libelle),
+            count: entry.total,
+          }))
           .sort((a, b) => {
             const orderA = ROLE_META[a.code]?.order ?? 50;
             const orderB = ROLE_META[b.code]?.order ?? 50;

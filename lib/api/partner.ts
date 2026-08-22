@@ -87,6 +87,19 @@ export interface PartnerStockStatsResponse {
   };
 }
 
+export interface PartnerRepartitionEmploye {
+  code: string;
+  libelle: string;
+  total: number;
+}
+
+export interface PartnerDashboardStatsResponse {
+  success: boolean;
+  data: {
+    repartition_employes?: PartnerRepartitionEmploye[];
+  };
+}
+
 export interface PartnerNotificationCountResponse {
   success: boolean;
   data: {
@@ -359,6 +372,13 @@ export async function notifierPartnerPatient(
 
 export async function getPartnerNotificationCount(token: string): Promise<PartnerNotificationCountResponse> {
   return apiRequest<PartnerNotificationCountResponse>("/pharmacie/notifications/count", {
+    method: "GET",
+    token,
+  });
+}
+
+export async function getPartnerDashboardStats(token: string): Promise<PartnerDashboardStatsResponse> {
+  return apiRequest<PartnerDashboardStatsResponse>("/pharmacie/statistiques/dashboard", {
     method: "GET",
     token,
   });
