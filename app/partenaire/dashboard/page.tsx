@@ -159,18 +159,18 @@ export default function PartenaireDashboardPage() {
       }
 
       try {
-        const canReadCommandes    = hasPermission(session, "gestion_commandes", "read");
-        const canReadStocks       = hasPermission(session, "gestion_stocks", "read");
-        // La repartition des employes est une simple info de tableau de bord
-        // (aucune donnee personnelle) : elle suit "Tableau de bord", pas
-        // "gestion_users", pour rester visible aux roles qui ne gerent pas les
-        // employes (ex. Responsable des stocks) — seul le clic vers la gestion
-        // des employes reste, lui, conditionne par gestion_users (cf. canManageEmployes).
+        // Les compteurs de commandes/stocks et la repartition des employes sont
+        // de simples infos agregees de tableau de bord (aucun detail sensible) :
+        // elles suivent "Tableau de bord", pas les modules "gestion_commandes"/
+        // "gestion_stocks"/"gestion_users", pour rester visibles aux roles qui
+        // n'ont pas (ou plus) ces modules — seule la navigation vers les pages
+        // de gestion reste, elle, conditionnee par leur propre permission
+        // (cf. canAccessCommandes / canAccessMedicaments / canManageEmployes).
         const canReadStatistiques = hasPermission(session, "consultation_statistiques", "read");
 
         const [compteursResponse, stockStats, dashboardStats] = await Promise.all([
-          canReadCommandes    ? getPartnerCommandeCompteurs(session.token) : Promise.resolve(null),
-          canReadStocks       ? getPartnerStockStats(session.token)        : Promise.resolve(null),
+          canReadStatistiques ? getPartnerCommandeCompteurs(session.token) : Promise.resolve(null),
+          canReadStatistiques ? getPartnerStockStats(session.token)        : Promise.resolve(null),
           canReadStatistiques ? getPartnerDashboardStats(session.token)    : Promise.resolve(null),
         ]);
 
