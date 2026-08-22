@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthSession, getAuthSession } from "@/lib/api/session";
@@ -160,6 +160,28 @@ function ArrowButton({ bg = "bg-emerald-700 hover:bg-emerald-800" }: { bg?: stri
   );
 }
 
+/* Rend un Link cliquable si href est fourni, sinon un simple conteneur inerte
+   (utilise pour desactiver l'acces a une cartouche selon les permissions). */
+function CardOrDiv({
+  href,
+  className,
+  children,
+}: {
+  href?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  if (!href) {
+    return <div className={className}>{children}</div>;
+  }
+
+  return (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  );
+}
+
 /* ═══════════════════════════ PAGE ═══════════════════════════════ */
 export default function PartenaireDashboardPage() {
   const router = useRouter();
@@ -171,6 +193,7 @@ export default function PartenaireDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const donutSegments = buildDonutSegments(roleDistribution);
+  const canManageEmployes = useMemo(() => hasPermission(getAuthSession(), "gestion_users", "read"), []);
 
   useEffect(() => {
     const syncProfile = async () => {
@@ -425,9 +448,11 @@ export default function PartenaireDashboardPage() {
             </Link>
 
             {/* Card 5 — Donut chart */}
-            <Link
-              href="/partenaire/employes"
-              className="group flex items-center justify-center sm:col-span-2 rounded-2xl border border-emerald-300 bg-white p-4 min-h-[180px] transition-shadow hover:shadow-md sm:p-6 sm:min-h-[220px]"
+            <CardOrDiv
+              href={canManageEmployes ? "/partenaire/employes" : undefined}
+              className={`group flex items-center justify-center sm:col-span-2 rounded-2xl border border-emerald-300 bg-white p-4 min-h-[180px] sm:p-6 sm:min-h-[220px] ${
+                canManageEmployes ? "transition-shadow hover:shadow-md" : "cursor-default"
+              }`}
             >
               {isLoading ? (
                 <Loader2 className="h-8 w-8 animate-spin text-emerald-700" />
@@ -484,7 +509,7 @@ export default function PartenaireDashboardPage() {
                   </div> */}
                 </div>
               )}
-            </Link>
+            </CardOrDiv>
 
           </div>
         </main>
