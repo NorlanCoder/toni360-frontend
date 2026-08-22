@@ -58,7 +58,8 @@ function PartenaireVerificationContent() {
 
     setSubmitting(true);
     try {
-      const response = await verifyOtp({ login: emailReal, code, purpose, actor_type: "user" });
+      const remember = sessionStorage.getItem(PARTNER_SESSION_REMEMBER_KEY) === "1";
+      const response = await verifyOtp({ login: emailReal, code, purpose, actor_type: "user", remember });
 
       if (!response.success || !response.data?.token) {
         toast.error(response.message ?? "Code invalide.");
@@ -66,7 +67,6 @@ function PartenaireVerificationContent() {
       }
 
       const profileResponse = await getPartnerProfile(response.data.token);
-      const remember = sessionStorage.getItem(PARTNER_SESSION_REMEMBER_KEY) === "1";
 
       const session = {
         userType: "user" as const,
@@ -74,6 +74,7 @@ function PartenaireVerificationContent() {
         tokenType: response.data.token_type ?? "Bearer",
         profile: profileResponse.data.user ?? null,
         permissions: profileResponse.data.permissions ?? [],
+        expiresAt: response.data.expires_at,
       };
 
       saveAuthSession(session, remember);

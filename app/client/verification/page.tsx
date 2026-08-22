@@ -57,7 +57,8 @@ function VerificationContent() {
 
     setSubmitting(true);
     try {
-      const response = await verifyOtp({ login: emailReal, code, purpose });
+      const remember = sessionStorage.getItem(SESSION_REMEMBER_KEY) === "1";
+      const response = await verifyOtp({ login: emailReal, code, purpose, remember });
 
       if (!response.success || !response.data?.token) {
         toast.error(response.message ?? "Code invalide.");
@@ -65,13 +66,13 @@ function VerificationContent() {
       }
 
       const profileResponse = await getPatientProfile(response.data.token);
-      const remember = sessionStorage.getItem(SESSION_REMEMBER_KEY) === "1";
 
       saveAuthSession({
         userType: "patient",
         token: response.data.token,
         tokenType: response.data.token_type ?? "Bearer",
         profile: profileResponse.data.patient ?? response.data.patient ?? null,
+        expiresAt: response.data.expires_at,
       }, remember);
 
       sessionStorage.removeItem(SESSION_KEY);

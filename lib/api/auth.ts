@@ -221,6 +221,7 @@ export interface OtpVerifyResponse {
     token?: string;
     token_type?: string;
     patient?: unknown;
+    expires_at?: string;
   };
 }
 
@@ -235,6 +236,7 @@ export async function verifyOtp(payload: {
   code: string;
   purpose: string;
   actor_type?: string;
+  remember?: boolean;
 }): Promise<OtpVerifyResponse> {
   const json = buildJsonRequest(payload);
   const path = payload.actor_type === 'user'
