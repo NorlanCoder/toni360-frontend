@@ -109,7 +109,7 @@ function PublicOrderContent() {
         <h1 className="text-2xl font-bold text-gray-900">Détails publics de la commande</h1>
 
         <div className="mt-6 grid gap-3 text-sm text-gray-700 sm:grid-cols-2">
-          <p><span className="font-semibold">Numéro :</span> {data.commande.numero}</p>
+          <p><span className="font-semibold">ID :</span> {data.commande.numero}</p>
           <p><span className="font-semibold">Statut :</span> {data.commande.statut_label}</p>
           <p><span className="font-semibold">Auteur :</span> {data.auteur?.nom_affiche || "Non renseigné"}</p>
           <p><span className="font-semibold">Date :</span> {formattedDate || "Non renseignée"}</p>
