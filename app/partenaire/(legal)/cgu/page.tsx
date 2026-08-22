@@ -22,7 +22,7 @@ export default function PartenaireCguPage() {
                 <li key={index}>
                   <a
                     href={`#section-${index + 1}`}
-                    className="text-[#00A669] font-medium text-lg md:text-xl leading-snug block"
+                    className="text-[#00955F] font-normal text-lg md:text-xl leading-snug block"
                   >
                     {index + 1}- {section}
                   </a>

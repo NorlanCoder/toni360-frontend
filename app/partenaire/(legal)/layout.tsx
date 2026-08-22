@@ -61,7 +61,7 @@ function PartenairePublicLayoutContent({
                     href={link.href}
                     className={`inline-block pb-3 transition font-medium ${
                       isActive
-                        ? "text-[#00A669] font-semibold border-b-2 border-[#00A669]"
+                        ? "text-[#00955F] border-b-2 border-[#00955F]"
                         : "hover:text-gray-900"
                     }`}
                   >
