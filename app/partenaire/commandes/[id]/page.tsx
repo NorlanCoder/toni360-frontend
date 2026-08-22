@@ -247,7 +247,8 @@ export default function CommandeDetailPage() {
   );
   const canReadyByStatus = READY_ALLOWED_STATUSES.has(backendStatus);
   const canMarkReady = canReadyByStatus && !hasUnvalidatedRequiredPrescription;
-  const canForceRecuperer = new Set(["PRETE", "PAYEE", "EN_PREPARATION", "EN_COURS"]).has(backendStatus);
+  // "Récupérer" ne doit apparaître disponible qu'après passage par "Prête".
+  const canForceRecuperer = backendStatus === "PRETE";
   const showDemanderOrdonnance = backendStatus === "EN_COURS";
 
   const handleDemanderOrdonnance = async () => {

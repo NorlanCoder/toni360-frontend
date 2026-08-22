@@ -8,7 +8,6 @@ import {
   getPartnerCommande,
   validerPartnerOrdonnance,
   rejeterPartnerOrdonnance,
-  notifierPartnerPatient,
 } from "@/lib/api/partner";
 import { ApiError } from "@/lib/api/errors";
 import { toast } from "sonner";
@@ -23,6 +22,12 @@ export default function OrdonnancePage() {
   const [submittingValider, setSubmittingValider] = useState(false);
   const [submittingRefuser, setSubmittingRefuser] = useState(false);
   const [submittingEnvoyer, setSubmittingEnvoyer] = useState(false);
+  const [zoneFocused, setZoneFocused] = useState(false);
+  // Masque boutons + zone de commentaire juste apres une action reussie sur
+  // cette vue (Valider / Refuser / Envoyer) — pas un etat persistant du statut.
+  const [hideControls, setHideControls] = useState(false);
+  // Motif du refus tel qu'envoye au patient, conserve affiche en gris.
+  const [refusComment, setRefusComment] = useState<string | null>(null);
 
   useEffect(() => {
     const loadOrdonnance = async () => {
@@ -52,14 +57,11 @@ export default function OrdonnancePage() {
     return session;
   };
 
-  const getPharmacieNom = () => {
-    const s = getAuthSession();
-    const profile = s?.profile as { pharmacie?: { nom?: string } | null; prenom?: string; nom?: string } | null;
-    return profile?.pharmacie?.nom ?? profile?.prenom ?? "La pharmacie";
-  };
-
   const isAnySubmitting = submittingValider || submittingRefuser || submittingEnvoyer;
   const messageHasContent = notification.trim().length > 0;
+  // Des le clic dans la zone de saisie, on grise Valider/Refuser — pas besoin
+  // d'attendre qu'un caractere soit tape.
+  const zoneActive = zoneFocused || messageHasContent;
 
   const getPreviewUrl = (url: string) => {
     const isPdf = /\.pdf($|\?)/i.test(url);
@@ -87,7 +89,9 @@ export default function OrdonnancePage() {
     try {
       await validerPartnerOrdonnance(session.token, id);
       toast.success("Ordonnance validée. Le patient a été notifié.");
-      router.back();
+      setOrdonnanceStatut("VALIDEE");
+      setHideControls(true);
+      router.push(`/partenaire/commandes/${id}`);
     } catch (err: unknown) {
       toast.error(err instanceof ApiError ? err.message : "Impossible de valider l'ordonnance.");
     } finally {
@@ -95,23 +99,18 @@ export default function OrdonnancePage() {
     }
   };
 
+  // Clic direct sur "Refuser" (zone vide) → rejet immediat, sans commentaire.
   const handleRefuser = async () => {
     const session = getSession();
     if (!session) { toast.error("Session partenaire invalide."); return; }
     setSubmittingRefuser(true);
     try {
-      // Zone de texte vide → rejet simple (le patient doit présenter l'ordonnance en pharmacie).
-      // Zone de texte renseignée → rejet commenté avec le motif détaillé au patient.
-      const commentaire = notification.trim();
-      await rejeterPartnerOrdonnance(session.token, id, commentaire || undefined);
+      await rejeterPartnerOrdonnance(session.token, id, undefined);
       toast.success("Ordonnance rejetée. Le patient a été notifié.");
-      setNotification("");
-      // Rejet commenté → retour au détail de la commande pour suivre la suite du traitement.
-      if (commentaire) {
-        router.push(`/partenaire/commandes/${id}`);
-      } else {
-        router.back();
-      }
+      setOrdonnanceStatut("REJETEE");
+      setRefusComment(null);
+      setHideControls(true);
+      router.push(`/partenaire/commandes/${id}`);
     } catch (err: unknown) {
       toast.error(err instanceof ApiError ? err.message : "Impossible de refuser l'ordonnance.");
     } finally {
@@ -119,6 +118,8 @@ export default function OrdonnancePage() {
     }
   };
 
+  // Commentaire renseigne + "Envoyer" → meme rejet, mais avec motif transmis
+  // au patient (ce n'est plus une simple notification distincte).
   const handleEnvoyer = async () => {
     const session = getSession();
     if (!session) { toast.error("Session partenaire invalide."); return; }
@@ -126,16 +127,15 @@ export default function OrdonnancePage() {
     if (!texte) return;
     setSubmittingEnvoyer(true);
     try {
-      const pharmacieNom = getPharmacieNom();
-      await notifierPartnerPatient(
-        session.token,
-        id,
-        `${pharmacieNom} a émis une observation concernant votre ordonnance : ${texte}. Veuillez consulter les détails et apporter les corrections nécessaires.`
-      );
-      toast.success("Message envoyé au patient.");
+      await rejeterPartnerOrdonnance(session.token, id, texte);
+      toast.success("Ordonnance rejetée. Le patient a été notifié.");
+      setOrdonnanceStatut("REJETEE");
+      setRefusComment(texte);
       setNotification("");
+      setHideControls(true);
+      router.push(`/partenaire/commandes/${id}`);
     } catch (err: unknown) {
-      toast.error(err instanceof ApiError ? err.message : "Impossible d'envoyer le message.");
+      toast.error(err instanceof ApiError ? err.message : "Impossible de refuser l'ordonnance.");
     } finally {
       setSubmittingEnvoyer(false);
     }
@@ -201,64 +201,78 @@ export default function OrdonnancePage() {
           )}
 
           {/* Valider / Refuser */}
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={handleValider}
-              disabled={isAnySubmitting || messageHasContent || !canValider}
-              className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition-colors ${
-                !isAnySubmitting && !messageHasContent && canValider
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
-              }`}
-            >
-              {submittingValider && <Loader2 className="h-4 w-4 animate-spin" />}
-              Valider
-            </button>
-            <button
-              type="button"
-              onClick={handleRefuser}
-              disabled={isAnySubmitting || !canRefuser}
-              className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full border-2 px-6 py-2.5 text-sm font-semibold transition-colors ${
-                !isAnySubmitting && canRefuser
-                  ? "border-emerald-600 text-emerald-700 bg-white hover:bg-emerald-50"
-                  : "border-gray-200 text-gray-400 bg-white cursor-not-allowed"
-              }`}
-            >
-              {submittingRefuser && <Loader2 className="h-4 w-4 animate-spin" />}
-              Refuser
-            </button>
-          </div>
-
-          {/* Textarea + Envoyer */}
-          <div className="flex flex-col gap-3">
-            <textarea
-              value={notification}
-              onChange={(e) => setNotification(e.target.value)}
-              disabled={isAnySubmitting}
-              rows={6}
-              placeholder="Notifier une incohérence au patient..."
-              className="w-full resize-none rounded-2xl border border-gray-300 bg-white px-5 py-4 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-sm disabled:opacity-50"
-            />
-            <p className="text-xs text-gray-400">
-              Ce texte, s&apos;il est renseigné, sera transmis au patient comme motif du rejet en cliquant sur « Refuser ».
-            </p>
-            <div className="flex justify-end">
+          {!hideControls && (
+            <div className="flex gap-3">
               <button
                 type="button"
-                onClick={handleEnvoyer}
-                disabled={isAnySubmitting || !messageHasContent}
-                className={`inline-flex items-center justify-center gap-2 rounded-full border-2 px-8 py-2.5 text-sm font-semibold transition-colors ${
-                  !isAnySubmitting && messageHasContent
-                    ? "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
-                    : "border-gray-200 text-gray-400 cursor-not-allowed"
+                onClick={handleValider}
+                disabled={isAnySubmitting || zoneActive || !canValider}
+                className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition-colors ${
+                  !isAnySubmitting && !zoneActive && canValider
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
                 }`}
               >
-                {submittingEnvoyer && <Loader2 className="h-4 w-4 animate-spin" />}
-                Envoyer
+                {submittingValider && <Loader2 className="h-4 w-4 animate-spin" />}
+                Valider
+              </button>
+              <button
+                type="button"
+                onClick={handleRefuser}
+                disabled={isAnySubmitting || zoneActive || !canRefuser}
+                className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full border-2 px-6 py-2.5 text-sm font-semibold transition-colors ${
+                  !isAnySubmitting && !zoneActive && canRefuser
+                    ? "border-emerald-600 text-emerald-700 bg-white hover:bg-emerald-50"
+                    : "border-gray-200 text-gray-400 bg-white cursor-not-allowed"
+                }`}
+              >
+                {submittingRefuser && <Loader2 className="h-4 w-4 animate-spin" />}
+                Refuser
               </button>
             </div>
-          </div>
+          )}
+
+          {/* Textarea + Envoyer */}
+          {!hideControls && (
+            <div className="flex flex-col gap-3">
+              <textarea
+                value={notification}
+                onChange={(e) => setNotification(e.target.value)}
+                onFocus={() => setZoneFocused(true)}
+                onBlur={() => { if (!notification.trim()) setZoneFocused(false); }}
+                disabled={isAnySubmitting}
+                rows={6}
+                placeholder="Motif du refus (facultatif)..."
+                className="w-full resize-none rounded-2xl border border-gray-300 bg-white px-5 py-4 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-sm disabled:opacity-50"
+              />
+              <p className="text-xs text-gray-400">
+                Ce texte, s&apos;il est renseigné, sera transmis au patient comme motif du rejet en cliquant sur « Envoyer ». Sans commentaire, cliquez directement sur « Refuser ».
+              </p>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleEnvoyer}
+                  disabled={isAnySubmitting || !messageHasContent}
+                  className={`inline-flex items-center justify-center gap-2 rounded-full border-2 px-8 py-2.5 text-sm font-semibold transition-colors ${
+                    !isAnySubmitting && messageHasContent
+                      ? "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+                      : "border-gray-200 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  {submittingEnvoyer && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Envoyer
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Motif du refus conserve affiche, en gris, une fois les controles masques */}
+          {hideControls && refusComment && (
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 px-5 py-4">
+              <p className="mb-1 text-xs font-medium text-gray-400">Motif du refus transmis au patient :</p>
+              <p className="text-sm text-gray-400">{refusComment}</p>
+            </div>
+          )}
         </div>
       </div>
     </main>
