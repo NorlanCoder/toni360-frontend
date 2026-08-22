@@ -731,12 +731,12 @@ export default function DevenirPartenairePage() {
         </form>
 
         {/* Lien connexion */}
-        <p className="text-center mt-8 text-lg text-gray-700">
+        <p className="text-center mt-8 text-sm text-gray-700">
           Déjà un compte ?{" "}
           <Link
             href="/partenaire/connexion"
             className="font-bold hover:underline"
-            style={{ color: "#137551", fontSize: "1.18rem" }}
+            style={{ color: "#137551"}}
           >
             Connectez-vous
           </Link>
