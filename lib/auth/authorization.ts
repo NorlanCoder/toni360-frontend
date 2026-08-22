@@ -26,10 +26,10 @@ export function getPartnerHomeRoute(session: AuthSession | null): string {
     return "/partenaire/dashboard";
   }
 
+  // gestion_stocks a ete fusionne dans gestion_produits : pas d'entree separee.
   const fallbacks: Array<{ path: string; module: string; action: PermissionAction }> = [
     { path: "/partenaire/commandes", module: "gestion_commandes", action: "read" },
     { path: "/partenaire/medicaments", module: "gestion_produits", action: "read" },
-    { path: "/partenaire/stocks", module: "gestion_stocks", action: "read" },
     { path: "/partenaire/employes", module: "gestion_users", action: "read" },
     { path: "/partenaire/employes/historique", module: "gestion_historique", action: "read" },
   ];
@@ -69,7 +69,8 @@ const PARTNER_ROUTE_REQUIREMENTS: Array<{ prefix: string; permission: string }> 
   { prefix: "/partenaire/medicaments/incoherences", permission: "gestion_produits:read" },
   { prefix: "/partenaire/medicaments/ajouter", permission: "gestion_produits:create" },
   { prefix: "/partenaire/medicaments", permission: "gestion_produits:read" },
-  { prefix: "/partenaire/stocks", permission: "gestion_stocks:read" },
+  // gestion_stocks a ete fusionne dans gestion_produits.
+  { prefix: "/partenaire/stocks", permission: "gestion_produits:read" },
   { prefix: "/partenaire/commandes", permission: "gestion_commandes:read" },
 ];
 
@@ -100,12 +101,12 @@ export function hasPermission(
  * Pharmacien titulaire desactive "Tableau de bord" pour un role, ces modules doivent
  * redevenir inaccessibles meme si leur propre permission reste active.
  */
-const DASHBOARD_DEPENDENT_MODULES = ["gestion_commandes", "gestion_stocks"];
+const DASHBOARD_DEPENDENT_MODULES = ["gestion_commandes"];
 
 /**
  * Comme hasPermission, mais applique en plus la dependance ci-dessus pour
- * gestion_commandes/gestion_stocks. A utiliser pour toute navigation/route liee
- * a ces deux modules (sidebar, cartouches dashboard, garde de route).
+ * gestion_commandes. A utiliser pour toute navigation/route liee a ce module
+ * (sidebar, cartouches dashboard, garde de route).
  */
 export function hasEffectivePermission(
   session: AuthSession | null,
@@ -176,7 +177,8 @@ export function filterPartnerNavigationByPermissions<T extends { href: string }>
     }
 
     if (item.href.startsWith("/partenaire/stocks")) {
-      return hasEffectivePermission(session, "gestion_stocks", "read");
+      // gestion_stocks a ete fusionne dans gestion_produits.
+      return hasPermission(session, "gestion_produits", "read");
     }
 
     if (item.href.startsWith("/partenaire/commandes")) {

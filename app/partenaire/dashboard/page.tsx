@@ -162,7 +162,7 @@ export default function PartenaireDashboardPage() {
         // Les compteurs de commandes/stocks et la repartition des employes sont
         // de simples infos agregees de tableau de bord (aucun detail sensible) :
         // elles suivent "Tableau de bord", pas les modules "gestion_commandes"/
-        // "gestion_stocks"/"gestion_users", pour rester visibles aux roles qui
+        // "gestion_produits"/"gestion_users", pour rester visibles aux roles qui
         // n'ont pas (ou plus) ces modules — seule la navigation vers les pages
         // de gestion reste, elle, conditionnee par leur propre permission
         // (cf. canAccessCommandes / canAccessMedicaments / canManageEmployes).

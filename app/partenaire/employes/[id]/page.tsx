@@ -52,7 +52,6 @@ const PERMISSIONS_BY_ROLE: Record<EmployeeRoleCode, Permission[]> = {
     { label: "Gestion des employés", enabled: true },
     { label: "Gestion des commandes", enabled: true },
     { label: "Gestion des médicaments", enabled: true },
-    { label: "Gestion des stocks", enabled: true },
     { label: "Gestion des données de la pharmacie", enabled: true },
     { label: "Gestion des interactions avec les patients", enabled: true },
     { label: "Gestion des performances", enabled: true },
@@ -68,7 +67,6 @@ const PERMISSIONS_BY_ROLE: Record<EmployeeRoleCode, Permission[]> = {
     { label: "Notifications", enabled: true },
     { label: "Tableau de bord", enabled: true },
     { label: "Gestion des médicaments", enabled: true },
-    { label: "Gestion des stocks", enabled: true },
     { label: "Historique des actions", enabled: true },
   ],
   RESPONSABLE_COMMANDES: [
@@ -92,8 +90,9 @@ const LABEL_TO_MODULES: Partial<Record<EmployeeRoleCode, Record<string, string[]
   RESPONSABLE_STOCKS: {
     "Notifications": ["GESTION_NOTIFICATIONS"],
     "Tableau de bord": ["CONSULTATION_STATISTIQUES"],
+    // GESTION_STOCKS a ete fusionne dans GESTION_PRODUITS : ce toggle
+    // couvre desormais aussi la gestion des stocks.
     "Gestion des médicaments": ["GESTION_PRODUITS", "GESTION_INCOHERENCES"],
-    "Gestion des stocks": ["GESTION_STOCKS"],
     "Historique des actions": ["GESTION_HISTORIQUE"],
   },
   RESPONSABLE_COMMANDES: {
