@@ -22,7 +22,7 @@ export default function PrivacyContent() {
                   <li key={index}>
                     <a
                       href={`#section-${index + 1}`}
-                      className="text-green-600 hover:text-green-700 font-medium text-base md:text-lg leading-snug block"
+                      className="text-[#00A669] hover:text-[#059669] font-medium text-base md:text-lg leading-snug block"
                     >
                       {index + 1}. {section}
                     </a>
@@ -293,7 +293,7 @@ export default function PrivacyContent() {
                 d&apos;aide ou à l&apos;adresse email suivante :{" "}
                 <a
                   href="mailto:contact@toni360.com"
-                  className="text-green-600 hover:text-green-700 underline"
+                  className="text-[#00A669] hover:text-[#059669] underline"
                 >
                   contact@toni360.com
                 </a>

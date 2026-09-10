@@ -168,13 +168,39 @@ export default function PartenaireDashboardPage() {
         // (cf. canAccessCommandes / canAccessMedicaments / canManageEmployes).
         const canReadStatistiques = hasPermission(session, "consultation_statistiques", "read");
 
-        const [compteursResponse, stockStats, dashboardStats] = await Promise.all([
+        // Promise.allSettled plutot que Promise.all : ces 3 statistiques sont
+        // independantes, l'echec de l'une (ex. compteurs commandes) ne doit
+        // pas empecher les autres (ex. repartition des employes) de s'afficher.
+        const [compteursResult, stockStatsResult, dashboardStatsResult] = await Promise.allSettled([
           canReadStatistiques ? getPartnerCommandeCompteurs(session.token) : Promise.resolve(null),
           canReadStatistiques ? getPartnerStockStats(session.token)        : Promise.resolve(null),
           canReadStatistiques ? getPartnerDashboardStats(session.token)    : Promise.resolve(null),
         ]);
 
-        const compteurs = compteursResponse?.data;
+        if (compteursResult.status === "rejected") {
+          console.error("Impossible de charger les compteurs de commandes.", compteursResult.reason);
+        }
+        if (stockStatsResult.status === "rejected") {
+          console.error("Impossible de charger les statistiques de stock.", stockStatsResult.reason);
+        }
+        if (dashboardStatsResult.status === "rejected") {
+          console.error("Impossible de charger les statistiques du tableau de bord.", dashboardStatsResult.reason);
+        }
+
+        // Une session expiree (401) sur n'importe lequel de ces appels doit
+        // deconnecter, comme avant.
+        for (const result of [compteursResult, stockStatsResult, dashboardStatsResult]) {
+          if (result.status === "rejected" && result.reason instanceof ApiError && result.reason.status === 401) {
+            clearAuthSession();
+            router.replace("/partenaire/connexion");
+            return;
+          }
+        }
+
+        const compteurs = compteursResult.status === "fulfilled" ? compteursResult.value?.data : undefined;
+        const stockStats = stockStatsResult.status === "fulfilled" ? stockStatsResult.value : null;
+        const dashboardStats = dashboardStatsResult.status === "fulfilled" ? dashboardStatsResult.value : null;
+
         setAPreparerCount(compteurs?.en_cours ?? 0);
         setEnAttenteCount(compteurs?.prete ?? 0);
         setRecupereesCount(compteurs?.recuperee ?? 0);

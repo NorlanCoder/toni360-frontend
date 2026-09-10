@@ -47,7 +47,7 @@ export default function Header() {
             {dashboardHref ? (
               <Link
                 href={dashboardHref}
-                className="flex items-center gap-2 px-6 py-2 bg-toni-green-dark-2 text-white font-bold rounded-full hover:bg-toni-green-dark transition"
+                className="flex items-center gap-2 px-6 py-2 bg-[#00A669] text-white font-bold rounded-full hover:bg-toni-green-dark transition"
               >
                 <LayoutDashboard size={18} />
                 Mon espace
@@ -57,14 +57,14 @@ export default function Header() {
                 {/* Bouton Se connecter - outline vert */}
                 <button
                   onClick={() => openModal("connexion")}
-                  className="px-6 py-2 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold rounded-full hover:bg-toni-green-dark-2 hover:text-white transition"
+                  className="px-6 py-2 border-2 border-[#00A669] text-[#00A669] font-bold rounded-full hover:bg-[#00A669] hover:text-white transition"
                 >
                   Se connecter
                 </button>
-                {/* Bouton S'inscrire - fond vert (toni-green) */}
+                {/* Bouton S'inscrire - fond vert (#00A669) */}
                 <button
                   onClick={() => openModal("inscription")}
-                  className="px-6 py-2 bg-toni-green-dark-2 text-white rounded-full font-bold hover:bg-toni-green-dark transition"
+                  className="px-6 py-2 bg-[#00A669] text-white rounded-full font-bold hover:bg-toni-green-dark transition"
                 >
                   S&apos;inscrire
                 </button>
@@ -75,7 +75,7 @@ export default function Header() {
           {/* Bouton hamburger - visible uniquement sur mobile */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden text-toni-green focus:outline-none"
+            className="md:hidden text-[#00A669] focus:outline-none"
             aria-label="Menu"
           >
             <svg
@@ -101,7 +101,7 @@ export default function Header() {
                 <Link
                   href={dashboardHref}
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-toni-green-dark-2 text-white font-bold rounded-full hover:bg-toni-green-dark transition text-center"
+                  className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#00A669] text-white font-bold rounded-full hover:bg-toni-green-dark transition text-center"
                 >
                   <LayoutDashboard size={18} />
                   Mon espace
@@ -110,13 +110,13 @@ export default function Header() {
                 <>
                   <button
                     onClick={() => openModal("connexion")}
-                    className="w-full px-6 py-3 border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold rounded-full hover:bg-toni-green-dark-2 hover:text-white transition text-center"
+                    className="w-full px-6 py-3 border-2 border-[#00A669] text-[#00A669] font-bold rounded-full hover:bg-[#00A669] hover:text-white transition text-center"
                   >
                     Se connecter
                   </button>
                   <button
                     onClick={() => openModal("inscription")}
-                    className="w-full px-6 py-3 bg-toni-green text-white rounded-full hover:bg-toni-green-dark transition text-center"
+                    className="w-full px-6 py-3 bg-[#00A669] text-white rounded-full hover:bg-toni-green-dark transition text-center"
                   >
                     S&apos;inscrire
                   </button>
@@ -156,7 +156,7 @@ export default function Header() {
               <Link
                 href={`/client/${modalMode}`}
                 onClick={closeModal}
-                className="flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-toni-green-dark-2 text-toni-green-dark-2 font-bold rounded-full hover:bg-toni-green-dark-2 hover:text-white transition w-full"
+                className="flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-[#00A669] text-[#00A669] font-bold rounded-full hover:bg-[#00A669] hover:text-white transition w-full"
               >
                 <FaLocationArrow size={18} />
                 Trouver mes médicaments
@@ -164,7 +164,7 @@ export default function Header() {
               <Link
                 href={`/partenaire/${modalMode}`}
                 onClick={closeModal}
-                className="flex items-center justify-center gap-3 px-6 py-4 bg-toni-green-dark-2 text-white font-bold rounded-full hover:bg-toni-green-dark transition w-full"
+                className="flex items-center justify-center gap-3 px-6 py-4 bg-[#00A669] text-white font-bold rounded-full hover:bg-toni-green-dark transition w-full"
               >
                 <Users size={18} />
                 Devenir partenaire

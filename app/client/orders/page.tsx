@@ -297,7 +297,7 @@ function ClientOrdersContent() {
                 bg: "#FF3D00",
                 icon: "/images/preparer.svg",
                 label: "En attente",
-                labelLong: "Commandes en attentes",
+                labelLong: "Commandes en attente",
                 value: stats.enAttente,
               },
               {

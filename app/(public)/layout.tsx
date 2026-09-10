@@ -62,7 +62,7 @@ function PublicLayoutContent({ children }: { children: React.ReactNode }) {
                                         <Link
                                             href={link.href}
                                             className={`inline-block pb-3 transition font-medium ${isActive
-                                                ? "text-toni-green-dark-2 font-semibold border-b-2 border-toni-green-dark"
+                                                ? "text-[#00A669] font-semibold border-b-2 border-[#00A669]"
                                                 : "hover:text-gray-900"
                                                 }`}
                                         >
